@@ -5,8 +5,9 @@
   "scripts": {
     "build": "forge build",
     "test": "forge test",
-    "typecheck": "forge build --sizes",
-    "clean": "forge clean"
+    "clean": "forge clean",
+    "fmt": "forge fmt",
+    "fmt:check": "forge fmt --check"
   },
   "devDependencies": {
     "@gluwa/asc-contracts": "^0.2.1",
