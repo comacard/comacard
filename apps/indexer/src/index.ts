@@ -8,7 +8,7 @@ import { CC3_TESTNET, CHAIN_KEY } from "@comacard/attestcoin";
  * Attestation is not instant — a block must be attested before it can be
  * proved — so this runs as a loop rather than inline with the user's action.
  */
-async function main(): Promise<void> {
+function main(): void {
   console.log("indexer watching", {
     sepolia: CHAIN_KEY.sepolia,
     mainnet: CHAIN_KEY.mainnet,
@@ -17,4 +17,4 @@ async function main(): Promise<void> {
   // TODO(#): subscribe to SourceVault events, prove, submit. See issue tracker.
 }
 
-await main();
+main();
