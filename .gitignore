@@ -62,3 +62,6 @@ desktop.ini
 .cache/
 tmp/
 *.tgz
+
+# kyc service state
+kyc.sqlite*

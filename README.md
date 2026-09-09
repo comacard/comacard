@@ -75,6 +75,7 @@ not simulated.
 ```
 apps/
   api/        HTTP API — credit scoring
+  kyc/        KYC service — Didit sessions and webhook intake
   app/        Cardholder PWA
   web/        Cardholder dashboard
   landing/    Marketing site

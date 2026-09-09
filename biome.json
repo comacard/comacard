@@ -138,7 +138,7 @@
       }
     },
     {
-      "includes": ["apps/api/**", "apps/indexer/**"],
+      "includes": ["apps/api/**", "apps/indexer/**", "apps/kyc/**"],
       "linter": {
         "rules": {
           "suspicious": {

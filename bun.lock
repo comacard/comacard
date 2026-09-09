@@ -41,6 +41,14 @@
         "typescript": "^5.9.3",
       },
     },
+    "apps/kyc": {
+      "name": "@comacard/kyc",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@comacard/tsconfig": "workspace:*",
+        "typescript": "^5.9.3",
+      },
+    },
     "apps/landing": {
       "name": "@comacard/landing",
       "version": "0.0.0",
@@ -128,6 +136,8 @@
     "@comacard/core": ["@comacard/core@workspace:packages/core"],
 
     "@comacard/indexer": ["@comacard/indexer@workspace:apps/indexer"],
+
+    "@comacard/kyc": ["@comacard/kyc@workspace:apps/kyc"],
 
     "@comacard/landing": ["@comacard/landing@workspace:apps/landing"],
 

@@ -7,16 +7,30 @@
     "SEPOLIA_RPC_URL",
     "MAINNET_RPC_URL",
     "CREDITCOIN_RPC_URL",
-    "PROOF_BUILDER_URL"
+    "PROOF_BUILDER_URL",
+    "DIDIT_API_KEY",
+    "DIDIT_WORKFLOW_ID",
+    "DIDIT_WEBHOOK_SECRET",
+    "KYC_CALLBACK_URL",
+    "KYC_DB_PATH"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "out/**"]
     },
-    "dev": { "cache": false, "persistent": true },
-    "test": { "dependsOn": ["^build"] },
-    "typecheck": { "dependsOn": ["^build"] },
-    "clean": { "cache": false }
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "clean": {
+      "cache": false
+    }
   }
 }
