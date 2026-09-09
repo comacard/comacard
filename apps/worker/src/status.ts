@@ -7,8 +7,13 @@ async function main(): Promise<void> {
   console.log("supported source chains:", await info.getSupportedChains());
 
   const head = await sepolia().getBlockNumber();
-  console.log(`sepolia head: ${head}`);
-  console.log(`proof builder: ${config.proofBuilderUrl}`);
+  const attested = await info.getLatestAttestedHeightAndHash(config.sepoliaChainKey);
+  const lag = head - Number(attested.height);
+
+  console.log(`sepolia head:      ${head}`);
+  console.log(`latest attested:   ${attested.height}`);
+  console.log(`lag:               ${lag} blocks (~${Math.round((lag * 12) / 60)} min)`);
+  console.log(`proof builder:     ${config.proofBuilderUrl}`);
 }
 
 main().catch((error) => {
