@@ -7,10 +7,10 @@
     "codegen": "envio codegen",
     "dev": "envio dev",
     "start": "envio start",
-    "test": "bun test",
-    "clean": "rm -rf generated .turbo",
-    "typecheck": "tsc --noEmit",
-    "test:live": "INDEXER_LIVE_TEST=1 bun test"
+    "test": "envio codegen && bun test",
+    "clean": "rm -rf .envio envio-env.d.ts .turbo",
+    "typecheck": "envio codegen && tsc --noEmit",
+    "test:live": "envio codegen && INDEXER_LIVE_TEST=1 bun test"
   },
   "dependencies": {
     "envio": "3.10.0"
