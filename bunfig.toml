@@ -4,3 +4,5 @@ peer = true
 
 [test]
 coverage = false
+# keep the bare `bun test` runner out of Foundry dependencies
+root = "packages"

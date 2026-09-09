@@ -10,11 +10,12 @@ build/
 .turbo/
 *.tsbuildinfo
 
-# foundry
+# foundry — lib/ is restored by `forge install`, vendor/ is committed on purpose
 contracts/out/
 contracts/cache/
 contracts/broadcast/
 contracts/lib/
+contracts/node_modules/
 
 # env & secrets
 .env
