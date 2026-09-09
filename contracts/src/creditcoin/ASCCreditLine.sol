@@ -12,6 +12,7 @@ import {Governed} from "../governance/Governed.sol";
 import {ICreditLine} from "../interfaces/ICreditLine.sol";
 import {IYieldAdapter} from "../interfaces/IYieldAdapter.sol";
 import {CreditScoring} from "../libraries/CreditScoring.sol";
+import {HistoryProof} from "../libraries/HistoryProof.sol";
 import {VaultEvents} from "../libraries/VaultEvents.sol";
 import {CreditAccount, CreditAction, CreditErrors} from "../types/CreditTypes.sol";
 
@@ -40,7 +41,29 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     /// @notice Sum of all outstanding principal, for solvency checks.
     uint256 public totalDrawn;
 
+    /// @notice Chain whose transaction history counts toward a score.
+    /// @dev 1 = Ethereum mainnet. Pinned inside the proof, not taken on trust.
+    uint64 public historyChainId;
+
+    /// @notice How long a draw may stay outstanding before it can be defaulted.
+    uint64 public term;
+
+    /// @notice How long a cycle must stay open before it counts toward a score.
+    /// @dev Without this, a borrower could open and close ten cycles in a single
+    ///      block for the price of gas and walk away with a record they never
+    ///      earned — then post real collateral against an inflated limit. A
+    ///      cycle shorter than this still settles the debt, it just proves
+    ///      nothing about the borrower.
+    uint64 public minCycleDuration;
+
+    uint64 internal constant MIN_TERM = 1 days;
+    uint64 internal constant MAX_TERM = 365 days;
+    uint64 internal constant MAX_CYCLE_DURATION = 30 days;
+
     event YieldAdapterChanged(address indexed from, address indexed to);
+    event HistoryImported(address indexed account, uint64 provenNonce, bytes32 queryId);
+    event Defaulted(address indexed account, uint256 writtenOff, uint256 collateralSeized);
+    event TermChanged(uint64 from, uint64 to);
     event LiquidityDeployed(uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -67,6 +90,9 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         __ReentrancyGuard_init();
         sourceVault = sourceVault_;
         sourceChainKey = sourceChainKey_;
+        historyChainId = 1;
+        term = 30 days;
+        minCycleDuration = 1 days;
         _grantRole(OPERATOR_ROLE, operator);
     }
 
@@ -85,6 +111,8 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
             _applyCollateral(queryId, encodedTransaction, true);
         } else if (action == uint8(CreditAction.CollateralUnlocked)) {
             _applyCollateral(queryId, encodedTransaction, false);
+        } else if (action == uint8(CreditAction.HistoryImported)) {
+            _importHistory(queryId, encodedTransaction);
         } else {
             revert CreditErrors.UnknownAction(action);
         }
@@ -104,16 +132,13 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
             CreditAccount storage account = _accounts[e.account];
 
             if (isLock) {
-                if (account.firstSeenAt == 0) {
-                    account.firstSeenAt = uint64(block.timestamp);
-                }
                 account.collateral += e.amount;
                 emit CollateralCredited(e.account, e.amount, queryId);
             } else {
                 if (e.amount > account.collateral) revert CreditErrors.InsufficientCollateral();
                 account.collateral -= e.amount;
                 // Releasing collateral must never strand outstanding debt.
-                if (account.drawn > CreditScoring.limit(account, block.timestamp)) {
+                if (account.drawn > CreditScoring.limit(account)) {
                     revert CreditErrors.OutstandingDebt(account.drawn);
                 }
                 emit CollateralReleased(e.account, e.amount, queryId);
@@ -139,15 +164,19 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         if (amount == 0) revert CreditErrors.ZeroAmount();
 
         CreditAccount storage account = _accounts[msg.sender];
-        uint256 available = CreditScoring.available(account, block.timestamp);
+        uint256 available = CreditScoring.available(account);
         if (amount > available) revert CreditErrors.ExceedsAvailableCredit(amount, available);
 
         _ensureLiquidity(amount);
 
+        if (account.drawn == 0) {
+            account.drawnAt = uint64(block.timestamp);
+            account.dueAt = uint64(block.timestamp) + term;
+        }
         account.drawn += amount;
         totalDrawn += amount;
 
-        emit Drawn(msg.sender, amount, account.drawn);
+        emit Drawn(msg.sender, amount, account.drawn, account.dueAt);
 
         Address.sendValue(payable(msg.sender), amount);
     }
@@ -156,7 +185,12 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     /// @dev Only a repayment that clears the balance closes a credit cycle and
     ///      counts toward the score. Partial repayments reduce the debt but earn
     ///      no mark, so the record cannot be farmed a wei at a time.
-    function repay() external payable override nonReentrant whenNotPaused {
+    ///
+    ///      Deliberately not pausable. A pause stops new borrowing, but a
+    ///      borrower who cannot repay while the clock still runs would be
+    ///      defaulted for something they had no way to prevent. Repaying only
+    ///      ever reduces risk, so it stays open.
+    function repay() external payable override nonReentrant {
         if (msg.value == 0) revert CreditErrors.ZeroAmount();
 
         CreditAccount storage account = _accounts[msg.sender];
@@ -169,15 +203,91 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         account.drawn = outstanding - msg.value;
         totalDrawn -= msg.value;
         if (account.drawn == 0) {
-            // A cycle is scored when it closes, not when it opens. Counting an
+            // A cycle is scored when it closes, not when it opens: counting an
             // open draw would let borrowing shrink the very limit it was drawn
-            // against, and a loan still in flight is not yet evidence either way.
-            // A future default path increments borrowCount without repayCount.
-            account.borrowCount += 1;
-            account.repayCount += 1;
+            // against, and a loan still in flight is evidence of nothing.
+            bool earned = block.timestamp - account.drawnAt >= minCycleDuration;
+            account.drawnAt = 0;
+            account.dueAt = 0;
+            if (earned) {
+                account.cycleCount += 1;
+                account.repayCount += 1;
+            }
         }
 
         emit Repaid(msg.sender, msg.value, account.drawn);
+    }
+
+    /// @notice Credit an account with track record proved on the history chain.
+    /// @dev The proof credits its own signer: the nonce is claimed for the
+    ///      transaction's `from`, so nobody can import somebody else's history.
+    ///      Only a higher nonce moves the needle, which makes replaying an old
+    ///      transaction pointless rather than merely redundant.
+    function _importHistory(bytes32 queryId, bytes memory encodedTransaction) internal {
+        HistoryProof.Activity memory activity =
+            HistoryProof.readActivity(encodedTransaction, historyChainId);
+
+        CreditAccount storage account = _accounts[activity.account];
+        if (activity.nonce <= account.provenNonce) {
+            revert CreditErrors.StaleHistory(account.provenNonce, activity.nonce);
+        }
+        account.provenNonce = activity.nonce;
+        emit HistoryImported(activity.account, activity.nonce, queryId);
+    }
+
+    // --------------------------------------------------------------------
+    // Default
+    // --------------------------------------------------------------------
+
+    /// @notice Close an overdue position as a default.
+    /// @dev Permissionless on purpose: a debt that everyone can see is overdue
+    ///      should not wait on a privileged key to be recognised as such.
+    ///
+    ///      The write-down is bounded by the collateral actually recorded, and
+    ///      the cycle is counted without a repayment — which is precisely how a
+    ///      default costs the borrower their score, and with it their limit.
+    ///
+    ///      Seizing the collateral on the source chain is a separate, off-chain
+    ///      step today: Attestcoin cannot yet write back, so the operator simply
+    ///      never approves the release. `collateral` here is the accounting
+    ///      record of that claim.
+    function markDefaulted(address borrower) external whenNotPaused {
+        CreditAccount storage account = _accounts[borrower];
+        uint256 outstanding = account.drawn;
+        if (outstanding == 0) revert CreditErrors.NothingOutstanding();
+        if (account.dueAt == 0 || block.timestamp <= account.dueAt) {
+            revert CreditErrors.NotOverdue(account.dueAt);
+        }
+
+        uint256 seized = outstanding > account.collateral ? account.collateral : outstanding;
+        account.collateral -= seized;
+        account.drawn = 0;
+        account.drawnAt = 0;
+        account.dueAt = 0;
+        account.cycleCount += 1;
+        account.defaultCount += 1;
+        totalDrawn -= outstanding;
+
+        emit Defaulted(borrower, outstanding, seized);
+    }
+
+    /// @notice How long a draw may stay outstanding before it can be defaulted.
+    function setTerm(uint64 next) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (next < MIN_TERM || next > MAX_TERM) revert CreditErrors.TermOutOfRange(next);
+        emit TermChanged(term, next);
+        term = next;
+    }
+
+    /// @notice How long a cycle must stay open before it counts toward a score.
+    function setMinCycleDuration(uint64 next) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (next > MAX_CYCLE_DURATION) revert CreditErrors.DurationOutOfRange(next);
+        minCycleDuration = next;
+    }
+
+    /// @notice Whether a position is past its due date and may be defaulted.
+    function isOverdue(address borrower) external view returns (bool) {
+        CreditAccount storage account = _accounts[borrower];
+        return account.drawn > 0 && account.dueAt != 0 && block.timestamp > account.dueAt;
     }
 
     // --------------------------------------------------------------------
@@ -227,17 +337,17 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
 
     /// @inheritdoc ICreditLine
     function limitOf(address account) external view override returns (uint256) {
-        return CreditScoring.limit(_accounts[account], block.timestamp);
+        return CreditScoring.limit(_accounts[account]);
     }
 
     /// @inheritdoc ICreditLine
     function availableOf(address account) external view override returns (uint256) {
-        return CreditScoring.available(_accounts[account], block.timestamp);
+        return CreditScoring.available(_accounts[account]);
     }
 
     /// @inheritdoc ICreditLine
     function scoreOf(address account) external view override returns (uint256) {
-        return CreditScoring.score(_accounts[account], block.timestamp);
+        return CreditScoring.score(_accounts[account]);
     }
 
     /// @inheritdoc ICreditLine

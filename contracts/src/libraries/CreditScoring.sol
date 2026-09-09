@@ -4,39 +4,38 @@ pragma solidity ^0.8.28;
 import {CreditAccount} from "../types/CreditTypes.sol";
 
 /// @title CreditScoring
-/// @notice Turns attested borrowing behaviour into a credit limit.
-/// @dev Pure and deliberately legible: a borrower can read the inputs off the
-///      chain and recompute their own limit by hand. Mirrors the `comacard/core` package
-///      so the frontend and the contract cannot disagree about a limit.
+/// @notice Turns proved borrowing behaviour into a credit limit.
 ///
-///      Attestcoin proves transactions and their logs, never balances, so every
-///      input here is a counted event rather than a snapshot of wealth.
+/// @dev Pure and deliberately legible: a borrower can read the inputs off the
+///      chain and recompute their own limit by hand.
+///
+///      Every input is a *counted event*, never a balance. Attestcoin proves
+///      transactions and their logs and nothing else, so wealth is unknowable
+///      here — but a transaction's nonce is provable, and so is whether a debt
+///      was repaid. That constraint is what makes this a credit score rather
+///      than a net-worth check.
 library CreditScoring {
-    /// @notice Worst collateralisation, applied to an account with no history.
+    /// @notice Worst collateralisation, applied to an account with no record.
     uint256 internal constant MAX_RATIO_BPS = 15_000; // 150%
     /// @notice Best collateralisation, earned by a spotless record.
     uint256 internal constant MIN_RATIO_BPS = 8_000; // 80%
     uint256 internal constant BPS = 10_000;
 
     uint256 internal constant MAX_SCORE = 100;
-    uint256 internal constant DEPTH_WEIGHT = 40;
+    uint256 internal constant HISTORY_WEIGHT = 40;
     uint256 internal constant RECORD_WEIGHT = 40;
     uint256 internal constant CONSISTENCY_WEIGHT = 20;
 
-    /// @notice History older than this stops earning depth points.
-    uint256 internal constant MAX_HISTORY = 730 days;
-    /// @notice Repayments beyond this stop earning consistency points.
+    /// @notice Proved external activity beyond this earns no further points.
+    uint256 internal constant HISTORY_TARGET = 200;
+    /// @notice Repayments beyond this earn no further consistency points.
     uint256 internal constant CONSISTENCY_TARGET = 10;
 
     /// @notice Score an account from 0 to 100.
-    /// @param account The borrower's accumulated attested activity.
-    /// @param nowTs Current block timestamp.
-    function score(CreditAccount memory account, uint256 nowTs) internal pure returns (uint256) {
-        uint256 depth = _depthPoints(account.firstSeenAt, nowTs);
-        uint256 record = _recordPoints(account.borrowCount, account.repayCount);
-        uint256 consistency = _consistencyPoints(account.repayCount);
-
-        uint256 total = depth + record + consistency;
+    function score(CreditAccount memory account) internal pure returns (uint256) {
+        uint256 total = _historyPoints(account.provenNonce)
+            + _recordPoints(account.cycleCount, account.repayCount)
+            + _consistencyPoints(account.repayCount);
         return total > MAX_SCORE ? MAX_SCORE : total;
     }
 
@@ -49,35 +48,31 @@ library CreditScoring {
     }
 
     /// @notice Total credit the account may have outstanding.
-    function limit(CreditAccount memory account, uint256 nowTs) internal pure returns (uint256) {
+    function limit(CreditAccount memory account) internal pure returns (uint256) {
         if (account.collateral == 0) return 0;
-        uint256 ratio = collateralizationBps(score(account, nowTs));
-        return (account.collateral * BPS) / ratio;
+        return (account.collateral * BPS) / collateralizationBps(score(account));
     }
 
     /// @notice Credit still drawable, after what is already outstanding.
-    function available(CreditAccount memory account, uint256 nowTs)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 ceiling = limit(account, nowTs);
+    function available(CreditAccount memory account) internal pure returns (uint256) {
+        uint256 ceiling = limit(account);
         return ceiling > account.drawn ? ceiling - account.drawn : 0;
     }
 
-    /// @dev How long the account has been observably active, capped at two years.
-    function _depthPoints(uint64 firstSeenAt, uint256 nowTs) private pure returns (uint256) {
-        if (firstSeenAt == 0 || nowTs <= firstSeenAt) return 0;
-        uint256 age = nowTs - firstSeenAt;
-        if (age > MAX_HISTORY) age = MAX_HISTORY;
-        return (age * DEPTH_WEIGHT) / MAX_HISTORY;
+    /// @dev Track record elsewhere. A wallet's nonce is the one durable measure
+    ///      of activity that a transaction proof can actually establish — age
+    ///      cannot, because the decoder exposes no block timestamp.
+    function _historyPoints(uint64 provenNonce) private pure returns (uint256) {
+        uint256 counted = provenNonce > HISTORY_TARGET ? HISTORY_TARGET : provenNonce;
+        return (counted * HISTORY_WEIGHT) / HISTORY_TARGET;
     }
 
-    /// @dev Repayments completed against draws taken.
-    function _recordPoints(uint64 borrowCount, uint64 repayCount) private pure returns (uint256) {
-        if (borrowCount == 0) return 0;
-        uint256 settled = repayCount > borrowCount ? borrowCount : repayCount;
-        return (uint256(settled) * RECORD_WEIGHT) / borrowCount;
+    /// @dev Cycles repaid against cycles concluded. A default concludes a cycle
+    ///      without a repayment, which is exactly how it costs the borrower.
+    function _recordPoints(uint64 cycleCount, uint64 repayCount) private pure returns (uint256) {
+        if (cycleCount == 0) return 0;
+        uint256 settled = repayCount > cycleCount ? cycleCount : repayCount;
+        return (settled * RECORD_WEIGHT) / cycleCount;
     }
 
     /// @dev Rewards a sustained record, not a single lucky repayment.

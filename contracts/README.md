@@ -12,6 +12,7 @@ src/
                 IYieldAdapter.sol
   libraries/    CreditScoring.sol     pure scoring maths
                 VaultEvents.sol       proved-log decoding + emitter checks
+                HistoryProof.sol      chain-pinned external track record
   governance/   Governed.sol          roles, pause, freeze, UUPS authority
   source/       SourceVault.sol       source chain (Ethereum Sepolia)
   creditcoin/   ASCCreditLine.sol     the ASC, extends Gluwa's ASCBase
@@ -47,6 +48,25 @@ Verified against `asc-contracts` v0.2.1 and the Attestcoin documentation:
   necessity. `deployedPrincipal` is the exact size of that trust.
 - **`via_ir` is required.** `EvmV1Decoder`'s structs overflow the stack without
   it. Do not turn it off.
+
+## The credit cycle
+
+A draw opens a cycle with a due date. Repaying in full closes it and earns a
+mark on the record; letting it run past the due date lets **anyone** call
+`markDefaulted`, which writes the debt off against the collateral and closes the
+cycle *without* a repayment. That asymmetry is what gives the score meaning — a
+default costs the borrower their limit.
+
+Two things the scoring deliberately refuses:
+
+- **A cycle shorter than `minCycleDuration` earns nothing.** Otherwise ten
+  draw/repay pairs in one block would buy a spotless record for the price of gas.
+- **External history alone caps out at 40 points.** A busy mainnet wallet that
+  has never repaid anything here is still a stranger, and still overcollateralised.
+
+`repay` is deliberately not pausable: a pause stops new borrowing, but a
+borrower who cannot clear a debt while the clock runs toward default would be
+punished for something they had no way to prevent.
 
 ## Governance
 

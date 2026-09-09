@@ -16,3 +16,12 @@ creditcoin = "${CREDITCOIN_RPC_URL}"
 [fmt]
 line_length = 100
 tab_width = 4
+
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
+
+[profile.default.fuzz]
+runs = 512
+
+[profile.ci.fuzz]
+runs = 2048

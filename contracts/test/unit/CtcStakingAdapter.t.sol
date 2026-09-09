@@ -134,4 +134,96 @@ contract CtcStakingAdapterTest is Test {
         }
         assertEq(adapter.totalAssets(), deposited);
     }
+
+    function test_withdrawRevertsWhenNothingIsIdle() public {
+        creditLine.deposit(5 ether);
+        vm.prank(operator);
+        adapter.delegate(5 ether);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(CreditErrors.InsufficientLiquidity.selector, 1 ether, 0)
+        );
+        creditLine.withdraw(1 ether);
+    }
+
+    function test_delegateRequiresAStakingAccount() public {
+        creditLine.deposit(1 ether);
+        vm.prank(operator);
+        adapter.setStakingAccount(address(0));
+
+        vm.prank(operator);
+        vm.expectRevert(CreditErrors.ZeroAddress.selector);
+        adapter.delegate(1 ether);
+    }
+
+    function test_stakingAccountCanBeRepointed() public {
+        address next = makeAddr("nextValidator");
+        vm.prank(operator);
+        adapter.setStakingAccount(next);
+        assertEq(adapter.stakingAccount(), next);
+
+        creditLine.deposit(2 ether);
+        vm.prank(operator);
+        adapter.delegate(2 ether);
+        assertEq(next.balance, 2 ether);
+    }
+
+    /// A partial return must reduce the outstanding principal, not clear it.
+    function test_partialPrincipalReturnLeavesTheRestOutstanding() public {
+        creditLine.deposit(10 ether);
+        vm.prank(operator);
+        adapter.delegate(10 ether);
+
+        vm.deal(operator, 4 ether);
+        vm.prank(operator);
+        adapter.returnPrincipal{value: 4 ether}();
+
+        assertEq(adapter.deployedPrincipal(), 6 ether);
+        assertEq(adapter.accruedRewards(), 0, "a partial return is not a reward");
+        assertEq(adapter.totalAssets(), 10 ether);
+    }
+
+    function test_zeroValueOperationsAreRejected() public {
+        vm.startPrank(operator);
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        adapter.delegate(0);
+
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        adapter.returnPrincipal{value: 0}();
+
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        adapter.reportRewards{value: 0}();
+        vm.stopPrank();
+
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        creditLine.deposit(0);
+
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        creditLine.withdraw(0);
+    }
+
+    /// Whatever the operator does with it, the adapter's own books must always
+    /// add up: idle plus outstanding principal equals everything it was given.
+    function testFuzz_booksAlwaysBalance(uint96 deposited, uint96 delegated, uint96 returned)
+        public
+    {
+        deposited = uint96(bound(deposited, 1, 100 ether));
+        delegated = uint96(bound(delegated, 0, deposited));
+        returned = uint96(bound(returned, 0, delegated));
+
+        vm.deal(address(creditLine), deposited);
+        creditLine.deposit(deposited);
+
+        if (delegated > 0) {
+            vm.prank(operator);
+            adapter.delegate(delegated);
+        }
+        if (returned > 0) {
+            vm.deal(operator, returned);
+            vm.prank(operator);
+            adapter.returnPrincipal{value: returned}();
+        }
+
+        assertEq(adapter.idleBalance() + adapter.deployedPrincipal(), uint256(deposited));
+    }
 }

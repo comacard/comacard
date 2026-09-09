@@ -32,7 +32,7 @@ contract ASCCreditLineTest is Test {
     }
 
     function _fundedAlice(uint256 collateral) internal {
-        line.seed(alice, collateral, 10, 10, uint64(block.timestamp - 730 days));
+        line.seed(alice, collateral, 10, 10, 200);
     }
 
     function test_drawRespectsTheLimit() public {
@@ -59,7 +59,7 @@ contract ASCCreditLineTest is Test {
         assertEq(alice.balance, before + 1 ether);
         assertEq(line.accountOf(alice).drawn, 1 ether);
         assertEq(line.totalDrawn(), 1 ether);
-        assertEq(line.accountOf(alice).borrowCount, 10);
+        assertEq(line.accountOf(alice).cycleCount, 10);
     }
 
     function test_repayClearsDebtAndCountsOnlyWhenSettled() public {
@@ -67,6 +67,9 @@ contract ASCCreditLineTest is Test {
         vm.prank(alice);
         line.draw(1 ether);
         vm.deal(alice, 1 ether);
+
+        // hold the cycle long enough for it to count as a real one
+        vm.warp(block.timestamp + 2 days);
 
         // a partial repayment reduces debt but earns no mark on the record
         vm.prank(alice);
@@ -78,7 +81,7 @@ contract ASCCreditLineTest is Test {
         line.repay{value: 0.6 ether}();
         assertEq(line.accountOf(alice).drawn, 0);
         assertEq(line.accountOf(alice).repayCount, 11);
-        assertEq(line.accountOf(alice).borrowCount, 11);
+        assertEq(line.accountOf(alice).cycleCount, 11);
         assertEq(line.totalDrawn(), 0);
     }
 
@@ -151,30 +154,26 @@ contract ASCCreditLineTest is Test {
     // Collateral applied from proved source-chain events
     // ----------------------------------------------------------------
 
-    function test_provedLockCreditsCollateralAndStartsHistory() public {
+    function test_provedLockCreditsCollateral() public {
         bytes memory encoded =
             TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 3 ether, 0));
 
         line.applyCollateral(bytes32("q1"), encoded, true);
 
         assertEq(line.accountOf(alice).collateral, 3 ether);
-        assertEq(line.accountOf(alice).firstSeenAt, uint64(block.timestamp));
     }
 
-    /// History depth anchors on the first sighting; later locks must not reset
-    /// it, or an account could keep itself permanently young.
-    function test_secondLockDoesNotResetHistoryAnchor() public {
-        bytes memory first =
-            TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 1 ether, 0));
-        line.applyCollateral(bytes32("q1"), first, true);
-        uint64 anchor = line.accountOf(alice).firstSeenAt;
-
-        vm.warp(block.timestamp + 365 days);
-        bytes memory second =
-            TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 1 ether, 1));
-        line.applyCollateral(bytes32("q2"), second, true);
-
-        assertEq(line.accountOf(alice).firstSeenAt, anchor);
+    function test_repeatedLocksAccumulate() public {
+        line.applyCollateral(
+            bytes32("q1"),
+            TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 1 ether, 0)),
+            true
+        );
+        line.applyCollateral(
+            bytes32("q2"),
+            TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 1 ether, 1)),
+            true
+        );
         assertEq(line.accountOf(alice).collateral, 2 ether);
     }
 
@@ -217,11 +216,6 @@ contract ASCCreditLineTest is Test {
     /// Collateral must not be releasable out from under an open debt.
     function test_unlockBlockedWhileDebtWouldBeStranded() public {
         _fundedAlice(2 ether);
-        line.applyCollateral(
-            bytes32("q1"),
-            TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 0, 0)),
-            true
-        );
 
         // resolve the limit before pranking: vm.prank applies to the next call,
         // and an inline availableOf() would consume it instead of draw()

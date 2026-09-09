@@ -6,9 +6,7 @@ import {CreditScoring} from "../../src/libraries/CreditScoring.sol";
 import {CreditAccount} from "../../src/types/CreditTypes.sol";
 
 contract CreditScoringTest is Test {
-    uint256 constant NOW = 1_800_000_000;
-
-    function _account(uint64 firstSeenAt, uint64 borrows, uint64 repays, uint256 collateral)
+    function _account(uint64 nonce, uint64 cycles, uint64 repays, uint256 collateral)
         internal
         pure
         returns (CreditAccount memory)
@@ -16,58 +14,67 @@ contract CreditScoringTest is Test {
         return CreditAccount({
             collateral: collateral,
             drawn: 0,
-            borrowCount: borrows,
+            drawnAt: 0,
+            dueAt: 0,
+            provenNonce: nonce,
+            cycleCount: cycles,
             repayCount: repays,
-            firstSeenAt: firstSeenAt
+            defaultCount: 0
         });
     }
 
-    function test_freshAccountScoresZeroAndPaysTheWorstRatio() public pure {
+    function test_strangerScoresZeroAndPaysTheWorstRatio() public pure {
         CreditAccount memory a = _account(0, 0, 0, 1 ether);
-        assertEq(CreditScoring.score(a, NOW), 0);
+        assertEq(CreditScoring.score(a), 0);
         assertEq(CreditScoring.collateralizationBps(0), 15_000);
-        // 150% collateralisation: two thirds of what was locked
-        assertEq(CreditScoring.limit(a, NOW), uint256(1 ether) * 10_000 / 15_000);
+        assertEq(CreditScoring.limit(a), uint256(1 ether) * 10_000 / 15_000);
     }
 
     function test_spotlessRecordEarnsUndercollateralisation() public pure {
-        CreditAccount memory a = _account(uint64(NOW - 730 days), 10, 10, 1 ether);
-        assertEq(CreditScoring.score(a, NOW), 100);
+        CreditAccount memory a = _account(200, 10, 10, 1 ether);
+        assertEq(CreditScoring.score(a), 100);
         assertEq(CreditScoring.collateralizationBps(100), 8_000);
-        // 80% collateralisation: borrows more than it locked
-        assertGt(CreditScoring.limit(a, NOW), 1 ether);
+        assertGt(CreditScoring.limit(a), 1 ether);
     }
 
-    function test_defaultsDragTheScoreDown() public pure {
-        uint64 seen = uint64(NOW - 365 days);
-        uint256 clean = CreditScoring.score(_account(seen, 4, 4, 1 ether), NOW);
-        uint256 dirty = CreditScoring.score(_account(seen, 4, 1, 1 ether), NOW);
-        assertGt(clean, dirty);
+    /// The whole point of tracking defaults: they must actually cost something.
+    function test_defaultsCostScoreAndBorrowingPower() public pure {
+        CreditAccount memory clean = _account(200, 4, 4, 1 ether);
+        CreditAccount memory defaulted = _account(200, 4, 2, 1 ether);
+
+        assertGt(CreditScoring.score(clean), CreditScoring.score(defaulted));
+        assertLt(CreditScoring.limit(clean), type(uint256).max);
+        assertGt(CreditScoring.limit(clean), CreditScoring.limit(defaulted));
+    }
+
+    /// External history alone must not unlock undercollateralised borrowing —
+    /// a busy wallet that has never repaid anything here is still a stranger.
+    function test_historyAloneCannotReachTheBestRatio() public pure {
+        CreditAccount memory busy = _account(type(uint64).max, 0, 0, 1 ether);
+        assertEq(CreditScoring.score(busy), 40);
+        assertGt(CreditScoring.collateralizationBps(CreditScoring.score(busy)), 10_000);
+        assertLt(CreditScoring.limit(busy), 1 ether);
     }
 
     function test_noCollateralMeansNoCredit() public pure {
-        CreditAccount memory a = _account(uint64(NOW - 730 days), 10, 10, 0);
-        assertEq(CreditScoring.limit(a, NOW), 0);
-        assertEq(CreditScoring.available(a, NOW), 0);
+        CreditAccount memory a = _account(200, 10, 10, 0);
+        assertEq(CreditScoring.limit(a), 0);
+        assertEq(CreditScoring.available(a), 0);
     }
 
     function test_availableNeverUnderflowsWhenOverdrawn() public pure {
         CreditAccount memory a = _account(0, 0, 0, 1 ether);
         a.drawn = 100 ether;
-        assertEq(CreditScoring.available(a, NOW), 0);
+        assertEq(CreditScoring.available(a), 0);
     }
 
-    /// The score is a percentage; nothing may push it outside 0..100.
     function testFuzz_scoreStaysWithinBounds(
-        uint64 age,
-        uint64 borrows,
+        uint64 nonce,
+        uint64 cycles,
         uint64 repays,
         uint128 collateral
     ) public pure {
-        age = uint64(bound(age, 0, 20 * 365 days));
-        CreditAccount memory a = _account(uint64(NOW - age), borrows, repays, collateral);
-        uint256 s = CreditScoring.score(a, NOW);
-        assertLe(s, 100);
+        assertLe(CreditScoring.score(_account(nonce, cycles, repays, collateral)), 100);
     }
 
     /// A better score must never demand more collateral.
@@ -77,5 +84,14 @@ contract CreditScoringTest is Test {
         assertGe(
             CreditScoring.collateralizationBps(lower), CreditScoring.collateralizationBps(higher)
         );
+    }
+
+    /// Repaying can never lower a score; defaulting can never raise one.
+    function testFuzz_repaymentNeverHurts(uint64 nonce, uint64 cycles, uint64 repays) public pure {
+        cycles = uint64(bound(cycles, 1, 1000));
+        repays = uint64(bound(repays, 0, cycles - 1));
+        uint256 before = CreditScoring.score(_account(nonce, cycles, repays, 1 ether));
+        uint256 afterRepay = CreditScoring.score(_account(nonce, cycles, repays + 1, 1 ether));
+        assertGe(afterRepay, before);
     }
 }

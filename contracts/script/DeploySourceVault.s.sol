@@ -11,11 +11,12 @@ import {SourceVault} from "../src/source/SourceVault.sol";
 /// @dev forge script script/DeploySourceVault.s.sol --rpc-url sepolia --broadcast
 contract DeploySourceVault is Script {
     function run() external returns (SourceVault vault) {
-        address governance = vm.envAddress("GOVERNANCE_ADDRESS");
-        address operator = vm.envAddress("OPERATOR_ADDRESS");
+        address deployer = vm.addr(vm.envUint("WALLET_PK"));
+        address governance = vm.envOr("GOVERNANCE_ADDRESS", deployer);
+        address operator = vm.envOr("OPERATOR_ADDRESS", deployer);
         uint48 delay = uint48(vm.envOr("ADMIN_TRANSFER_DELAY", uint256(3 days)));
 
-        vm.startBroadcast(vm.envUint("DEPLOYER_PRIVATE_KEY"));
+        vm.startBroadcast(vm.envUint("WALLET_PK"));
         SourceVault implementation = new SourceVault();
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(implementation),

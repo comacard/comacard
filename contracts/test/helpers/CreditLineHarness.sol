@@ -16,12 +16,20 @@ contract CreditLineHarness is ASCCreditLine {
     }
 
     /// @notice Seed account state directly, standing in for a proved history.
-    function seed(address account, uint256 collateral, uint64 borrows, uint64 repays, uint64 seenAt)
-        external
-    {
+    function seed(
+        address account,
+        uint256 collateral,
+        uint64 cycles,
+        uint64 repays,
+        uint64 provenNonce
+    ) external {
         _accounts[account].collateral = collateral;
-        _accounts[account].borrowCount = borrows;
+        _accounts[account].cycleCount = cycles;
         _accounts[account].repayCount = repays;
-        _accounts[account].firstSeenAt = seenAt;
+        _accounts[account].provenNonce = provenNonce;
+    }
+
+    function importHistory(bytes32 queryId, bytes memory encodedTx) external {
+        _importHistory(queryId, encodedTx);
     }
 }

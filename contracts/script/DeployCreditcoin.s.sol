@@ -20,12 +20,13 @@ contract DeployCreditcoin is Script {
 
     function run() external returns (ASCCreditLine line, CtcStakingAdapter adapter) {
         address sourceVault = vm.envAddress("SOURCE_VAULT_ADDRESS");
-        address governance = vm.envAddress("GOVERNANCE_ADDRESS");
-        address operator = vm.envAddress("OPERATOR_ADDRESS");
-        address stakingAccount = vm.envAddress("STAKING_ACCOUNT_ADDRESS");
+        address deployer = vm.addr(vm.envUint("WALLET_PK"));
+        address governance = vm.envOr("GOVERNANCE_ADDRESS", deployer);
+        address operator = vm.envOr("OPERATOR_ADDRESS", deployer);
+        address stakingAccount = vm.envOr("STAKING_ACCOUNT_ADDRESS", deployer);
         uint48 delay = uint48(vm.envOr("ADMIN_TRANSFER_DELAY", uint256(3 days)));
 
-        vm.startBroadcast(vm.envUint("DEPLOYER_PRIVATE_KEY"));
+        vm.startBroadcast(vm.envUint("WALLET_PK"));
 
         ASCCreditLine lineImpl = new ASCCreditLine();
         ERC1967Proxy lineProxy = new ERC1967Proxy(

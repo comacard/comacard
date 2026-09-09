@@ -53,6 +53,30 @@ library TxFixtures {
         return abi.encode(uint8(2), chunks);
     }
 
+    /// @notice A full EIP-1559 transaction, carrying the signed chain id that
+    ///         `HistoryProof` uses to pin a claim to Ethereum mainnet.
+    function historyTx(address from, uint64 nonce, uint64 chainId)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        bytes[] memory chunks = new bytes[](3);
+        chunks[0] =
+            abi.encode(nonce, uint64(21000), from, false, address(0xdead), uint256(0), bytes(""));
+        chunks[1] = abi.encode(
+            chainId,
+            uint128(1 gwei),
+            uint128(2 gwei),
+            new EvmV1Decoder.AccessListEntryBytes32[](0),
+            uint8(0),
+            bytes32(0),
+            bytes32(0)
+        );
+        chunks[2] =
+            abi.encode(uint8(1), uint64(21000), new EvmV1Decoder.LogEntryTuple[](0), bytes(""));
+        return abi.encode(uint8(2), chunks);
+    }
+
     function single(EvmV1Decoder.LogEntryTuple memory log) internal pure returns (bytes memory) {
         EvmV1Decoder.LogEntryTuple[] memory logs = new EvmV1Decoder.LogEntryTuple[](1);
         logs[0] = log;

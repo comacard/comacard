@@ -8,7 +8,7 @@ import {CreditAccount} from "../types/CreditTypes.sol";
 interface ICreditLine {
     event CollateralCredited(address indexed account, uint256 amount, bytes32 queryId);
     event CollateralReleased(address indexed account, uint256 amount, bytes32 queryId);
-    event Drawn(address indexed account, uint256 amount, uint256 outstanding);
+    event Drawn(address indexed account, uint256 amount, uint256 outstanding, uint64 dueAt);
     event Repaid(address indexed account, uint256 amount, uint256 outstanding);
 
     /// @notice Borrow against the line, up to the available limit.
@@ -22,6 +22,9 @@ interface ICreditLine {
 
     /// @notice Credit still drawable after what is already outstanding.
     function availableOf(address account) external view returns (uint256);
+
+    /// @notice Close an overdue position as a default. Permissionless.
+    function markDefaulted(address borrower) external;
 
     /// @notice Credit score from 0 to 100.
     function scoreOf(address account) external view returns (uint256);
