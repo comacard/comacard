@@ -28,6 +28,13 @@ come off these contracts, not out of a mock.
 | ASCCreditLine | [`0x18052272…E906`](https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906) |
 | CtcStakingAdapter | [`0xA94218Db…7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
 
+**Indexer** — both chains in one GraphQL API, hosted on Envio Cloud
+
+    https://indexer.dev.hyperindex.xyz/8373da2/v1/graphql
+
+Sepolia syncs through HyperSync; Creditcoin CC3 is not on the supported list so
+it reads over plain RPC, which the same indexer handles without noticing.
+
 Both Creditcoin contracts sit behind UUPS proxies; the Sepolia vault does too.
 All three are compiled for the London EVM, because CC3 reports `baseFeePerGas`
 but no `mixHash` — building for a later target emits opcodes the chain cannot

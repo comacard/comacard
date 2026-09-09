@@ -8,6 +8,14 @@ down in seconds. Creditcoin CC3 is not, so it reads over plain RPC — which is
 fine here, because the chain produces a block every 15 seconds and these
 contracts are days old.
 
+## Live
+
+    https://indexer.dev.hyperindex.xyz/8373da2/v1/graphql
+
+```graphql
+{ Account { id collateral drawn score creditLimit available } }
+```
+
 ## What it does not do
 
 It never recomputes a credit score. The contract emits `ScoreChanged` with the
