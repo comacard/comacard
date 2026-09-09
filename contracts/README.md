@@ -9,8 +9,6 @@ credit line reads them, sizes a limit, and lends against it. Repay on time and
 the limit grows; let a debt lapse and anyone can close it as a default, which
 costs the borrower that limit.
 
-Three contracts across two chains, built with Foundry alone.
-
 ## Deployed
 
 | Contract | Chain | Address |
