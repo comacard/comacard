@@ -8,6 +8,7 @@ function required(name: string): string {
 
 export const config = {
   sepoliaRpc: process.env.SEPOLIA_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com",
+  mainnetRpc: process.env.MAINNET_RPC_URL ?? "https://ethereum-rpc.publicnode.com",
   creditcoinRpc: process.env.CREDITCOIN_RPC_URL ?? "https://rpc.cc3-testnet.creditcoin.network",
   proofBuilderUrl:
     process.env.PROOF_BUILDER_URL ?? "https://proof-gen-api.cc3-testnet.creditcoin.network",
@@ -25,6 +26,7 @@ export const config = {
 } as const;
 
 export const sepolia = () => new JsonRpcProvider(config.sepoliaRpc);
+export const mainnet = () => new JsonRpcProvider(config.mainnetRpc);
 export const creditcoin = () => new JsonRpcProvider(config.creditcoinRpc);
 
 export function signer(): Wallet {

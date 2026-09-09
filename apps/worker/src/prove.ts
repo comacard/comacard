@@ -1,5 +1,5 @@
 import { ASC_ACTION } from "@comacard/attestcoin";
-import { creditcoin, sepolia, signer } from "./config.js";
+import { creditcoin, mainnet, sepolia, signer } from "./config.js";
 import { Prover } from "./prover.js";
 
 /**
@@ -25,11 +25,19 @@ async function main(): Promise<void> {
     throw new Error(`unknown action ${actionName}; expected one of ${Object.keys(ACTIONS)}`);
   }
 
-  // History comes from Ethereum mainnet; collateral from Sepolia.
-  const chainKey = action === ASC_ACTION.historyImported ? 3 : 1;
-  const source = sepolia();
+  // History comes from Ethereum mainnet; collateral from the Sepolia vault.
+  // The receipt has to be read from whichever chain the transaction is on —
+  // looking on the wrong one just reports "not found".
+  const isHistory = action === ASC_ACTION.historyImported;
+  const chainKey = isHistory ? 3 : 1;
+  const source = isHistory ? mainnet() : sepolia();
+
   const receipt = await source.getTransactionReceipt(txHash);
-  if (!receipt) throw new Error(`transaction ${txHash} not found on the source chain`);
+  if (!receipt) {
+    throw new Error(
+      `transaction ${txHash} not found on ${isHistory ? "Ethereum mainnet" : "Sepolia"}`,
+    );
+  }
 
   const prover = new Prover(creditcoin(), signer());
   console.log(`waiting for block ${receipt.blockNumber} to be attested…`);
