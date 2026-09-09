@@ -1,5 +1,12 @@
 {
-  "extends": "@comacard/tsconfig/base.json",
-  "compilerOptions": { "noEmit": true },
-  "include": ["src/**/*"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*", "envio-env.d.ts"]
 }
