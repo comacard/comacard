@@ -1,6 +1,15 @@
 # Contracts
 
-Pure Foundry — no Node toolchain, no `package.json`.
+The onchain half of Comacard: a revolving credit line whose limit comes from a
+borrower's proven track record rather than from the balance in their wallet.
+
+Collateral is locked on Ethereum and never moves. Attestcoin proves those
+locks — and the borrower's history on mainnet — across to Creditcoin, where the
+credit line reads them, sizes a limit, and lends against it. Repay on time and
+the limit grows; let a debt lapse and anyone can close it as a default, which
+costs the borrower that limit.
+
+Three contracts across two chains, built with Foundry alone.
 
 ## Deployed
 
