@@ -1,0 +1,1 @@
+{ "extends": "@comacard/tsconfig/library.json", "include": ["src/**/*"] }

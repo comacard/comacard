@@ -1,0 +1,20 @@
+{
+  "name": "@comacard/indexer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Oracle query worker: source-chain events to Creditcoin proofs",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --target=bun --outdir=dist",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "@comacard/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@comacard/attestcoin": "workspace:*"
+  }
+}

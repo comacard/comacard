@@ -1,0 +1,23 @@
+{
+  "name": "@comacard/attestcoin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@gluwa/asc-contracts": "^0.2.1",
+    "@gluwa/usc-sdk": "^0.18.0",
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "@comacard/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

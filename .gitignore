@@ -1,0 +1,40 @@
+# deps
+node_modules/
+.pnp.*
+
+# build
+dist/
+out/
+build/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# coverage
+coverage/
+lcov.info

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "globalDependencies": [".env"],
+  "globalEnv": [
+    "NODE_ENV",
+    "SEPOLIA_RPC_URL",
+    "MAINNET_RPC_URL",
+    "CREDITCOIN_RPC_URL",
+    "PROOF_BUILDER_URL"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "out/**"]
+    },
+    "dev": { "cache": false, "persistent": true },
+    "test": { "dependsOn": ["^build"] },
+    "typecheck": { "dependsOn": ["^build"] },
+    "clean": { "cache": false }
+  }
+}
