@@ -7,6 +7,7 @@ import {
   type IndexedAccount,
   indexer,
   isAddress,
+  kycStart,
   kycStatus,
   stakingAdapterState,
 } from "./sources";
@@ -63,6 +64,16 @@ const server = Bun.serve({
           : null,
         card: { ...card, spendableCtc: formatCtc(BigInt(card.spendable)) },
       });
+    },
+
+    "/account/:wallet/kyc": {
+      // Kicks off verification. Status comes back through /account/:wallet
+      // once Didit's webhook reaches the KYC service.
+      POST: async (req) => {
+        const wallet = req.params.wallet.toLowerCase();
+        if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
+        return Response.json(await kycStart(wallet));
+      },
     },
 
     "/account/:wallet/activity": async (req) => {

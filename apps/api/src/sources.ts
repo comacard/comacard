@@ -86,6 +86,17 @@ export async function stakingAdapterState() {
 
 export type KycStatus = { status: string; verified: boolean; sessionId: string | null };
 
+/** Starts (or resumes) a Didit session; the app opens the returned URL. */
+export async function kycStart(wallet: string): Promise<{ sessionId: string; url: string }> {
+  const res = await fetch(`${env.kycUrl}/kyc/session`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ wallet }),
+  });
+  if (!res.ok) throw new Error(`kyc ${res.status}`);
+  return (await res.json()) as { sessionId: string; url: string };
+}
+
 export async function kycStatus(wallet: string): Promise<KycStatus> {
   const res = await fetch(`${env.kycUrl}/kyc/status/${wallet}`);
   if (!res.ok) throw new Error(`kyc ${res.status}`);
