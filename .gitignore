@@ -1,41 +1,59 @@
-# deps
+# ---------- dependencies ----------
 node_modules/
 .pnp.*
+# contracts/ is pure Foundry: lib/ is restored by `forge install`,
+# vendor/ is committed on purpose (see contracts/vendor/attestcoin/README.md)
+contracts/lib/
+contracts/node_modules/
 
-# build
+# ---------- build output ----------
 dist/
 out/
 build/
 .next/
 .turbo/
 *.tsbuildinfo
-
-# foundry — lib/ is restored by `forge install`, vendor/ is committed on purpose
 contracts/out/
 contracts/cache/
 contracts/broadcast/
-contracts/lib/
-contracts/node_modules/
+!contracts/broadcast/**/dry-run/
 
-# env & secrets
+# ---------- coverage ----------
+coverage/
+lcov.info
+*.lcov
+
+# ---------- secrets & environment ----------
+# never commit a real key: deploys here sign with DEPLOYER_PRIVATE_KEY
 .env
 .env.*
 !.env.example
 *.pem
 *.key
+*.keystore
+secrets.json
 
-# logs
+# ---------- logs ----------
 *.log
 npm-debug.log*
+yarn-debug.log*
 bun-debug.log*
+lerna-debug.log*
 
-# os / editor
+# ---------- editors & os ----------
 .DS_Store
+.AppleDouble
+.LSOverride
 Thumbs.db
+desktop.ini
 .idea/
+*.swp
+*.swo
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 
-# coverage
-coverage/
-lcov.info
+# ---------- misc ----------
+.cache/
+tmp/
+*.tgz
