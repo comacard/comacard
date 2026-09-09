@@ -3,18 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "HTTP API: scoring, QRIS, proof orchestration",
+  "description": "HTTP API for the card app: indexer + KYC + chain, composed per wallet",
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "build": "bun build src/index.ts --target=bun --outdir=dist",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"
   },
   "devDependencies": {
     "@comacard/tsconfig": "workspace:*",
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@comacard/core": "workspace:*"
   }
 }

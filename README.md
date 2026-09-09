@@ -78,7 +78,7 @@ not simulated.
 
 ```
 apps/
-  api/        HTTP API — credit scoring
+  api/        HTTP API — composes indexer, KYC and chain per wallet
   kyc/        KYC service — Didit sessions and webhook intake
   app/        Cardholder PWA
   web/        Cardholder dashboard

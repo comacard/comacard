@@ -15,9 +15,6 @@
     "apps/api": {
       "name": "@comacard/api",
       "version": "0.0.0",
-      "dependencies": {
-        "@comacard/core": "workspace:*",
-      },
       "devDependencies": {
         "@comacard/tsconfig": "workspace:*",
         "typescript": "^5.9.3",

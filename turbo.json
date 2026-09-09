@@ -12,7 +12,11 @@
     "DIDIT_WORKFLOW_ID",
     "DIDIT_WEBHOOK_SECRET",
     "KYC_CALLBACK_URL",
-    "KYC_DB_PATH"
+    "KYC_DB_PATH",
+    "INDEXER_URL",
+    "KYC_URL",
+    "ASC_CREDIT_LINE_ADDRESS",
+    "STAKING_ADAPTER_ADDRESS"
   ],
   "tasks": {
     "build": {
