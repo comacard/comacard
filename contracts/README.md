@@ -2,6 +2,22 @@
 
 Pure Foundry — no Node toolchain, no `package.json`.
 
+## Deployed
+
+| Contract | Chain | Address |
+| --- | --- | --- |
+| `SourceVault` | Ethereum Sepolia | [`0x911290c37E9558C704870f4C44CBdEA1B2B33303`](https://sepolia.etherscan.io/address/0x911290c37E9558C704870f4C44CBdEA1B2B33303) |
+| `ASCCreditLine` | Creditcoin CC3 (`102031`) | [`0x18052272cC69113DE2b45d2BDB4E1fB287F4E906`](https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906) |
+| `CtcStakingAdapter` | Creditcoin CC3 (`102031`) | [`0xA94218Dbdb142A10e32eF7b494105D27F47f7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
+
+All three are UUPS proxies. Sepolia is verified on Etherscan; the implementation
+behind the vault is [`0x6981E1453c80D0E774145f20876D9F57ADfD2bbC`](https://sepolia.etherscan.io/address/0x6981E1453c80D0E774145f20876D9F57ADfD2bbC).
+
+Exercised end to end on-chain: the pool was funded, liquidity deployed into the
+adapter and delegated toward staking, and every guardrail — drawing without
+collateral, defaulting a non-borrower, and each privileged call from an
+unauthorised address — was confirmed to revert on the live contracts.
+
 ## Layout
 
 ```
