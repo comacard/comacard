@@ -1,0 +1,23 @@
+{
+  "name": "@comacard/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Oracle query worker: proves source-chain events to Creditcoin",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "prove": "bun src/prove.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@comacard/attestcoin": "workspace:*",
+    "@gluwa/usc-sdk": "^0.18.0",
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "@comacard/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

@@ -57,6 +57,19 @@
         "typescript": "^5.9.3",
       },
     },
+    "apps/worker": {
+      "name": "@comacard/worker",
+      "version": "0.0.0",
+      "dependencies": {
+        "@comacard/attestcoin": "workspace:*",
+        "@gluwa/usc-sdk": "^0.18.0",
+        "ethers": "^6.15.0",
+      },
+      "devDependencies": {
+        "@comacard/tsconfig": "workspace:*",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/attestcoin": {
       "name": "@comacard/attestcoin",
       "version": "0.0.0",
@@ -121,6 +134,8 @@
     "@comacard/tsconfig": ["@comacard/tsconfig@workspace:packages/tsconfig"],
 
     "@comacard/web": ["@comacard/web@workspace:apps/web"],
+
+    "@comacard/worker": ["@comacard/worker@workspace:apps/worker"],
 
     "@elastic/ecs-helpers": ["@elastic/ecs-helpers@1.1.0", "", { "dependencies": { "fast-json-stringify": "^2.4.1" } }, "sha512-MDLb2aFeGjg46O5mLpdCzT5yOUDnXToJSrco2ShqGIXxNJaM8uJjX+4nd+hRYV4Vex8YJyDtOFEVBldQct6ndg=="],
 
