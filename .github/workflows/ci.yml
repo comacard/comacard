@@ -28,13 +28,11 @@ jobs:
       - name: Lint and format check
         run: bun run lint
 
-      # The contracts workspace is driven by forge, which this job has no need
-      # to install — the contracts job below owns it.
       - name: Typecheck
-        run: bunx turbo run typecheck --filter='!@comacard/contracts'
+        run: bun run typecheck
 
       - name: Test
-        run: bunx turbo run test --filter='!@comacard/contracts'
+        run: bun run test
 
   contracts:
     name: Contracts
@@ -44,18 +42,15 @@ jobs:
         working-directory: contracts
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
       - uses: foundry-rs/foundry-toolchain@v1
 
-      # Solidity dependencies resolve through node_modules via foundry remappings
+      # Pure Foundry: Solidity dependencies come from forge, and the Attestcoin
+      # contracts are vendored because Gluwa publishes them to npm only.
       - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: .
-
-      - name: Install forge-std
-        run: forge install foundry-rs/forge-std --no-git
+        run: |
+          forge install foundry-rs/forge-std --no-git
+          forge install OpenZeppelin/openzeppelin-contracts@v5.4.0 --no-git
+          forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.4.0 --no-git
 
       - name: Format check
         run: forge fmt --check
@@ -65,3 +60,6 @@ jobs:
 
       - name: Test
         run: forge test -vvv
+
+      - name: Coverage
+        run: forge coverage --no-match-coverage 'script|test|vendor' --report summary

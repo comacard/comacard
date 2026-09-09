@@ -10,6 +10,29 @@ Built on [Creditcoin](https://creditcoin.org) with the
 
 ---
 
+## Live on testnet
+
+Everything below is deployed, verified, and working — the numbers in the demo
+come off these contracts, not out of a mock.
+
+**Ethereum Sepolia** — where collateral is locked and stays
+
+| | |
+| --- | --- |
+| SourceVault | [`0x911290c3…3303`](https://sepolia.etherscan.io/address/0x911290c37E9558C704870f4C44CBdEA1B2B33303) |
+
+**Creditcoin CC3 testnet** (chain `102031`) — where credit lives
+
+| | |
+| --- | --- |
+| ASCCreditLine | [`0x18052272…E906`](https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906) |
+| CtcStakingAdapter | [`0xA94218Db…7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
+
+Both Creditcoin contracts sit behind UUPS proxies; the Sepolia vault does too.
+All three are compiled for the London EVM, because CC3 reports `baseFeePerGas`
+but no `mixHash` — building for a later target emits opcodes the chain cannot
+run, and it only shows up once you are already on-chain.
+
 ## How it works
 
 ```

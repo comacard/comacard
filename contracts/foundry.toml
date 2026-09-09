@@ -2,20 +2,33 @@
 src = "src"
 test = "test"
 out = "out"
-libs = ["lib", "node_modules", "../node_modules"]
+libs = ["lib"]
 solc_version = "0.8.28"
+# Creditcoin CC3 is a London-era EVM: it reports baseFeePerGas but no mixHash,
+# withdrawals or blob fields. Building for a later target would emit opcodes
+# (MCOPY, TSTORE) the chain cannot execute, and the failure would only show up
+# at runtime. Sepolia accepts London bytecode too, so one target serves both.
+evm_version = "london"
 optimizer = true
 optimizer_runs = 200
 via_ir = true
-remappings = [
-  "@openzeppelin/=node_modules/@openzeppelin/",
-  "@gluwa/=node_modules/@gluwa/",
-]
+# remappings live in remappings.txt so editors and tooling pick them up too
 
 [rpc_endpoints]
-sepolia = "${SEPOLIA_RPC_URL}"
-creditcoin = "${CREDITCOIN_RPC_URL}"
+# Public endpoints by default so a checkout deploys without extra setup; set the
+# env vars to point at a private node.
+sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
+creditcoin = "https://rpc.cc3-testnet.creditcoin.network"
 
 [fmt]
 line_length = 100
 tab_width = 4
+
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
+
+[profile.default.fuzz]
+runs = 512
+
+[profile.ci.fuzz]
+runs = 2048

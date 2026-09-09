@@ -1,0 +1,58 @@
+# Comacard indexer.
+#
+# Two chains, two very different sync paths. Sepolia is on Envio's HyperSync so
+# it syncs in seconds. Creditcoin CC3 is not, so it reads over plain RPC — which
+# is fine here: the chain produces a block every 15 seconds and these contracts
+# were deployed days ago, so there is almost nothing to catch up on.
+name: comacard
+description: Credit lines sized by proved onchain history
+
+# Only what the handlers actually read. Every extra field is data pulled over
+# the wire for every event, which matters most on the RPC chain.
+field_selection:
+  transaction_fields:
+    - hash
+
+chains:
+  # ---- Ethereum Sepolia: where collateral is locked and stays ----
+  - id: 11155111
+    start_block: 11668664
+    contracts:
+      - name: SourceVault
+        address:
+          - 0x911290c37E9558C704870f4C44CBdEA1B2B33303
+        handler: src/handlers/SourceVault.ts
+        events:
+          - event: CollateralLocked(address indexed account, uint256 amount, uint256 nonce)
+          - event: CollateralUnlocked(address indexed account, uint256 amount, uint256 nonce)
+          - event: ReleaseApproved(address indexed account, uint256 amount)
+
+  # ---- Creditcoin CC3 testnet: where credit lives ----
+  - id: 102031
+    start_block: 5458366
+    rpc:
+      - url: https://rpc.cc3-testnet.creditcoin.network
+        for: sync
+    contracts:
+      - name: ASCCreditLine
+        address:
+          - 0x18052272cC69113DE2b45d2BDB4E1fB287F4E906
+        handler: src/handlers/CreditLine.ts
+        events:
+          - event: ScoreChanged(address indexed account, uint256 score, uint256 limit, uint256 available)
+          - event: CollateralCredited(address indexed account, uint256 amount, bytes32 indexed queryId)
+          - event: CollateralReleased(address indexed account, uint256 amount, bytes32 indexed queryId)
+          - event: HistoryImported(address indexed account, uint64 provenNonce, bytes32 indexed queryId)
+          - event: Drawn(address indexed account, uint256 amount, uint256 outstanding, uint64 dueAt)
+          - event: Repaid(address indexed account, uint256 amount, uint256 outstanding)
+          - event: Defaulted(address indexed account, uint256 writtenOff, uint256 collateralSeized)
+          - event: ReleaseHeld(address indexed account, uint256 amount, uint256 pending)
+
+      - name: CtcStakingAdapter
+        address:
+          - 0xA94218Dbdb142A10e32eF7b494105D27F47f7045
+        handler: src/handlers/StakingAdapter.ts
+        events:
+          - event: Delegated(address indexed stakingAccount, uint256 amount)
+          - event: PrincipalReturned(uint256 amount)
+          - event: RewardsReported(uint256 amount)

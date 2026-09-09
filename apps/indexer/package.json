@@ -3,18 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Oracle query worker: source-chain events to Creditcoin proofs",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "build": "bun build src/index.ts --target=bun --outdir=dist",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist .turbo"
-  },
-  "devDependencies": {
-    "@comacard/tsconfig": "workspace:*",
-    "typescript": "^5.9.3"
+    "codegen": "envio codegen",
+    "dev": "envio dev",
+    "start": "envio start",
+    "test": "envio codegen && bun test",
+    "clean": "rm -rf .envio envio-env.d.ts .turbo",
+    "typecheck": "envio codegen && tsc --noEmit",
+    "test:live": "envio codegen && INDEXER_LIVE_TEST=1 bun test"
   },
   "dependencies": {
-    "@comacard/attestcoin": "workspace:*"
+    "envio": "3.10.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

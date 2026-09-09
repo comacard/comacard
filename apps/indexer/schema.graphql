@@ -1,0 +1,113 @@
+"""
+A borrower, as the chain sees them.
+
+The derived fields — score, limit, available — are taken straight from the
+contract's ScoreChanged event rather than recomputed here. The scoring maths
+lives in CreditScoring.sol and stays there; duplicating it in TypeScript is how
+an indexer quietly starts disagreeing with the chain it indexes.
+"""
+type Account {
+  id: ID! # borrower address
+  collateral: BigInt!
+  drawn: BigInt!
+  pendingRelease: BigInt!
+  provenNonce: BigInt!
+
+  score: BigInt!
+  creditLimit: BigInt!
+  available: BigInt!
+
+  cycleCount: Int!
+  repayCount: Int!
+  defaultCount: Int!
+
+  totalDrawn: BigInt!
+  totalRepaid: BigInt!
+  totalWrittenOff: BigInt!
+
+  dueAt: BigInt!
+  firstSeenAt: BigInt!
+  lastActiveAt: BigInt!
+
+  locks: [CollateralLock!]! @derivedFrom(field: "account")
+  draws: [Draw!]! @derivedFrom(field: "account")
+  repayments: [Repayment!]! @derivedFrom(field: "account")
+  defaults: [Default!]! @derivedFrom(field: "account")
+}
+
+"A collateral lock or unlock observed on the source chain."
+type CollateralLock {
+  id: ID!
+  account: Account!
+  amount: BigInt!
+  nonce: BigInt!
+  released: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: String!
+}
+
+type Draw {
+  id: ID!
+  account: Account!
+  amount: BigInt!
+  outstandingAfter: BigInt!
+  dueAt: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: String!
+}
+
+type Repayment {
+  id: ID!
+  account: Account!
+  amount: BigInt!
+  outstandingAfter: BigInt!
+  settled: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: String!
+}
+
+type Default {
+  id: ID!
+  account: Account!
+  writtenOff: BigInt!
+  collateralSeized: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: String!
+}
+
+"An Attestcoin proof landing on Creditcoin, and what it carried."
+type Attestation {
+  id: ID! # queryId
+  account: String!
+  kind: String! # collateral_credited | collateral_released | history_imported
+  amount: BigInt!
+  provenNonce: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: String!
+}
+
+"Where idle liquidity sits and what it has earned."
+type YieldPosition {
+  id: ID! # adapter address
+  deployedPrincipal: BigInt!
+  accruedRewards: BigInt!
+  totalDelegated: BigInt!
+  totalReturned: BigInt!
+  lastUpdatedAt: BigInt!
+}
+
+type Protocol {
+  id: ID!
+  accounts: Int!
+  totalCollateral: BigInt!
+  outstanding: BigInt!
+  lifetimeDrawn: BigInt!
+  lifetimeRepaid: BigInt!
+  lifetimeDefaulted: BigInt!
+  defaultCount: Int!
+}
