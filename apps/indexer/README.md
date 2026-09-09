@@ -10,7 +10,10 @@ contracts are days old.
 
 ## Live
 
-    https://indexer.dev.hyperindex.xyz/8373da2/v1/graphql
+    https://indexer.dev.hyperindex.xyz/5d01570/v1/graphql
+
+Each deployment gets its own URL on the Development plan, and old ones keep
+serving, so this changes whenever `main` moves. Consumers read `INDEXER_URL`.
 
 ```graphql
 { Account { id collateral drawn score creditLimit available } }

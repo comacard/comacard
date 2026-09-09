@@ -30,10 +30,14 @@ come off these contracts, not out of a mock.
 
 **Indexer** — both chains in one GraphQL API, hosted on Envio Cloud
 
-    https://indexer.dev.hyperindex.xyz/8373da2/v1/graphql
+    https://indexer.dev.hyperindex.xyz/5d01570/v1/graphql
 
 Sepolia syncs through HyperSync; Creditcoin CC3 is not on the supported list so
 it reads over plain RPC, which the same indexer handles without noticing.
+
+On the Development plan each deployment gets its own URL and older ones keep
+running, so this address changes whenever `main` moves. Anything that consumes
+it reads `INDEXER_URL` rather than hardcoding it.
 
 Both Creditcoin contracts sit behind UUPS proxies; the Sepolia vault does too.
 All three are compiled for the London EVM, because CC3 reports `baseFeePerGas`
