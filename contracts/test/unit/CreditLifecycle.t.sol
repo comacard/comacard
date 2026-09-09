@@ -2,9 +2,11 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {CreditScoring} from "../../src/libraries/CreditScoring.sol";
 import {CreditErrors} from "../../src/types/CreditTypes.sol";
+import {VaultEvents} from "../../src/libraries/VaultEvents.sol";
 import {CreditLineHarness} from "../helpers/CreditLineHarness.sol";
 import {Deployers} from "../helpers/Deployers.sol";
 import {TxFixtures} from "../helpers/TxFixtures.sol";
@@ -46,7 +48,7 @@ contract CreditLifecycleTest is Test {
         line.seed(alice, 1 ether, 0, 0, 0);
         uint256 before = line.limitOf(alice);
 
-        line.importHistory(bytes32("h1"), TxFixtures.historyTx(alice, 200, MAINNET));
+        line.importHistory(keccak256("h1"), TxFixtures.historyTx(alice, 200, MAINNET));
 
         assertEq(line.accountOf(alice).provenNonce, 200);
         assertGt(line.limitOf(alice), before);
@@ -57,26 +59,26 @@ contract CreditLifecycleTest is Test {
     /// passed off as mainnet history.
     function test_testnetHistoryIsRejected() public {
         vm.expectRevert(abi.encodeWithSelector(CreditErrors.WrongChain.selector, MAINNET, SEPOLIA));
-        line.importHistory(bytes32("h1"), TxFixtures.historyTx(alice, 5000, SEPOLIA));
+        line.importHistory(keccak256("h1"), TxFixtures.historyTx(alice, 5000, SEPOLIA));
     }
 
     /// A proof credits its own signer, so nobody can import someone else's past.
     function test_historyIsCreditedToTheSigner() public {
         address bob = makeAddr("bob");
-        line.importHistory(bytes32("h1"), TxFixtures.historyTx(bob, 150, MAINNET));
+        line.importHistory(keccak256("h1"), TxFixtures.historyTx(bob, 150, MAINNET));
 
         assertEq(line.accountOf(bob).provenNonce, 150);
         assertEq(line.accountOf(alice).provenNonce, 0);
     }
 
     function test_replayingOlderHistoryIsRejected() public {
-        line.importHistory(bytes32("h1"), TxFixtures.historyTx(alice, 100, MAINNET));
+        line.importHistory(keccak256("h1"), TxFixtures.historyTx(alice, 100, MAINNET));
 
         vm.expectRevert(abi.encodeWithSelector(CreditErrors.StaleHistory.selector, 100, 40));
-        line.importHistory(bytes32("h2"), TxFixtures.historyTx(alice, 40, MAINNET));
+        line.importHistory(keccak256("h2"), TxFixtures.historyTx(alice, 40, MAINNET));
 
         vm.expectRevert(abi.encodeWithSelector(CreditErrors.StaleHistory.selector, 100, 100));
-        line.importHistory(bytes32("h3"), TxFixtures.historyTx(alice, 100, MAINNET));
+        line.importHistory(keccak256("h3"), TxFixtures.historyTx(alice, 100, MAINNET));
     }
 
     // ---------------- defaults ----------------
@@ -290,5 +292,127 @@ contract CreditLifecycleTest is Test {
             abi.encodeWithSelector(CreditErrors.DurationOutOfRange.selector, uint64(60 days))
         );
         line.setMinCycleDuration(60 days);
+    }
+
+    // ---------------- collateral release ----------------
+
+    /// Releasing collateral takes three steps across two chains, and until the
+    /// unlock proof lands Creditcoin still counts collateral the borrower has
+    /// already withdrawn. The hold makes the credit vanish before the money does.
+    function test_holdRemovesCreditBeforeTheCollateralLeaves() public {
+        line.seed(alice, 2 ether, 10, 10, 200);
+        uint256 before = line.availableOf(alice);
+
+        vm.prank(operator);
+        line.placeReleaseHold(alice, 1 ether);
+
+        assertLt(line.availableOf(alice), before, "credit must shrink immediately");
+        assertEq(line.accountOf(alice).collateral, 1 ether);
+        assertEq(line.accountOf(alice).pendingRelease, 1 ether);
+    }
+
+    /// The arriving proof must consume the hold, not debit a second time.
+    function test_unlockProofConsumesTheHoldInsteadOfDoubleDebiting() public {
+        line.seed(alice, 2 ether, 10, 10, 200);
+        vm.prank(operator);
+        line.placeReleaseHold(alice, 1 ether);
+
+        line.applyCollateral(
+            keccak256("u1"),
+            TxFixtures.single(
+                TxFixtures.logWithSignature(
+                    vaultOnSource, VaultEvents.COLLATERAL_UNLOCKED_SIG, alice, 1 ether
+                )
+            ),
+            false
+        );
+
+        assertEq(line.accountOf(alice).collateral, 1 ether, "must not debit twice");
+        assertEq(line.accountOf(alice).pendingRelease, 0);
+    }
+
+    function test_holdCannotStrandOutstandingDebt() public {
+        _drawn(2 ether);
+        vm.prank(operator);
+        vm.expectRevert();
+        line.placeReleaseHold(alice, 2 ether);
+    }
+
+    function test_holdCannotExceedCollateral() public {
+        line.seed(alice, 1 ether, 0, 0, 0);
+        vm.prank(operator);
+        vm.expectRevert(CreditErrors.InsufficientCollateral.selector);
+        line.placeReleaseHold(alice, 2 ether);
+    }
+
+    // ---------------- liquidity recovery ----------------
+
+    /// Draws only ever pay out against a limit, so without this everything sent
+    /// to fund() would be stranded in the contract forever.
+    function test_governanceCanRecoverIdleLiquidity() public {
+        address treasury = makeAddr("treasury");
+        uint256 pool = address(line).balance;
+        assertGt(pool, 0);
+
+        vm.prank(governance);
+        line.withdrawLiquidity(treasury, 10 ether);
+
+        assertEq(treasury.balance, 10 ether);
+        assertEq(address(line).balance, pool - 10 ether);
+    }
+
+    function test_liquidityRecoveryIsGovernanceOnlyAndBounded() public {
+        vm.prank(operator);
+        vm.expectRevert();
+        line.withdrawLiquidity(operator, 1 ether);
+
+        vm.prank(governance);
+        vm.expectRevert(CreditErrors.ZeroAddress.selector);
+        line.withdrawLiquidity(address(0), 1 ether);
+
+        uint256 tooMuch = address(line).balance + 1;
+        vm.prank(governance);
+        vm.expectRevert();
+        line.withdrawLiquidity(makeAddr("t"), tooMuch);
+    }
+
+    // ---------------- indexability ----------------
+
+    /// Consumers should never have to reimplement the scoring maths, so every
+    /// mutation publishes the derived view alongside the raw change.
+    function test_everyMutationPublishesTheDerivedScore() public {
+        line.seed(alice, 1 ether, 0, 0, 0);
+
+        vm.recordLogs();
+        line.importHistory(keccak256("h1"), TxFixtures.historyTx(alice, 200, MAINNET));
+        _assertScorePublished(line.scoreOf(alice), line.limitOf(alice));
+
+        uint256 amount = line.availableOf(alice);
+        vm.recordLogs();
+        vm.prank(alice);
+        line.draw(amount);
+        _assertScorePublished(line.scoreOf(alice), line.limitOf(alice));
+
+        vm.warp(block.timestamp + 2 days);
+        vm.deal(alice, amount);
+        vm.recordLogs();
+        vm.prank(alice);
+        line.repay{value: amount}();
+        _assertScorePublished(line.scoreOf(alice), line.limitOf(alice));
+    }
+
+    function _assertScorePublished(uint256 expectedScore, uint256 expectedLimit) internal {
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 sig = keccak256("ScoreChanged(address,uint256,uint256,uint256)");
+        for (uint256 i = 0; i < logs.length; ++i) {
+            if (logs[i].topics[0] == sig) {
+                (uint256 score, uint256 limit,) =
+                    abi.decode(logs[i].data, (uint256, uint256, uint256));
+                assertEq(score, expectedScore);
+                assertEq(limit, expectedLimit);
+                return;
+            }
+        }
+        fail("no ScoreChanged emitted");
     }
 }

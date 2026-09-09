@@ -158,19 +158,19 @@ contract ASCCreditLineTest is Test {
         bytes memory encoded =
             TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 3 ether, 0));
 
-        line.applyCollateral(bytes32("q1"), encoded, true);
+        line.applyCollateral(keccak256("q1"), encoded, true);
 
         assertEq(line.accountOf(alice).collateral, 3 ether);
     }
 
     function test_repeatedLocksAccumulate() public {
         line.applyCollateral(
-            bytes32("q1"),
+            keccak256("q1"),
             TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 1 ether, 0)),
             true
         );
         line.applyCollateral(
-            bytes32("q2"),
+            keccak256("q2"),
             TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 1 ether, 1)),
             true
         );
@@ -179,12 +179,12 @@ contract ASCCreditLineTest is Test {
 
     function test_provedUnlockDebitsCollateral() public {
         line.applyCollateral(
-            bytes32("q1"),
+            keccak256("q1"),
             TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 3 ether, 0)),
             true
         );
         line.applyCollateral(
-            bytes32("q2"),
+            keccak256("q2"),
             TxFixtures.single(
                 TxFixtures.logWithSignature(
                     vaultOnSource, VaultEvents.COLLATERAL_UNLOCKED_SIG, alice, 1 ether
@@ -197,13 +197,13 @@ contract ASCCreditLineTest is Test {
 
     function test_unlockCannotExceedRecordedCollateral() public {
         line.applyCollateral(
-            bytes32("q1"),
+            keccak256("q1"),
             TxFixtures.single(TxFixtures.collateralLog(vaultOnSource, alice, 1 ether, 0)),
             true
         );
         vm.expectRevert(CreditErrors.InsufficientCollateral.selector);
         line.applyCollateral(
-            bytes32("q2"),
+            keccak256("q2"),
             TxFixtures.single(
                 TxFixtures.logWithSignature(
                     vaultOnSource, VaultEvents.COLLATERAL_UNLOCKED_SIG, alice, 5 ether
@@ -225,7 +225,7 @@ contract ASCCreditLineTest is Test {
 
         vm.expectRevert();
         line.applyCollateral(
-            bytes32("q2"),
+            keccak256("q2"),
             TxFixtures.single(
                 TxFixtures.logWithSignature(
                     vaultOnSource, VaultEvents.COLLATERAL_UNLOCKED_SIG, alice, 2 ether
@@ -239,7 +239,7 @@ contract ASCCreditLineTest is Test {
         address impostor = makeAddr("impostor");
         vm.expectRevert(abi.encodeWithSelector(CreditErrors.UntrustedEmitter.selector, impostor));
         line.applyCollateral(
-            bytes32("q1"),
+            keccak256("q1"),
             TxFixtures.single(TxFixtures.collateralLog(impostor, alice, 1000 ether, 0)),
             true
         );
@@ -247,7 +247,7 @@ contract ASCCreditLineTest is Test {
 
     function test_unknownActionReverts() public {
         vm.expectRevert(abi.encodeWithSelector(CreditErrors.UnknownAction.selector, uint8(9)));
-        line.exposedProcess(9, bytes32("q"), bytes(""));
+        line.exposedProcess(9, keccak256("q"), bytes(""));
     }
 
     /// A yield adapter is operator-configured, but a compromised one must not

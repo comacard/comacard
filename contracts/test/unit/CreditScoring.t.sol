@@ -14,6 +14,7 @@ contract CreditScoringTest is Test {
         return CreditAccount({
             collateral: collateral,
             drawn: 0,
+            pendingRelease: 0,
             drawnAt: 0,
             dueAt: 0,
             provenNonce: nonce,

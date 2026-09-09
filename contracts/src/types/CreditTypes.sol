@@ -14,6 +14,9 @@ enum CreditAction {
 /// @notice Per-borrower state backing a revolving credit line.
 /// @param collateral Value locked on the source chain and proved to Creditcoin.
 /// @param drawn Currently outstanding principal.
+/// @param pendingRelease Collateral already debited here because it is being
+///        released on the source chain, kept so the arriving unlock proof does
+///        not debit it a second time.
 /// @param drawnAt When the current cycle opened. Zero when nothing is drawn.
 /// @param dueAt When the outstanding balance must be settled. Zero when nothing
 ///        is drawn.
@@ -25,6 +28,7 @@ enum CreditAction {
 struct CreditAccount {
     uint256 collateral;
     uint256 drawn;
+    uint256 pendingRelease;
     uint64 drawnAt;
     uint64 dueAt;
     uint64 provenNonce;
@@ -53,5 +57,6 @@ library CreditErrors {
     error StaleHistory(uint64 known, uint64 offered);
     error TermOutOfRange(uint64 term);
     error DurationOutOfRange(uint64 duration);
+    error ReleaseWouldStrandDebt(uint256 outstanding, uint256 remainingLimit);
     error WrongChain(uint64 expected, uint64 actual);
 }

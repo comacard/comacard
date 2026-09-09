@@ -6,8 +6,8 @@ import {CreditAccount} from "../types/CreditTypes.sol";
 /// @title ICreditLine
 /// @notice A revolving credit line on Creditcoin, sized by proved history.
 interface ICreditLine {
-    event CollateralCredited(address indexed account, uint256 amount, bytes32 queryId);
-    event CollateralReleased(address indexed account, uint256 amount, bytes32 queryId);
+    event CollateralCredited(address indexed account, uint256 amount, bytes32 indexed queryId);
+    event CollateralReleased(address indexed account, uint256 amount, bytes32 indexed queryId);
     event Drawn(address indexed account, uint256 amount, uint256 outstanding, uint64 dueAt);
     event Repaid(address indexed account, uint256 amount, uint256 outstanding);
 

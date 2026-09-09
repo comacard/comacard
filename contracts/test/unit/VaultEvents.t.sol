@@ -27,7 +27,7 @@ contract VaultEventsTest is Test {
     address internal impostor = makeAddr("impostor");
     address internal alice = makeAddr("alice");
 
-    function test_extractsAccountAmountAndNonce() public {
+    function test_extractsAccountAmountAndNonce() public view {
         bytes memory encoded = TxFixtures.single(TxFixtures.collateralLog(vault, alice, 5 ether, 7));
 
         VaultEvents.CollateralEvent[] memory found =
@@ -92,6 +92,7 @@ contract VaultEventsTest is Test {
 
     function testFuzz_roundTripsAnyAmountAndNonce(uint256 amount, uint256 nonce, address who)
         public
+        view
     {
         vm.assume(who != address(0));
         bytes memory encoded =

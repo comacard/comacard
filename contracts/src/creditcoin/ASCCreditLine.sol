@@ -61,9 +61,17 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     uint64 internal constant MAX_CYCLE_DURATION = 30 days;
 
     event YieldAdapterChanged(address indexed from, address indexed to);
-    event HistoryImported(address indexed account, uint64 provenNonce, bytes32 queryId);
+    event HistoryImported(address indexed account, uint64 provenNonce, bytes32 indexed queryId);
     event Defaulted(address indexed account, uint256 writtenOff, uint256 collateralSeized);
     event TermChanged(uint64 from, uint64 to);
+    event ReleaseHeld(address indexed account, uint256 amount, uint256 pending);
+    event LiquidityWithdrawn(address indexed to, uint256 amount);
+
+    /// @notice Emitted whenever anything that moves a score actually moves it.
+    /// @dev Saves every indexer and frontend from reimplementing CreditScoring
+    ///      and drifting from it. The chain stays the single source of truth for
+    ///      what a borrower may draw.
+    event ScoreChanged(address indexed account, uint256 score, uint256 limit, uint256 available);
     event LiquidityDeployed(uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -134,16 +142,42 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
             if (isLock) {
                 account.collateral += e.amount;
                 emit CollateralCredited(e.account, e.amount, queryId);
+                _publishScore(e.account);
             } else {
-                if (e.amount > account.collateral) revert CreditErrors.InsufficientCollateral();
-                account.collateral -= e.amount;
-                // Releasing collateral must never strand outstanding debt.
-                if (account.drawn > CreditScoring.limit(account)) {
-                    revert CreditErrors.OutstandingDebt(account.drawn);
+                // A hold placed before the source-chain release already debited
+                // this collateral. Consume it first so the arriving proof does
+                // not debit the same funds twice.
+                uint256 held = account.pendingRelease;
+                uint256 consumed = e.amount > held ? held : e.amount;
+                account.pendingRelease = held - consumed;
+
+                uint256 remainder = e.amount - consumed;
+                if (remainder > 0) {
+                    if (remainder > account.collateral) {
+                        revert CreditErrors.InsufficientCollateral();
+                    }
+                    account.collateral -= remainder;
+                    // Releasing collateral must never strand outstanding debt.
+                    if (account.drawn > CreditScoring.limit(account)) {
+                        revert CreditErrors.OutstandingDebt(account.drawn);
+                    }
                 }
                 emit CollateralReleased(e.account, e.amount, queryId);
+                _publishScore(e.account);
             }
         }
+    }
+
+    /// @dev Publishes the derived view of an account after anything that can
+    ///      change it, so consumers never have to recompute the maths.
+    function _publishScore(address borrower) internal {
+        CreditAccount storage account = _accounts[borrower];
+        emit ScoreChanged(
+            borrower,
+            CreditScoring.score(account),
+            CreditScoring.limit(account),
+            CreditScoring.available(account)
+        );
     }
 
     // --------------------------------------------------------------------
@@ -177,6 +211,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         totalDrawn += amount;
 
         emit Drawn(msg.sender, amount, account.drawn, account.dueAt);
+        _publishScore(msg.sender);
 
         Address.sendValue(payable(msg.sender), amount);
     }
@@ -216,6 +251,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         }
 
         emit Repaid(msg.sender, msg.value, account.drawn);
+        _publishScore(msg.sender);
     }
 
     /// @notice Credit an account with track record proved on the history chain.
@@ -233,6 +269,35 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         }
         account.provenNonce = activity.nonce;
         emit HistoryImported(activity.account, activity.nonce, queryId);
+        _publishScore(activity.account);
+    }
+
+    /// @notice Debit collateral here *before* it is released on the source chain.
+    ///
+    /// @dev Closes a race that is otherwise unavoidable. Releasing collateral
+    ///      takes three steps — the operator approves on the source chain, the
+    ///      borrower withdraws, and only then does the proof reach Creditcoin.
+    ///      Until that proof lands this contract still counts collateral the
+    ///      borrower no longer has, and a draw in that window would be backed by
+    ///      nothing. Placing the hold first makes the credit disappear before
+    ///      the collateral does.
+    ///
+    ///      The arriving unlock proof consumes the hold rather than debiting
+    ///      again, so the order the two arrive in does not matter.
+    function placeReleaseHold(address borrower, uint256 amount) external onlyRole(OPERATOR_ROLE) {
+        if (amount == 0) revert CreditErrors.ZeroAmount();
+        CreditAccount storage account = _accounts[borrower];
+        if (amount > account.collateral) revert CreditErrors.InsufficientCollateral();
+
+        account.collateral -= amount;
+        account.pendingRelease += amount;
+
+        uint256 remainingLimit = CreditScoring.limit(account);
+        if (account.drawn > remainingLimit) {
+            revert CreditErrors.ReleaseWouldStrandDebt(account.drawn, remainingLimit);
+        }
+        emit ReleaseHeld(borrower, amount, account.pendingRelease);
+        _publishScore(borrower);
     }
 
     // --------------------------------------------------------------------
@@ -269,6 +334,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         totalDrawn -= outstanding;
 
         emit Defaulted(borrower, outstanding, seized);
+        _publishScore(borrower);
     }
 
     /// @notice How long a draw may stay outstanding before it can be defaulted.
@@ -326,9 +392,24 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         yieldAdapter = next;
     }
 
-    /// @notice Seed the lending pool.
+    /// @notice Seed the lending pool. Open to anyone.
     function fund() external payable {
         if (msg.value == 0) revert CreditErrors.ZeroAmount();
+    }
+
+    /// @notice Recover idle liquidity from the pool.
+    /// @dev Without this, everything ever sent to `fund` is stranded: draws only
+    ///      ever pay out against a limit, so there is no other way back. Drawn
+    ///      principal has already left the contract, so this can only ever move
+    ///      what is genuinely idle.
+    function withdrawLiquidity(address to, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (to == address(0)) revert CreditErrors.ZeroAddress();
+        if (amount == 0) revert CreditErrors.ZeroAmount();
+        if (amount > address(this).balance) {
+            revert CreditErrors.InsufficientLiquidity(amount, address(this).balance);
+        }
+        emit LiquidityWithdrawn(to, amount);
+        Address.sendValue(payable(to), amount);
     }
 
     // --------------------------------------------------------------------
