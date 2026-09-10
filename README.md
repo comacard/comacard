@@ -28,6 +28,17 @@ come off these contracts, not out of a mock.
 | ASCCreditLine | [`0x18052272…E906`](https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906) |
 | CtcStakingAdapter | [`0xA94218Db…7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
 
+**Services** — on Railway, each with Swagger at `/docs`
+
+| | |
+| --- | --- |
+| API | https://api-production-1141.up.railway.app |
+| KYC | https://kyc-production-e05a.up.railway.app |
+
+The API reaches the KYC service over Railway's private network; the KYC
+service keeps its SQLite state on a volume at `/data`. Both build from the
+`Dockerfile` in their own directory with the repository root as context.
+
 **Indexer** — both chains in one GraphQL API, hosted on Envio Cloud
 
     https://indexer.dev.hyperindex.xyz/5d01570/v1/graphql

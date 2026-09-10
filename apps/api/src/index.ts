@@ -1,3 +1,4 @@
+import { docsHtml, openapi } from "./openapi";
 import {
   ACCOUNT_FIELDS,
   balanceOf,
@@ -24,6 +25,9 @@ const server = Bun.serve({
   port,
   routes: {
     "/health": () => Response.json({ ok: true }),
+    "/openapi.json": () => Response.json(openapi),
+    "/docs": () =>
+      new Response(docsHtml("/openapi.json"), { headers: { "content-type": "text/html" } }),
 
     "/account/:wallet": async (req) => {
       const wallet = req.params.wallet.toLowerCase();

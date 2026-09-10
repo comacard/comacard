@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { createSession, eventKey, isSessionEvent, parseWebhook, verifyWebhook } from "./didit";
+import { docsHtml, openapi } from "./openapi";
 
 const port = Number(process.env.PORT ?? 3002);
 const env = {
@@ -61,6 +62,9 @@ const server = Bun.serve({
   port,
   routes: {
     "/health": () => Response.json({ ok: true }),
+    "/openapi.json": () => Response.json(openapi),
+    "/docs": () =>
+      new Response(docsHtml("/openapi.json"), { headers: { "content-type": "text/html" } }),
 
     "/kyc/session": {
       POST: async (req) => {
