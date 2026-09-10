@@ -15,7 +15,9 @@
                     border:1px solid #252a34; border-radius:6px; padding:5px 9px;
                     font:12px ui-monospace,Menlo,monospace; }
       #bar button { background:#7cc4ff; color:#05070a; border:0; border-radius:6px;
-                     padding:6px 12px; font:inherit; font-weight:600; cursor:pointer; }
+                     padding:6px 12px; font:inherit; font-weight:600; cursor:pointer;
+                     white-space:nowrap; }
+      #bar #curl { background:#252a34; color:#e6e9ef; }
     </style>
     <link
       rel="stylesheet"
@@ -112,6 +114,46 @@
 }
 `;
 
+      // GraphiQL has no "copy as cURL", so track what is in the editors and
+      // build one. Variables are sent only when they are actually present.
+      let currentQuery = defaultQuery;
+      let currentVariables = '';
+
+      const shellQuote = (s) => `'${s.replaceAll("'", `'\\''`)}'`;
+
+      function asCurl() {
+        const body = { query: currentQuery };
+        const vars = currentVariables.trim();
+        if (vars && vars !== '{}') {
+          try {
+            body.variables = JSON.parse(vars);
+          } catch {
+            // leave them out rather than emit a command that cannot run
+          }
+        }
+        return [
+          `curl ${shellQuote(url)}`,
+          `  -H 'content-type: application/json'`,
+          `  --data-raw ${shellQuote(JSON.stringify(body))}`,
+        ].join(' \\\n');
+      }
+
+      const curlButton = document.getElementById('curl');
+      curlButton.onclick = async () => {
+        const command = asCurl();
+        try {
+          await navigator.clipboard.writeText(command);
+          curlButton.textContent = 'Copied';
+        } catch {
+          // clipboard needs a secure context; opening the file directly is not
+          // one, so fall back to something the reader can still select
+          window.prompt('Copy the command:', command);
+          curlButton.textContent = 'Copy as cURL';
+          return;
+        }
+        setTimeout(() => { curlButton.textContent = 'Copy as cURL'; }, 1400);
+      };
+
       const fetcher = createGraphiQLFetcher({ url });
       const plugins = [HISTORY_PLUGIN, explorerPlugin()];
 
@@ -120,6 +162,8 @@
         plugins,
         defaultQuery,
         defaultEditorToolsVisibility: true,
+        onEditQuery: (value) => { currentQuery = value ?? ''; },
+        onEditVariables: (value) => { currentVariables = value ?? ''; },
       });
 
       ReactDOM.createRoot(document.getElementById('graphiql'))
@@ -131,6 +175,7 @@
       <span>endpoint</span>
       <input id="endpoint" spellcheck="false" aria-label="Indexer GraphQL endpoint" />
       <button type="button" id="use">Use</button>
+      <button type="button" id="curl">Copy as cURL</button>
     </div>
     <div id="graphiql"><div class="loading">Loading…</div></div>
   </body>
