@@ -34,8 +34,10 @@ db.run(`create table if not exists events (
   received_at integer not null
 )`);
 
+// Didit hands back the same session while one is still open for this wallet,
+// so a second request must not fail on the primary key.
 const insertSession = db.prepare(
-  "insert into sessions (session_id, wallet, status, updated_at) values (?, ?, 'Not Started', ?)",
+  "insert or ignore into sessions (session_id, wallet, status, updated_at) values (?, ?, 'Not Started', ?)",
 );
 const upsertStatus = db.prepare(
   `insert into sessions (session_id, wallet, status, decision, updated_at) values (?, ?, ?, ?, ?)
