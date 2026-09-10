@@ -28,14 +28,14 @@ contract CreditScoringTest is Test {
         CreditAccount memory a = _account(0, 0, 0, 1 ether);
         assertEq(CreditScoring.score(a), 0);
         assertEq(CreditScoring.collateralizationBps(0), 15_000);
-        assertEq(CreditScoring.limit(a), uint256(1 ether) * 10_000 / 15_000);
+        assertEq(CreditScoring.limitFrom(a.collateral, a), uint256(1 ether) * 10_000 / 15_000);
     }
 
     function test_spotlessRecordEarnsUndercollateralisation() public pure {
         CreditAccount memory a = _account(200, 10, 10, 1 ether);
         assertEq(CreditScoring.score(a), 100);
         assertEq(CreditScoring.collateralizationBps(100), 8_000);
-        assertGt(CreditScoring.limit(a), 1 ether);
+        assertGt(CreditScoring.limitFrom(a.collateral, a), 1 ether);
     }
 
     /// The whole point of tracking defaults: they must actually cost something.
@@ -44,8 +44,11 @@ contract CreditScoringTest is Test {
         CreditAccount memory defaulted = _account(200, 4, 2, 1 ether);
 
         assertGt(CreditScoring.score(clean), CreditScoring.score(defaulted));
-        assertLt(CreditScoring.limit(clean), type(uint256).max);
-        assertGt(CreditScoring.limit(clean), CreditScoring.limit(defaulted));
+        assertLt(CreditScoring.limitFrom(clean.collateral, clean), type(uint256).max);
+        assertGt(
+            CreditScoring.limitFrom(clean.collateral, clean),
+            CreditScoring.limitFrom(defaulted.collateral, defaulted)
+        );
     }
 
     /// External history alone must not unlock undercollateralised borrowing —
@@ -54,19 +57,38 @@ contract CreditScoringTest is Test {
         CreditAccount memory busy = _account(type(uint64).max, 0, 0, 1 ether);
         assertEq(CreditScoring.score(busy), 40);
         assertGt(CreditScoring.collateralizationBps(CreditScoring.score(busy)), 10_000);
-        assertLt(CreditScoring.limit(busy), 1 ether);
+        assertLt(CreditScoring.limitFrom(busy.collateral, busy), 1 ether);
+    }
+
+    /// Collateral and credit are different assets on different chains, so the
+    /// library is handed a value rather than a balance. Passing the balance
+    /// straight through — as the credit line used to — is the 1:1 assumption
+    /// this signature exists to make visible.
+    function test_priceScalesTheLimit() public pure {
+        CreditAccount memory a = _account(0, 0, 0, 1 ether);
+
+        // A stranger posts 1 unit of collateral and pays 150% collateralisation.
+        assertEq(CreditScoring.limitFrom(1 ether, a), uint256(1 ether) * 10_000 / 15_000);
+
+        // Worth ten times as much in the credit asset, the same balance backs
+        // ten times the credit. Integer division truncates, so this is exact
+        // rather than a multiple of the smaller result.
+        assertEq(CreditScoring.limitFrom(10 ether, a), uint256(10 ether) * 10_000 / 15_000);
+
+        // Priced at zero, collateral backs nothing at all.
+        assertEq(CreditScoring.limitFrom(0, a), 0);
     }
 
     function test_noCollateralMeansNoCredit() public pure {
         CreditAccount memory a = _account(200, 10, 10, 0);
-        assertEq(CreditScoring.limit(a), 0);
-        assertEq(CreditScoring.available(a), 0);
+        assertEq(CreditScoring.limitFrom(a.collateral, a), 0);
+        assertEq(CreditScoring.availableFrom(a.collateral, a), 0);
     }
 
     function test_availableNeverUnderflowsWhenOverdrawn() public pure {
         CreditAccount memory a = _account(0, 0, 0, 1 ether);
         a.drawn = 100 ether;
-        assertEq(CreditScoring.available(a), 0);
+        assertEq(CreditScoring.availableFrom(a.collateral, a), 0);
     }
 
     function testFuzz_scoreStaysWithinBounds(

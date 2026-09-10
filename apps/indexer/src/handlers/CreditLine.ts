@@ -236,3 +236,21 @@ indexer.onEvent({ contract: "ASCCreditLine", event: "ReleaseHeld" }, async ({ ev
     lastActiveAt: timestamp,
   });
 });
+
+/**
+ * Repricing collateral moves every account's limit at once and emits nothing
+ * per account, so cached limits go stale here and stay stale until an account
+ * next transacts. Recording the price at least lets a consumer see that it
+ * happened — and decide to read the live figure off the contract instead.
+ */
+indexer.onEvent(
+  { contract: "ASCCreditLine", event: "CollateralPriceChanged" },
+  async ({ event, context }) => {
+    const protocol = (await context.Protocol.get(PROTOCOL_ID)) ?? emptyProtocol();
+    context.Protocol.set({
+      ...protocol,
+      collateralPrice: event.params.to,
+      pricedAt: BigInt(event.block.timestamp),
+    });
+  },
+);

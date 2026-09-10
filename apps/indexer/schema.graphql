@@ -14,6 +14,13 @@ type Account {
   provenNonce: BigInt!
 
   score: BigInt!
+  """
+  As of this account's last on-chain activity, not as of now. The limit also
+  moves when the protocol reprices collateral, and that changes every account
+  at once without emitting anything per account — so after a price change this
+  is stale until the account next transacts. Read `limitOf` from the contract
+  for a live figure; use this one for history.
+  """
   creditLimit: BigInt!
   available: BigInt!
 
@@ -104,6 +111,11 @@ type YieldPosition {
 type Protocol {
   id: ID!
   accounts: Int!
+  """
+  What one whole unit of collateral is worth in the credit asset, 18dp.
+  """
+  collateralPrice: BigInt!
+  pricedAt: BigInt!
   totalCollateral: BigInt!
   outstanding: BigInt!
   lifetimeDrawn: BigInt!

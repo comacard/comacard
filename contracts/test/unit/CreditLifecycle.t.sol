@@ -415,4 +415,67 @@ contract CreditLifecycleTest is Test {
         }
         fail("no ScoreChanged emitted");
     }
+
+    // ---------------- collateral pricing ----------------
+
+    /// Collateral is locked on one chain in one asset and drawn on another in a
+    /// different one. Before this existed the limit was a ratio between two
+    /// unrelated balances — a wei of the collateral asset counted as a wei of
+    /// the credit asset, which is only harmless while the collateral happens to
+    /// be the dearer of the two.
+    function test_priceDecidesHowMuchCollateralIsWorth() public {
+        line.seed(alice, 1 ether, 0, 0, 0);
+        assertEq(line.limitOf(alice), uint256(1 ether) * 10_000 / 15_000);
+
+        vm.prank(operator);
+        line.setCollateralPrice(10 ether); // one unit of collateral buys ten of credit
+
+        // Integer division truncates, so this is the exact figure rather than a
+        // multiple of the smaller one.
+        assertEq(line.limitOf(alice), uint256(10 ether) * 10_000 / 15_000);
+    }
+
+    function test_drawIsBoundedByThePricedValueNotTheBalance() public {
+        line.seed(alice, 1 ether, 0, 0, 0);
+
+        // Priced at a tenth, the same locked balance backs a tenth of the credit.
+        vm.prank(operator);
+        line.setCollateralPrice(0.1 ether);
+
+        uint256 available = line.availableOf(alice);
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CreditErrors.ExceedsAvailableCredit.selector, available + 1, available
+            )
+        );
+        line.draw(available + 1);
+
+        vm.prank(alice);
+        line.draw(available);
+        assertEq(line.accountOf(alice).drawn, available);
+    }
+
+    /// Pricing mints borrowing power, so it is its own role rather than a
+    /// side-effect of the key that moves liquidity.
+    function test_pricingIsOracleRoleOnly() public {
+        address stranger = makeAddr("stranger");
+        vm.prank(stranger);
+        vm.expectRevert();
+        line.setCollateralPrice(1 ether);
+
+        vm.prank(operator);
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        line.setCollateralPrice(0);
+    }
+
+    /// An upgrade that lands without a price would value every account's
+    /// collateral at zero, so the upgrade call has to set one.
+    function test_upgradeMustCarryAPrice() public {
+        address impl = address(new CreditLineHarness());
+
+        vm.prank(governance);
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        line.upgradeToAndCall(impl, abi.encodeCall(line.initializeV2, (operator, 0)));
+    }
 }

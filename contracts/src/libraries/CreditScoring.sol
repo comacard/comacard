@@ -48,14 +48,29 @@ library CreditScoring {
     }
 
     /// @notice Total credit the account may have outstanding.
-    function limit(CreditAccount memory account) internal pure returns (uint256) {
-        if (account.collateral == 0) return 0;
-        return (account.collateral * BPS) / collateralizationBps(score(account));
+    /// @param collateralValue Posted collateral expressed in the asset the line
+    ///        actually lends. The caller converts; this library never assumes a
+    ///        unit of collateral is worth a unit of credit.
+    /// @dev Collateral is locked on one chain in one asset and drawn on another
+    ///      in a different one, so a ratio between raw balances is a ratio
+    ///      between two unrelated numbers. Taking the value already converted
+    ///      keeps that conversion somewhere it can be seen and priced.
+    function limitFrom(uint256 collateralValue, CreditAccount memory account)
+        internal
+        pure
+        returns (uint256)
+    {
+        if (collateralValue == 0) return 0;
+        return (collateralValue * BPS) / collateralizationBps(score(account));
     }
 
     /// @notice Credit still drawable, after what is already outstanding.
-    function available(CreditAccount memory account) internal pure returns (uint256) {
-        uint256 ceiling = limit(account);
+    function availableFrom(uint256 collateralValue, CreditAccount memory account)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 ceiling = limitFrom(collateralValue, account);
         return ceiling > account.drawn ? ceiling - account.drawn : 0;
     }
 

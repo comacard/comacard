@@ -41,6 +41,8 @@ export function emptyProtocol(): Entity<"Protocol"> {
     lifetimeRepaid: ZERO,
     lifetimeDefaulted: ZERO,
     defaultCount: 0,
+    collateralPrice: ZERO,
+    pricedAt: ZERO,
   };
 }
 

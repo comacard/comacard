@@ -25,6 +25,9 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 ///        instantly and without deliberation, so it is cheap to hold and useless
 ///        for anything else.
 ///      - `COMPLIANCE_ROLE` can freeze an account, and only that.
+///      - `ORACLE_ROLE` can price the collateral asset, and only that. It is a
+///        hot key that mints borrowing power, so it is deliberately separate
+///        from the key that moves liquidity.
 ///
 ///      Unpausing is deliberately not a guardian power: stopping the system
 ///      should be easy, restarting it should require governance. Upgrades are
@@ -37,6 +40,7 @@ abstract contract Governed is
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
     bytes32 public constant COMPLIANCE_ROLE = keccak256("COMPLIANCE_ROLE");
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 
     /// @custom:storage-location erc7201:comacard.storage.Governed
     struct GovernedStorage {

@@ -47,6 +47,7 @@ chains:
           - event: Repaid(address indexed account, uint256 amount, uint256 outstanding)
           - event: Defaulted(address indexed account, uint256 writtenOff, uint256 collateralSeized)
           - event: ReleaseHeld(address indexed account, uint256 amount, uint256 pending)
+          - event: CollateralPriceChanged(uint256 from, uint256 to)
 
       - name: CtcStakingAdapter
         address:

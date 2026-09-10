@@ -56,6 +56,17 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     ///      nothing about the borrower.
     uint64 public minCycleDuration;
 
+    /// @notice What one whole unit of the collateral asset is worth in the asset
+    ///         this line lends, as 18-decimal fixed point.
+    /// @dev Collateral is ETH locked on Sepolia; a draw pays out native CTC on
+    ///      Creditcoin. Without this the limit was a ratio between two unrelated
+    ///      balances — one wei of ETH counted as one wei of CTC. Operator-fed
+    ///      for now: Attestcoin proves transactions, not prices, and Creditcoin
+    ///      has no price feed, so there is nothing trustless to read yet.
+    uint256 public collateralPrice;
+
+    uint256 internal constant PRICE_SCALE = 1e18;
+
     uint64 internal constant MIN_TERM = 1 days;
     uint64 internal constant MAX_TERM = 365 days;
     uint64 internal constant MAX_CYCLE_DURATION = 30 days;
@@ -64,6 +75,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     event HistoryImported(address indexed account, uint64 provenNonce, bytes32 indexed queryId);
     event Defaulted(address indexed account, uint256 writtenOff, uint256 collateralSeized);
     event TermChanged(uint64 from, uint64 to);
+    event CollateralPriceChanged(uint256 from, uint256 to);
     event ReleaseHeld(address indexed account, uint256 amount, uint256 pending);
     event LiquidityWithdrawn(address indexed to, uint256 amount);
 
@@ -101,7 +113,21 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         historyChainId = 1;
         term = 30 days;
         minCycleDuration = 1 days;
+        collateralPrice = PRICE_SCALE; // parity until an oracle prices it
+        _grantRole(ORACLE_ROLE, operator);
         _grantRole(OPERATOR_ROLE, operator);
+    }
+
+    /// @notice Sets the collateral price when upgrading from the version that
+    ///         had none. Called atomically by `upgradeToAndCall`, because a
+    ///         proxy that lands on this code without a price prices every
+    ///         account's collateral at zero.
+    function initializeV2(address oracle, uint256 price) external reinitializer(2) {
+        if (oracle == address(0)) revert CreditErrors.ZeroAddress();
+        if (price == 0) revert CreditErrors.ZeroAmount();
+        _grantRole(ORACLE_ROLE, oracle);
+        emit CollateralPriceChanged(0, price);
+        collateralPrice = price;
     }
 
     // --------------------------------------------------------------------
@@ -158,7 +184,8 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
                     }
                     account.collateral -= remainder;
                     // Releasing collateral must never strand outstanding debt.
-                    if (account.drawn > CreditScoring.limit(account)) {
+                    if (account.drawn > CreditScoring.limitFrom(_collateralValue(account), account))
+                    {
                         revert CreditErrors.OutstandingDebt(account.drawn);
                     }
                 }
@@ -168,6 +195,18 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         }
     }
 
+    /// @notice Posted collateral, expressed in the asset the line lends.
+    function _collateralValue(CreditAccount storage account) internal view returns (uint256) {
+        return (account.collateral * collateralPrice) / PRICE_SCALE;
+    }
+
+    /// @notice Price one whole unit of the collateral asset in the credit asset.
+    function setCollateralPrice(uint256 next) external onlyRole(ORACLE_ROLE) {
+        if (next == 0) revert CreditErrors.ZeroAmount();
+        emit CollateralPriceChanged(collateralPrice, next);
+        collateralPrice = next;
+    }
+
     /// @dev Publishes the derived view of an account after anything that can
     ///      change it, so consumers never have to recompute the maths.
     function _publishScore(address borrower) internal {
@@ -175,8 +214,8 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         emit ScoreChanged(
             borrower,
             CreditScoring.score(account),
-            CreditScoring.limit(account),
-            CreditScoring.available(account)
+            CreditScoring.limitFrom(_collateralValue(account), account),
+            CreditScoring.availableFrom(_collateralValue(account), account)
         );
     }
 
@@ -198,7 +237,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         if (amount == 0) revert CreditErrors.ZeroAmount();
 
         CreditAccount storage account = _accounts[msg.sender];
-        uint256 available = CreditScoring.available(account);
+        uint256 available = CreditScoring.availableFrom(_collateralValue(account), account);
         if (amount > available) revert CreditErrors.ExceedsAvailableCredit(amount, available);
 
         _ensureLiquidity(amount);
@@ -292,7 +331,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         account.collateral -= amount;
         account.pendingRelease += amount;
 
-        uint256 remainingLimit = CreditScoring.limit(account);
+        uint256 remainingLimit = CreditScoring.limitFrom(_collateralValue(account), account);
         if (account.drawn > remainingLimit) {
             revert CreditErrors.ReleaseWouldStrandDebt(account.drawn, remainingLimit);
         }
@@ -418,12 +457,12 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
 
     /// @inheritdoc ICreditLine
     function limitOf(address account) external view override returns (uint256) {
-        return CreditScoring.limit(_accounts[account]);
+        return CreditScoring.limitFrom(_collateralValue(_accounts[account]), _accounts[account]);
     }
 
     /// @inheritdoc ICreditLine
     function availableOf(address account) external view override returns (uint256) {
-        return CreditScoring.available(_accounts[account]);
+        return CreditScoring.availableFrom(_collateralValue(_accounts[account]), _accounts[account]);
     }
 
     /// @inheritdoc ICreditLine
