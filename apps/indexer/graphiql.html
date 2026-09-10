@@ -57,11 +57,11 @@
       }
     </script>
     <script type="module">
+      import { explorerPlugin } from '@graphiql/plugin-explorer';
+      import { createGraphiQLFetcher } from '@graphiql/toolkit';
+      import { GraphiQL, HISTORY_PLUGIN } from 'graphiql';
       import React from 'react';
       import ReactDOM from 'react-dom/client';
-      import { GraphiQL, HISTORY_PLUGIN } from 'graphiql';
-      import { createGraphiQLFetcher } from '@graphiql/toolkit';
-      import { explorerPlugin } from '@graphiql/plugin-explorer';
       import 'graphiql/setup-workers/esm.sh';
 
       // Every Envio deployment gets its own URL, so this has to be replaceable
