@@ -86,12 +86,14 @@ export function ClosingFooter({ logoSrc, faqId }: { logoSrc: string; faqId?: str
       <main className="mx-auto w-full max-w-[1100px] px-5 py-[60px] md:py-20">
         <div className="grid grid-cols-1 items-stretch gap-[60px] md:grid-cols-[1.6fr_1fr] md:gap-[30px]">
           <div
-            className="cc-animated-gradient flex flex-col items-center justify-center rounded-[24px] px-10 py-20 text-center text-white"
+            className="cc-animated-gradient flex flex-col items-center justify-center rounded-[24px] px-6 py-14 text-center text-white sm:px-10 sm:py-20"
             style={{ boxShadow: "0 10px 30px rgba(0, 0, 0, 0.05)" }}
           >
             <h2
               className="mb-[15px] font-normal leading-[1.1]"
-              style={{ fontSize: "3.5rem", letterSpacing: "-0.03em" }}
+              // Was a flat 3.5rem, which does not shrink. On a 320px phone the
+              // fixed size left the words with almost no gutter.
+              style={{ fontSize: "clamp(2.25rem, 11vw, 3.5rem)", letterSpacing: "-0.03em" }}
             >
               Spend it.
               <br />
