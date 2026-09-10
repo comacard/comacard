@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comacard — indexer</title>
+<style>
+  :root{--bg:#0f1115;--panel:#171a21;--line:#252a34;--text:#e6e9ef;--dim:#8b93a7;
+        --accent:#7cc4ff;--good:#7ee2a8;--warn:#ffcc66}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;
+         gap:16px;align-items:baseline;flex-wrap:wrap}
+  h1{margin:0;font-size:16px;font-weight:600}
+  .ep{flex:1;min-width:280px;background:var(--bg);color:var(--dim);border:1px solid var(--line);
+      border-radius:8px;padding:7px 10px;font:12px ui-monospace,SFMono-Regular,Menlo,monospace}
+  .ep:focus{outline:none;border-color:var(--accent);color:var(--text)}
+  main{padding:24px;max-width:1100px}
+  nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+  button{background:var(--panel);color:var(--text);border:1px solid var(--line);
+         border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button[aria-selected=true]{background:var(--accent);color:#05070a;border-color:var(--accent);font-weight:600}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+          padding:18px;margin-bottom:18px;overflow-x:auto}
+  h2{margin:0 0 4px;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+  p.note{margin:0 0 14px;color:var(--dim);font-size:12.5px}
+  table{border-collapse:collapse;width:100%;font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--dim);font-weight:500}
+  td.num{text-align:right}
+  a{color:var(--accent)}
+  .empty{color:var(--dim);font-style:italic}
+  .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;
+        border:1px solid var(--line)}
+  .ok{color:var(--good)} .stale{color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Comacard indexer</h1>
+  <input class="ep" id="ep" spellcheck="false"
+         aria-label="Indexer GraphQL endpoint" placeholder="https://…/v1/graphql">
+  <button type="button" id="use">Use</button>
+</header>
+<main>
+  <nav id="tabs"></nav>
+  <div id="view"></div>
+</main>
+<script type="module">
+/**
+ * Envio's Development plan gives every deployment its own URL, so the address
+ * below goes stale each time main moves. Keeping it editable — and remembered —
+ * beats re-editing this file after every deploy.
+ */
+const FALLBACK = "https://indexer.dev.hyperindex.xyz/5d01570/v1/graphql";
+const epInput = document.getElementById("ep");
+
+let ENDPOINT = new URLSearchParams(location.search).get("endpoint")
+  || localStorage.getItem("comacard.endpoint")
+  || FALLBACK;
+epInput.value = ENDPOINT;
+
+document.getElementById("use").onclick = () => {
+  ENDPOINT = epInput.value.trim() || FALLBACK;
+  localStorage.setItem("comacard.endpoint", ENDPOINT);
+  PRESENT = {};
+  learnSchema().catch(() => {}).then(() => show(current));
+};
+epInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("use").click();
+});
+
+const ETH = (v) => (Number(v) / 1e18).toLocaleString(undefined, {maximumFractionDigits: 6});
+const short = (h) => (h ? `${h.slice(0, 10)}…${h.slice(-6)}` : "—");
+const when = (t) => t ? new Date(Number(t) * 1000).toLocaleString() : "—";
+
+/**
+ * Each Envio deployment gets its own URL *and* its own schema, so a field this
+ * page wants may simply not exist on the deployment it is pointed at. Asking
+ * what is there beats hardcoding an assumption and breaking on the older one.
+ */
+let PRESENT = {};
+async function learnSchema() {
+  const d = await gql("{ __schema { types { name fields { name } } } }");
+  for (const t of d.__schema.types) {
+    if (t.fields) PRESENT[t.name] = new Set(t.fields.map((f) => f.name));
+  }
+}
+const has = (type, field) => PRESENT[type]?.has(field) ?? false;
+const pick = (type, ...fields) => fields.filter((f) => has(type, f)).join(" ");
+
+async function gql(query) {
+  const r = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: {"content-type": "application/json"},
+    body: JSON.stringify({query}),
+  });
+  const j = await r.json();
+  if (j.errors) throw new Error(j.errors[0].message);
+  return j.data;
+}
+
+function table(rows, cols) {
+  if (!rows.length) return '<p class="empty">Nothing yet.</p>';
+  const head = cols.map((c) => `<th>${c.label}</th>`).join("");
+  const body = rows
+    .map((r) => `<tr>${cols.map((c) => `<td class="${c.num ? "num" : ""}">${c.get(r)}</td>`).join("")}</tr>`)
+    .join("");
+  return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+const VIEWS = {
+  "Borrowers": {
+    note: "Limits here are as of each account's last activity. After the protocol reprices collateral they go stale until that account next transacts — read limitOf on the contract for a live figure.",
+    query: "{ Account(order_by:{creditLimit:desc}) { id collateral drawn score creditLimit available provenNonce cycleCount repayCount defaultCount } }",
+    render: (d) => table(d.Account, [
+      {label: "account", get: (r) => `<a href="https://creditcoin-testnet.blockscout.com/address/${r.id}" target="_blank" rel="noopener">${short(r.id)}</a>`},
+      {label: "collateral", num: 1, get: (r) => ETH(r.collateral)},
+      {label: "drawn", num: 1, get: (r) => ETH(r.drawn)},
+      {label: "score", num: 1, get: (r) => r.score},
+      {label: "limit", num: 1, get: (r) => ETH(r.creditLimit)},
+      {label: "available", num: 1, get: (r) => ETH(r.available)},
+      {label: "mainnet nonce", num: 1, get: (r) => Number(r.provenNonce).toLocaleString()},
+      {label: "cycles", num: 1, get: (r) => `${r.repayCount}/${r.cycleCount}`},
+      {label: "defaults", num: 1, get: (r) => r.defaultCount},
+    ]),
+  },
+  "Proofs": {
+    note: "Each row is one Attestcoin proof that landed on Creditcoin. The id is the queryId the contract marks as processed, so a credit can always be traced back to the proof that granted it.",
+    query: "{ Attestation(order_by:{blockNumber:desc}) { id kind account amount provenNonce blockNumber timestamp txHash } }",
+    render: (d) => table(d.Attestation, [
+      {label: "kind", get: (r) => r.kind},
+      {label: "account", get: (r) => short(r.account)},
+      {label: "amount", num: 1, get: (r) => r.amount === "0" ? "—" : ETH(r.amount)},
+      {label: "mainnet nonce", num: 1, get: (r) => r.provenNonce === "0" ? "—" : Number(r.provenNonce).toLocaleString()},
+      {label: "queryId", get: (r) => short(r.id)},
+      {label: "creditcoin tx", get: (r) => `<a href="https://creditcoin-testnet.blockscout.com/tx/${r.txHash}" target="_blank" rel="noopener">${short(r.txHash)}</a>`},
+      {label: "when", get: (r) => when(r.timestamp)},
+    ]),
+  },
+  "Collateral": {
+    note: "Locks observed on Ethereum Sepolia. These are the facts Attestcoin later proves across; a lock appears here before the credit line hears about it.",
+    query: "{ CollateralLock(order_by:{blockNumber:desc}) { id amount nonce released blockNumber timestamp txHash } }",
+    render: (d) => table(d.CollateralLock, [
+      {label: "amount", num: 1, get: (r) => `${ETH(r.amount)} ETH`},
+      {label: "state", get: (r) => r.released ? "released" : '<span class="ok">locked</span>'},
+      {label: "nonce", num: 1, get: (r) => r.nonce},
+      {label: "sepolia tx", get: (r) => `<a href="https://sepolia.etherscan.io/tx/${r.txHash}" target="_blank" rel="noopener">${short(r.txHash)}</a>`},
+      {label: "when", get: (r) => when(r.timestamp)},
+    ]),
+  },
+  "Borrowing": {
+    note: "Draws, repayments and defaults. A repayment only closes a cycle when it clears the balance, and only a cycle held long enough to prove anything counts toward the score.",
+    query: `{ Draw(order_by:{blockNumber:desc}) { amount outstandingAfter dueAt txHash timestamp }
+             Repayment(order_by:{blockNumber:desc}) { amount outstandingAfter settled txHash timestamp }
+             Default(order_by:{blockNumber:desc}) { writtenOff collateralSeized txHash timestamp } }`,
+    render: (d) => `
+      <h2 style="margin-top:0">Draws</h2>${table(d.Draw, [
+        {label: "amount", num: 1, get: (r) => ETH(r.amount)},
+        {label: "outstanding after", num: 1, get: (r) => ETH(r.outstandingAfter)},
+        {label: "due", get: (r) => when(r.dueAt)},
+        {label: "tx", get: (r) => short(r.txHash)},
+      ])}
+      <h2 style="margin-top:22px">Repayments</h2>${table(d.Repayment, [
+        {label: "amount", num: 1, get: (r) => ETH(r.amount)},
+        {label: "outstanding after", num: 1, get: (r) => ETH(r.outstandingAfter)},
+        {label: "closed the cycle", get: (r) => r.settled ? "yes" : "no"},
+        {label: "tx", get: (r) => short(r.txHash)},
+      ])}
+      <h2 style="margin-top:22px">Defaults</h2>${table(d.Default, [
+        {label: "written off", num: 1, get: (r) => ETH(r.writtenOff)},
+        {label: "collateral seized", num: 1, get: (r) => ETH(r.collateralSeized)},
+        {label: "tx", get: (r) => short(r.txHash)},
+      ])}`,
+  },
+  "Protocol": {
+    note: "Pool-wide state, plus how far each chain has been indexed. Creditcoin reads over plain RPC because it is not on HyperSync; Sepolia is.",
+    query: () => `{ Protocol { ${pick("Protocol", "accounts", "totalCollateral", "outstanding",
+               "lifetimeDrawn", "lifetimeRepaid", "lifetimeDefaulted", "defaultCount",
+               "collateralPrice", "pricedAt")} }
+             YieldPosition { deployedPrincipal accruedRewards totalDelegated totalReturned }
+             chain_metadata { chain_id block_height latest_processed_block is_hyper_sync } }`,
+    render: (d) => {
+      const p = d.Protocol[0];
+      const y = d.YieldPosition[0];
+      const rows = p ? [
+        ["accounts", p.accounts],
+        ["total collateral", ETH(p.totalCollateral)],
+        ["outstanding", ETH(p.outstanding)],
+        ["lifetime drawn", ETH(p.lifetimeDrawn)],
+        ["lifetime repaid", ETH(p.lifetimeRepaid)],
+        ["lifetime defaulted", `${ETH(p.lifetimeDefaulted)} (${p.defaultCount})`],
+        ["collateral price", !has("Protocol", "collateralPrice")
+          ? '<span class="stale">this deployment predates price indexing</span>'
+          : p.collateralPrice && p.collateralPrice !== "0"
+            ? `${ETH(p.collateralPrice)} CTC per unit — set ${when(p.pricedAt)}`
+            : '<span class="stale">no price recorded yet</span>'],
+      ] : [];
+      const ys = y ? [
+        ["deployed principal", ETH(y.deployedPrincipal)],
+        ["accrued rewards", ETH(y.accruedRewards)],
+        ["total delegated", ETH(y.totalDelegated)],
+        ["total returned", ETH(y.totalReturned)],
+      ] : [];
+      const kv = (list) => list.length
+        ? `<table><tbody>${list.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("")}</tbody></table>`
+        : '<p class="empty">Nothing yet.</p>';
+      return `${kv(rows)}
+        <h2 style="margin-top:22px">Yield adapter</h2>${kv(ys)}
+        <h2 style="margin-top:22px">Sync</h2>
+        ${table(d.chain_metadata, [
+          {label: "chain", get: (r) => r.chain_id === 102031 ? "Creditcoin CC3" : "Ethereum Sepolia"},
+          {label: "mode", get: (r) => r.is_hyper_sync ? "HyperSync" : "RPC"},
+          {label: "indexed to", num: 1, get: (r) => Number(r.latest_processed_block).toLocaleString()},
+          {label: "behind", num: 1, get: (r) => {
+            const lag = r.block_height - r.latest_processed_block;
+            return lag === 0 ? '<span class="ok">caught up</span>' : `${lag} blocks`;
+          }},
+        ])}`;
+    },
+  },
+};
+
+const tabs = document.getElementById("tabs");
+const view = document.getElementById("view");
+let current = Object.keys(VIEWS)[0];
+
+async function show(name) {
+  current = name;
+  for (const b of tabs.children) b.setAttribute("aria-selected", String(b.textContent === name));
+  const v = VIEWS[name];
+  view.innerHTML = `<section><h2>${name}</h2><p class="note">${v.note}</p><p class="empty">Loading…</p></section>`;
+  try {
+    const data = await gql(typeof v.query === "function" ? v.query() : v.query);
+    view.innerHTML = `<section><h2>${name}</h2><p class="note">${v.note}</p>${v.render(data)}</section>`;
+  } catch (err) {
+    view.innerHTML = `<section><h2>${name}</h2><p class="empty">Could not reach the indexer: ${err.message}</p></section>`;
+  }
+}
+
+await learnSchema().catch(() => {});
+
+for (const name of Object.keys(VIEWS)) {
+  const b = document.createElement("button");
+  b.textContent = name;
+  b.onclick = () => show(name);
+  tabs.appendChild(b);
+}
+show(current);
+setInterval(() => show(current), 30000);
+</script>
+</body>
+</html>
