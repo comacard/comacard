@@ -1,4 +1,4 @@
-import type { Entity } from "envio";
+import type { Entity, EvmOnEventContext } from "envio";
 
 export const PROTOCOL_ID = "comacard";
 export const ADAPTER_ID = "ctc-staking-adapter";
@@ -61,3 +61,23 @@ export const logId = (chainId: number, txHash: string, logIndex: number): string
 
 /** Subtraction that cannot go negative — totals are unsigned in the schema. */
 export const minus = (a: bigint, b: bigint): bigint => (a > b ? a - b : ZERO);
+
+/**
+ * Creates an account row if it does not exist yet, counting it exactly once.
+ *
+ * Every Creditcoin handler goes through here. When account creation was spread
+ * across five handlers, three of them forgot to count, and `Protocol.accounts`
+ * read zero while two accounts existed.
+ */
+export async function getOrCreateAccount(
+  context: EvmOnEventContext,
+  id: string,
+  timestamp: bigint,
+): Promise<Entity<"Account">> {
+  const existing = await context.Account.get(id);
+  if (existing) return existing;
+
+  const protocol = (await context.Protocol.get(PROTOCOL_ID)) ?? emptyProtocol();
+  context.Protocol.set({ ...protocol, accounts: protocol.accounts + 1 });
+  return emptyAccount(id, timestamp);
+}

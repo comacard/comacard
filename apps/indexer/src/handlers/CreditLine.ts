@@ -1,5 +1,5 @@
 import { indexer } from "envio";
-import { emptyAccount, emptyProtocol, logId, minus, PROTOCOL_ID } from "../shared";
+import { emptyProtocol, getOrCreateAccount, logId, minus, PROTOCOL_ID } from "../shared";
 
 /**
  * Creditcoin side.
@@ -15,13 +15,7 @@ indexer.onEvent(
     const id = event.params.account.toLowerCase();
     const timestamp = BigInt(event.block.timestamp);
 
-    const existing = await context.Account.get(id);
-    const account = existing ?? emptyAccount(id, timestamp);
-
-    if (!existing) {
-      const protocol = (await context.Protocol.get(PROTOCOL_ID)) ?? emptyProtocol();
-      context.Protocol.set({ ...protocol, accounts: protocol.accounts + 1 });
-    }
+    const account = await getOrCreateAccount(context, id, timestamp);
 
     context.Account.set({
       ...account,
@@ -38,7 +32,7 @@ indexer.onEvent(
   async ({ event, context }) => {
     const id = event.params.account.toLowerCase();
     const timestamp = BigInt(event.block.timestamp);
-    const account = (await context.Account.get(id)) ?? emptyAccount(id, timestamp);
+    const account = await getOrCreateAccount(context, id, timestamp);
 
     context.Account.set({
       ...account,
@@ -70,7 +64,7 @@ indexer.onEvent(
   async ({ event, context }) => {
     const id = event.params.account.toLowerCase();
     const timestamp = BigInt(event.block.timestamp);
-    const account = (await context.Account.get(id)) ?? emptyAccount(id, timestamp);
+    const account = await getOrCreateAccount(context, id, timestamp);
 
     // A release may have been held here first, in which case the hold already
     // debited the collateral and this event only clears the marker.
@@ -103,7 +97,7 @@ indexer.onEvent(
   async ({ event, context }) => {
     const id = event.params.account.toLowerCase();
     const timestamp = BigInt(event.block.timestamp);
-    const account = (await context.Account.get(id)) ?? emptyAccount(id, timestamp);
+    const account = await getOrCreateAccount(context, id, timestamp);
 
     context.Account.set({
       ...account,
@@ -127,7 +121,7 @@ indexer.onEvent(
 indexer.onEvent({ contract: "ASCCreditLine", event: "Drawn" }, async ({ event, context }) => {
   const id = event.params.account.toLowerCase();
   const timestamp = BigInt(event.block.timestamp);
-  const account = (await context.Account.get(id)) ?? emptyAccount(id, timestamp);
+  const account = await getOrCreateAccount(context, id, timestamp);
 
   context.Account.set({
     ...account,
@@ -159,7 +153,7 @@ indexer.onEvent({ contract: "ASCCreditLine", event: "Drawn" }, async ({ event, c
 indexer.onEvent({ contract: "ASCCreditLine", event: "Repaid" }, async ({ event, context }) => {
   const id = event.params.account.toLowerCase();
   const timestamp = BigInt(event.block.timestamp);
-  const account = (await context.Account.get(id)) ?? emptyAccount(id, timestamp);
+  const account = await getOrCreateAccount(context, id, timestamp);
 
   // Only a repayment that clears the balance closes a cycle. Partial ones
   // reduce the debt and earn nothing, exactly as the contract scores them.
@@ -197,7 +191,7 @@ indexer.onEvent({ contract: "ASCCreditLine", event: "Repaid" }, async ({ event, 
 indexer.onEvent({ contract: "ASCCreditLine", event: "Defaulted" }, async ({ event, context }) => {
   const id = event.params.account.toLowerCase();
   const timestamp = BigInt(event.block.timestamp);
-  const account = (await context.Account.get(id)) ?? emptyAccount(id, timestamp);
+  const account = await getOrCreateAccount(context, id, timestamp);
 
   context.Account.set({
     ...account,
@@ -233,7 +227,7 @@ indexer.onEvent({ contract: "ASCCreditLine", event: "Defaulted" }, async ({ even
 indexer.onEvent({ contract: "ASCCreditLine", event: "ReleaseHeld" }, async ({ event, context }) => {
   const id = event.params.account.toLowerCase();
   const timestamp = BigInt(event.block.timestamp);
-  const account = (await context.Account.get(id)) ?? emptyAccount(id, timestamp);
+  const account = await getOrCreateAccount(context, id, timestamp);
 
   context.Account.set({
     ...account,

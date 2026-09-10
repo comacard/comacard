@@ -119,6 +119,23 @@ forge test
 forge coverage --no-match-coverage 'script|test|vendor'
 ```
 
+### Verifying on Creditcoin
+
+`--verify` during deployment only covers Etherscan, so the Creditcoin side needs
+Blockscout explicitly — easy to forget, and the contracts sat unverified because
+of it:
+
+```sh
+forge verify-contract <address> <path>:<Name> \
+  --verifier blockscout \
+  --verifier-url https://creditcoin-testnet.blockscout.com/api \
+  --chain-id 102031
+```
+
+Proxies additionally need `--constructor-args $(cast abi-encode \
+"constructor(address,bytes)" <implementation> <initCalldata>)`, both of which
+are recorded in `broadcast/DeployCreditcoin.s.sol/102031/run-latest.json`.
+
 Deployment needs `GOVERNANCE_ADDRESS`, `OPERATOR_ADDRESS`, `DEPLOYER_PRIVATE_KEY`
 and, for Creditcoin, `SOURCE_VAULT_ADDRESS` and `STAKING_ACCOUNT_ADDRESS`.
 `EvmV1Decoder` is linked at deploy time — see `script/DeployCreditcoin.s.sol`.

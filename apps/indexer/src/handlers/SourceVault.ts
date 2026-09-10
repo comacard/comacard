@@ -1,5 +1,5 @@
 import { indexer } from "envio";
-import { emptyAccount, emptyProtocol, logId, PROTOCOL_ID } from "../shared";
+import { emptyAccount, logId } from "../shared";
 
 /**
  * Sepolia side. These events are the facts Attestcoin later proves across to
@@ -12,12 +12,12 @@ indexer.onEvent(
     const id = event.params.account.toLowerCase();
     const timestamp = BigInt(event.block.timestamp);
 
-    const existing = await context.Account.get(id);
-    if (!existing) {
-      const protocol = (await context.Protocol.get(PROTOCOL_ID)) ?? emptyProtocol();
-      context.Protocol.set({ ...protocol, accounts: protocol.accounts + 1 });
-    }
-    const account = existing ?? emptyAccount(id, timestamp);
+    // Protocol is a Creditcoin-side aggregate and is never written from here.
+    // Both chains sharing one mutable singleton is what silently reset the
+    // account count: this handler incremented it, then a Creditcoin handler
+    // wrote the row back from a read that predated the increment. A lock that
+    // has not been proved across yet is not a borrower anyway.
+    const account = (await context.Account.get(id)) ?? emptyAccount(id, timestamp);
     context.Account.set({ ...account, lastActiveAt: timestamp });
 
     context.CollateralLock.set({
