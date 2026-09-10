@@ -86,6 +86,9 @@ All three are compiled for the London EVM, because CC3 reports `baseFeePerGas`
 but no `mixHash` — building for a later target emits opcodes the chain cannot
 run, and it only shows up once you are already on-chain.
 
+Recording a demo of this: [DEMO.md](DEMO.md) — the sequence, the exact commands,
+and the one timing constraint that will ruin a take if you meet it live.
+
 ## How it works
 
 ```
