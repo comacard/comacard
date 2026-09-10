@@ -43,6 +43,9 @@ service keeps its SQLite state on a volume at `/data`. Both build from the
 
     https://indexer.dev.hyperindex.xyz/5d01570/v1/graphql
 
+Browse it with a schema sidebar and autocomplete, no credentials needed:
+[Apollo Sandbox](https://studio.apollographql.com/sandbox/explorer?endpoint=https%3A%2F%2Findexer.dev.hyperindex.xyz%2F5d01570%2Fv1%2Fgraphql)
+
 Sepolia syncs through HyperSync; Creditcoin CC3 is not on the supported list so
 it reads over plain RPC, which the same indexer handles without noticing.
 
