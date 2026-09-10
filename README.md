@@ -91,7 +91,7 @@ not simulated.
 apps/
   api/        HTTP API — composes indexer, KYC and chain per wallet
   kyc/        KYC service — Didit sessions and webhook intake
-  app/        Cardholder PWA
+  app/        Cardholder app — Next.js, wagmi; KYC, draw, repay
   web/        Cardholder dashboard
   landing/    Marketing site
   indexer/    Oracle query worker: source events → proofs → Creditcoin

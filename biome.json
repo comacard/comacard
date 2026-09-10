@@ -158,7 +158,7 @@
       }
     },
     {
-      "includes": ["apps/landing/**/*.css"],
+      "includes": ["apps/landing/**/*.css", "apps/app/**/*.css"],
       "linter": {
         "rules": {
           "suspicious": {
