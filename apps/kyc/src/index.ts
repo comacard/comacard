@@ -113,6 +113,7 @@ const server = Bun.serve({
           event.decision === undefined ? null : JSON.stringify(event.decision),
           event.timestamp,
         );
+        console.log(`didit ${event.webhook_type} ${event.vendor_data} → ${event.status}`);
         return new Response("ok");
       },
     },
