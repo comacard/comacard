@@ -91,6 +91,32 @@ Two things the scoring deliberately refuses:
 borrower who cannot clear a debt while the clock runs toward default would be
 punished for something they had no way to prevent.
 
+## The cycle, run on the live contracts
+
+One full pass, on Sepolia and Creditcoin CC3, with every figure read back off
+the chain:
+
+```
+lock 0.01 ETH on Sepolia          0x5d75d6c4…3555a
+prove it to Creditcoin            0xc8cc9934…e8ef    collateral credited
+                                                     score 0 → limit 6.666 CTC
+
+draw 5 CTC                        0x5759063d…a52e    available 6.666 → 1.666
+hold 75s, repay 5 CTC in full     0x3ab1d85f…20c8    cycle closed
+
+                                                     score 0 → 42
+                                                     limit 6.666 → 8.291 CTC
+```
+
+The limit is arithmetic anyone can redo: a score of 42 asks for 120.6%
+collateralisation, and 0.01 ETH priced at 1000 CTC is 10 CTC of value, so
+`10 × 10000 / 12060 = 8.291873963515754560`. The chain agrees to the wei, and so
+does the indexer.
+
+`minCycleDuration` is set to **60 seconds on this testnet deployment** so the
+loop can be demonstrated inside a recording. The default is a day, and it exists
+because a cycle opened and closed in one block proves nothing about a borrower.
+
 ## Governance
 
 Roles are separated so no single key both runs operations and changes rules:
