@@ -15,6 +15,22 @@ matters here.
 
 For a demo, lock the collateral first and prove it a few minutes later.
 
+## Seeing the whole thing work
+
+```sh
+bun run demo             # lock, prove, draw, hold, repay
+bun run demo --no-lock   # skip to borrowing against collateral already posted
+```
+
+It prints what the chain says at each step and ends with the before-and-after:
+repaying on time raises the limit. Every figure comes from a live call, so the
+arithmetic can be checked rather than believed.
+
+The lock leg takes about nine minutes, and none of that is this program: a fresh
+lock is not provable until Attestcoin has attested its block, which runs 30-45
+source blocks behind. `--no-lock` is there for when you have already paid that
+cost once.
+
 ## Running
 
 ```sh

@@ -9,7 +9,8 @@
     "start": "bun src/index.ts",
     "prove": "bun src/prove.ts",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist .turbo"
+    "clean": "rm -rf dist .turbo",
+    "demo": "bun src/demo.ts"
   },
   "dependencies": {
     "@comacard/attestcoin": "workspace:*",
