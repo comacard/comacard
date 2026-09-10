@@ -19,8 +19,8 @@ const account = (over: Partial<IndexedAccount> = {}): IndexedAccount => ({
   lastActiveAt: "0",
   ...over,
 });
-const verified = { status: "Approved", verified: true, sessionId: "s" };
-const unverified = { status: "none", verified: false, sessionId: null };
+const verified = { status: "Approved", verified: true, sessionId: "s", updatedAt: 1 };
+const unverified = { status: "none", verified: false, sessionId: null, updatedAt: null };
 
 describe("formatCtc", () => {
   test("four decimals, truncated, no float", () => {
@@ -39,8 +39,8 @@ describe("cardState", () => {
       reason: "kyc_required",
     });
   });
-  test("no indexed account → no credit", () => {
-    expect(cardState(verified, null, 100).active).toBe(false);
+  test("verified with no indexed account → active, nothing to spend yet", () => {
+    expect(cardState(verified, null, 100)).toEqual({ active: true, spendable: "0" });
   });
   test("overdue draw freezes the card", () => {
     const state = cardState(verified, account({ drawn: "1", dueAt: "50", available: "5" }), 100);

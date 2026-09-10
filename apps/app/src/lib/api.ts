@@ -12,7 +12,7 @@ export const API_URL = required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_A
 
 export type Account = {
   wallet: string;
-  kyc: { status: string; verified: boolean; sessionId: string | null };
+  kyc: { status: string; verified: boolean; sessionId: string | null; updatedAt: number | null };
   balance: { wei: string; ctc: string };
   credit: {
     score: number;
@@ -28,14 +28,17 @@ export type Account = {
     availableCtc: string;
     drawnCtc: string;
   } | null;
-  card:
-    | { active: true; spendable: string; spendableCtc: string }
-    | {
-        active: false;
-        spendable: "0";
-        spendableCtc: string;
-        reason: "kyc_required" | "overdue" | "no_credit";
-      };
+  card: {
+    active: boolean;
+    issued: boolean;
+    spendable: string;
+    spendableCtc: string;
+    reason?: "kyc_required" | "overdue";
+    number: string | null;
+    accountNumber: string | null;
+    expiry: string | null;
+    issuedAt: number | null;
+  };
 };
 
 export type ActivityItem = {

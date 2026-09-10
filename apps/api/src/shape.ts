@@ -1,7 +1,12 @@
 /** Pure shaping of upstream data. No env, no I/O, so it is trivially testable. */
 import type { IndexedAccount } from "./sources";
 
-export type KycStatus = { status: string; verified: boolean; sessionId: string | null };
+export type KycStatus = {
+  status: string;
+  verified: boolean;
+  sessionId: string | null;
+  updatedAt: number | null;
+};
 
 const WEI = 10n ** 18n;
 
@@ -14,12 +19,12 @@ export function formatCtc(wei: bigint): string {
 
 export type CardState =
   | { active: true; spendable: string }
-  | { active: false; spendable: "0"; reason: "kyc_required" | "overdue" | "no_credit" };
+  | { active: false; spendable: "0"; reason: "kyc_required" | "overdue" };
 
 /**
- * Whether the card can be used, and why not. Order matters: an unverified
- * wallet is told about KYC before it is told about credit, because that is the
- * step it can actually do something about.
+ * A card exists and is active the moment KYC clears, whether or not the wallet
+ * has earned a limit yet. Only an overdue draw switches it off. Spendable is
+ * simply what the credit line will honour right now, which may be zero.
  */
 export function cardState(kyc: KycStatus, account: IndexedAccount | null, now: number): CardState {
   if (!kyc.verified) return { active: false, spendable: "0", reason: "kyc_required" };
@@ -27,9 +32,7 @@ export function cardState(kyc: KycStatus, account: IndexedAccount | null, now: n
   if (account && BigInt(account.drawn) > 0n && dueAt > 0 && now > dueAt) {
     return { active: false, spendable: "0", reason: "overdue" };
   }
-  const available = BigInt(account?.available ?? 0);
-  if (available === 0n) return { active: false, spendable: "0", reason: "no_credit" };
-  return { active: true, spendable: available.toString() };
+  return { active: true, spendable: BigInt(account?.available ?? 0).toString() };
 }
 
 export const isAddress = (s: unknown): s is string =>

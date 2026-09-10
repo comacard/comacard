@@ -1,3 +1,4 @@
+import { issueCard } from "./card";
 import { docsHtml, openapi } from "./openapi";
 import { cardState, formatCtc, isAddress } from "./shape";
 import {
@@ -58,6 +59,7 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
     ]);
     const account = Account[0] ?? null;
     const card = cardState(kyc, account, now());
+    const issued = kyc.verified ? issueCard(wallet, kyc.updatedAt ?? now(), env.cardSecret) : null;
 
     return Response.json({
       wallet,
@@ -81,7 +83,42 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
             drawnCtc: formatCtc(BigInt(account.drawn)),
           }
         : null,
-      card: { ...card, spendableCtc: formatCtc(BigInt(card.spendable)) },
+      card: {
+        ...card,
+        spendableCtc: formatCtc(BigInt(card.spendable)),
+        issued: issued !== null,
+        // Full PAN and CVV only through /account/:wallet/card, on purpose.
+        number: issued?.masked ?? null,
+        accountNumber: issued?.accountNumber ?? null,
+        expiry: issued?.expiry ?? null,
+        issuedAt: issued?.issuedAt ?? null,
+      },
+    });
+  },
+
+  "/account/:wallet/card": async (req) => {
+    const wallet = req.params.wallet.toLowerCase();
+    if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
+
+    const [kyc, { Account }] = await Promise.all([
+      kycStatus(wallet),
+      indexer<{ Account: IndexedAccount[] }>(
+        `query($id:String!){ Account(where:{id:{_eq:$id}}){ ${ACCOUNT_FIELDS} } }`,
+        { id: wallet },
+      ),
+    ]);
+    if (!kyc.verified) {
+      return Response.json({ error: "no card: identity not verified" }, { status: 404 });
+    }
+    const state = cardState(kyc, Account[0] ?? null, now());
+    const card = issueCard(wallet, kyc.updatedAt ?? now(), env.cardSecret);
+    return Response.json({
+      wallet,
+      ...card,
+      active: state.active,
+      reason: state.active ? undefined : state.reason,
+      spendable: state.spendable,
+      spendableCtc: formatCtc(BigInt(state.spendable)),
     });
   },
 

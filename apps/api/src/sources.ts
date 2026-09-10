@@ -19,6 +19,7 @@ export const env = {
   creditLine: must("ASC_CREDIT_LINE_ADDRESS"),
   stakingAdapter: must("STAKING_ADAPTER_ADDRESS"),
   corsOrigin: process.env.CORS_ORIGIN ?? "*",
+  cardSecret: must("CARD_SECRET"),
 };
 
 // ---------------------------------------------------------------- indexer

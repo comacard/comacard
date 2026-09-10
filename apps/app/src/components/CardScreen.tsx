@@ -26,9 +26,8 @@ const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const when = (s: string | number) => new Date(Number(s) * 1000).toLocaleString();
 
 const REASON: Record<string, string> = {
-  kyc_required: "Verify your identity to activate the card",
+  kyc_required: "Verify your identity and your card is issued instantly",
   overdue: "A draw is past due. Repay to reactivate",
-  no_credit: "Lock collateral on Sepolia to earn a limit",
 };
 
 export function CardScreen() {
@@ -101,37 +100,66 @@ function Wallet({ wallet, canSign }: { wallet: string; canSign: boolean }) {
     <>
       <Card data={account.data} />
       <Kyc data={account.data} wallet={wallet} />
+      <CardDetails data={account.data} />
       {account.data.credit && <Credit data={account.data} />}
-      {account.data.card.active && canSign && <Actions data={account.data} wallet={wallet} />}
-      {account.data.credit &&
+      {canSign && account.data.card.active && BigInt(account.data.card.spendable) > 0n && (
+        <Actions data={account.data} wallet={wallet} />
+      )}
+      {canSign &&
+        account.data.credit &&
         BigInt(account.data.credit.drawn) > 0n &&
-        canSign &&
-        !account.data.card.active && <Actions data={account.data} wallet={wallet} repayOnly />}
+        !(account.data.card.active && BigInt(account.data.card.spendable) > 0n) && (
+          <Actions data={account.data} wallet={wallet} repayOnly />
+        )}
       <Activity items={activity.data ?? []} />
     </>
   );
 }
 
 function Card({ data }: { data: Account }) {
-  const active = data.card.active;
+  const { card } = data;
+  const noLimit = card.active && BigInt(card.spendable) === 0n;
   return (
     <section
       className={`relative aspect-[1.6] w-full rounded-3xl p-6 text-canvas shadow-xl ${
-        active ? "bg-night" : "bg-ink/40"
+        card.active ? "bg-night" : "bg-ink/40"
       }`}
     >
       <p className="text-xs uppercase tracking-widest opacity-70">
-        {active ? "Available to spend" : "Card inactive"}
+        {card.active ? "Available to spend" : card.issued ? "Card frozen" : "No card yet"}
       </p>
       <p className="mt-2 text-4xl font-semibold">
-        {data.card.spendableCtc} <span className="text-lg opacity-70">tCTC</span>
+        {card.spendableCtc} <span className="text-lg opacity-70">tCTC</span>
       </p>
-      {!active && <p className="mt-3 text-sm opacity-80">{REASON[data.card.reason]}</p>}
+      {card.reason && <p className="mt-3 text-sm opacity-80">{REASON[card.reason]}</p>}
+      {noLimit && (
+        <p className="mt-3 text-sm opacity-80">Lock collateral on Sepolia to earn a limit</p>
+      )}
       <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between text-xs opacity-70">
-        <span className="font-code">{short(data.wallet)}</span>
-        <span>Score {data.credit?.score ?? 0}/100</span>
+        <div>
+          <p className="font-code text-base tracking-widest">
+            {card.number ?? "•••• •••• •••• ••••"}
+          </p>
+          <p className="mt-1 font-code">{short(data.wallet)}</p>
+        </div>
+        <div className="text-right">
+          <p>{card.expiry ? `EXP ${card.expiry}` : ""}</p>
+          <p className="mt-1">Score {data.credit?.score ?? 0}/100</p>
+        </div>
       </div>
     </section>
+  );
+}
+
+function CardDetails({ data }: { data: Account }) {
+  const { card } = data;
+  if (!card.issued) return null;
+  return (
+    <Row title="Account number" value={card.accountNumber ?? ""}>
+      <span className="text-xs text-ink/60">
+        issued {card.issuedAt ? new Date(card.issuedAt * 1000).toLocaleDateString() : ""}
+      </span>
+    </Row>
   );
 }
 
