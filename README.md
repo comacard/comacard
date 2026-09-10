@@ -28,12 +28,40 @@ come off these contracts, not out of a mock.
 | ASCCreditLine | [`0x18052272…E906`](https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906) |
 | CtcStakingAdapter | [`0xA94218Db…7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
 
-**Services** — on Railway, each with Swagger at `/docs`
+**Services** — on Railway
 
-| | |
+| | Base URL | Swagger |
+| --- | --- | --- |
+| API | https://api-production-1141.up.railway.app | [/docs](https://api-production-1141.up.railway.app/docs) |
+| KYC | https://kyc-production-e05a.up.railway.app | [/docs](https://kyc-production-e05a.up.railway.app/docs) |
+
+A frontend only ever talks to the API. It is read-only, has CORS open, and
+every number is either read off the chain or off the indexer's copy of it.
+One call per screen:
+
+| Call | Gives you |
 | --- | --- |
-| API | https://api-production-1141.up.railway.app |
-| KYC | https://kyc-production-e05a.up.railway.app |
+| [`GET /account/{wallet}`](https://api-production-1141.up.railway.app/account/0x3b4f0135465d444a5bd06ab90fc59b73916c85f5) | KYC status, live limit / available / drawn, CTC balance, and the card (active, masked number, account number, expiry) |
+| `POST /account/{wallet}/kyc` | Starts Didit, returns `{ sessionId, url }` — send the user to `url` |
+| `GET /account/{wallet}/card` | Full card number, CVV, expiry. 404 until KYC is Approved |
+| [`GET /account/{wallet}/activity`](https://api-production-1141.up.railway.app/account/0x3b4f0135465d444a5bd06ab90fc59b73916c85f5/activity) | Draws, repayments, collateral locks, defaults — newest first, with explorer tx hashes |
+| [`GET /protocol`](https://api-production-1141.up.railway.app/protocol) | Pool liquidity, CTC staking position, collateral price |
+
+```sh
+API=https://api-production-1141.up.railway.app
+W=0x3b4f0135465d444a5bd06ab90fc59b73916c85f5     # has a limit on testnet
+
+curl $API/account/$W                     # the card screen in one call
+curl -X POST $API/account/$W/kyc         # → { sessionId, url }
+curl $API/account/$W/card                # 404 until Approved
+curl $API/account/$W/activity
+curl $API/protocol
+```
+
+`card.active` means KYC cleared and nothing is overdue; `card.spendable` is
+what `ASCCreditLine.availableOf` will honour right now, which can be zero.
+Drawing and repaying are wallet transactions against the contract, not API
+calls — see `apps/app/src/lib/creditLine.ts` for the two-function ABI.
 
 The API reaches the KYC service over Railway's private network; the KYC
 service keeps its SQLite state on a volume at `/data`. Both build from the
