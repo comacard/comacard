@@ -132,8 +132,8 @@ export const openapi = {
         description: "null until the wallet has been seen by the indexer",
         properties: {
           score: { type: "integer", minimum: 0, maximum: 100 },
-          limit: Wei,
-          available: Wei,
+          limit: { ...Wei, description: "live from ASCCreditLine.limitOf, not the indexer" },
+          available: { ...Wei, description: "live from ASCCreditLine.availableOf" },
           drawn: Wei,
           collateral: Wei,
           pendingRelease: Wei,
@@ -232,6 +232,11 @@ export const openapi = {
               lifetimeDefaulted: Wei,
               defaultCount: { type: "integer" },
             },
+          },
+          collateralPrice: {
+            type: "object",
+            description: "What one ETH of collateral is worth in CTC, live off the contract",
+            properties: { wei: Wei, ctcPerEth: { type: "string", example: "1000.0000" } },
           },
           liquidity: { type: "object", properties: { poolWei: Wei, poolCtc: { type: "string" } } },
           staking: {

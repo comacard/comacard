@@ -26,13 +26,18 @@ export type CardState =
  * has earned a limit yet. Only an overdue draw switches it off. Spendable is
  * simply what the credit line will honour right now, which may be zero.
  */
-export function cardState(kyc: KycStatus, account: IndexedAccount | null, now: number): CardState {
+export function cardState(
+  kyc: KycStatus,
+  account: IndexedAccount | null,
+  available: bigint,
+  now: number,
+): CardState {
   if (!kyc.verified) return { active: false, spendable: "0", reason: "kyc_required" };
   const dueAt = Number(account?.dueAt ?? 0);
   if (account && BigInt(account.drawn) > 0n && dueAt > 0 && now > dueAt) {
     return { active: false, spendable: "0", reason: "overdue" };
   }
-  return { active: true, spendable: BigInt(account?.available ?? 0).toString() };
+  return { active: true, spendable: available.toString() };
 }
 
 export const isAddress = (s: unknown): s is string =>

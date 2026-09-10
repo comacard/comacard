@@ -4,11 +4,13 @@ import { cardState, formatCtc, isAddress } from "./shape";
 import {
   ACCOUNT_FIELDS,
   balanceOf,
+  collateralPrice,
   env,
   type IndexedAccount,
   indexer,
   kycStart,
   kycStatus,
+  liveCredit,
   stakingAdapterState,
 } from "./sources";
 
@@ -49,16 +51,17 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
     const wallet = req.params.wallet.toLowerCase();
     if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
 
-    const [kyc, { Account }, balance] = await Promise.all([
+    const [kyc, { Account }, balance, live] = await Promise.all([
       kycStatus(wallet),
       indexer<{ Account: IndexedAccount[] }>(
         `query($id:String!){ Account(where:{id:{_eq:$id}}){ ${ACCOUNT_FIELDS} } }`,
         { id: wallet },
       ),
       balanceOf(wallet),
+      liveCredit(wallet),
     ]);
     const account = Account[0] ?? null;
-    const card = cardState(kyc, account, now());
+    const card = cardState(kyc, account, live.available, now());
     const issued = kyc.verified ? issueCard(wallet, kyc.updatedAt ?? now(), env.cardSecret) : null;
 
     return Response.json({
@@ -68,8 +71,9 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
       credit: account
         ? {
             score: Number(account.score),
-            limit: account.creditLimit,
-            available: account.available,
+            // Live off the contract; the indexer's copy lags a repricing.
+            limit: live.limit.toString(),
+            available: live.available.toString(),
             drawn: account.drawn,
             collateral: account.collateral,
             pendingRelease: account.pendingRelease,
@@ -78,8 +82,8 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
             cycleCount: account.cycleCount,
             repayCount: account.repayCount,
             defaultCount: account.defaultCount,
-            limitCtc: formatCtc(BigInt(account.creditLimit)),
-            availableCtc: formatCtc(BigInt(account.available)),
+            limitCtc: formatCtc(live.limit),
+            availableCtc: formatCtc(live.available),
             drawnCtc: formatCtc(BigInt(account.drawn)),
           }
         : null,
@@ -100,17 +104,18 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
     const wallet = req.params.wallet.toLowerCase();
     if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
 
-    const [kyc, { Account }] = await Promise.all([
+    const [kyc, { Account }, live] = await Promise.all([
       kycStatus(wallet),
       indexer<{ Account: IndexedAccount[] }>(
         `query($id:String!){ Account(where:{id:{_eq:$id}}){ ${ACCOUNT_FIELDS} } }`,
         { id: wallet },
       ),
+      liveCredit(wallet),
     ]);
     if (!kyc.verified) {
       return Response.json({ error: "no card: identity not verified" }, { status: 404 });
     }
-    const state = cardState(kyc, Account[0] ?? null, now());
+    const state = cardState(kyc, Account[0] ?? null, live.available, now());
     const card = issueCard(wallet, kyc.updatedAt ?? now(), env.cardSecret);
     return Response.json({
       wallet,
@@ -167,7 +172,7 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
   },
 
   "/protocol": async () => {
-    const [{ Protocol, YieldPosition }, adapter, poolBalance] = await Promise.all([
+    const [{ Protocol, YieldPosition }, adapter, poolBalance, price] = await Promise.all([
       indexer<{
         Protocol: {
           accounts: number;
@@ -190,11 +195,14 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
       ),
       stakingAdapterState(),
       balanceOf(env.creditLine),
+      collateralPrice(),
     ]);
     const position = YieldPosition[0];
 
     return Response.json({
       protocol: Protocol[0] ?? null,
+      // What one ETH of collateral is worth in CTC, 18dp, live off the contract.
+      collateralPrice: { wei: price.toString(), ctcPerEth: formatCtc(price) },
       liquidity: {
         // What the credit line can pay out right now, before touching the adapter.
         poolWei: poolBalance.toString(),
