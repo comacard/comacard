@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { cardState, formatCtc, type IndexedAccount } from "../src/sources";
+import { cardState, formatCtc } from "../src/shape";
+import type { IndexedAccount } from "../src/sources";
 
 const account = (over: Partial<IndexedAccount> = {}): IndexedAccount => ({
   id: "0xabc",

@@ -1,5 +1,11 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-1141.up.railway.app";
+/** NEXT_PUBLIC_* is inlined at build time; a missing one should fail there, not in a user's browser. */
+export function required(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`missing env ${name}`);
+  return v;
+}
+
+export const API_URL = required("NEXT_PUBLIC_API_URL");
 
 export type Account = {
   wallet: string;
