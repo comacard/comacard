@@ -4,23 +4,22 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: "Helvetica Neue Roman";
-  src:
-    url("/fonts/HelveticaNeue-Roman.woff2") format("woff2"),
-    url("/fonts/HelveticaNeue-Roman.woff") format("woff");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 * {
   font-family: "Geist", sans-serif;
 }
 
+/* Descendant selector on purpose: the global `*` rule above would otherwise win
+   on every child. There is no webfont here, only the system stack. */
 .font-helvetica-neue,
 .font-helvetica-neue * {
-  font-family: "Helvetica Neue Roman", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 /* The `*` rule above wins over inherited families, so mono has to be re-declared
@@ -37,8 +36,7 @@ html {
 
 /* min-height, not height: the document grows past one viewport once the
    scroll-locked intro releases. */
-body,
-#root {
+body {
   min-height: 100%;
 }
 
@@ -79,5 +77,225 @@ body,
     animation: none;
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Entrance used by the quote carousel. Distinct from `fadeSlideUp` above: this
+   one travels further and is driven by an IntersectionObserver, not by class
+   swap on mount. */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Animated gradient behind the closing call to action.
+   `@property` is what makes this work without JavaScript: declaring the custom
+   properties as <percentage> lets the browser interpolate them, so the blobs
+   drift and breathe instead of jumping between keyframes.
+   Colours are the page's own pastels, not the reference's neon set, so the card
+   still belongs to this site. */
+@property --cc-x1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 10%;
+}
+@property --cc-y1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 10%;
+}
+@property --cc-x2 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 90%;
+}
+@property --cc-y2 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 10%;
+}
+@property --cc-x3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 10%;
+}
+@property --cc-y3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 90%;
+}
+@property --cc-x4 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 90%;
+}
+@property --cc-y4 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 90%;
+}
+@property --cc-s1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 55%;
+}
+@property --cc-s2 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 55%;
+}
+@property --cc-s3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 55%;
+}
+@property --cc-s4 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 55%;
+}
+
+.cc-animated-gradient {
+  background-color: #1b1a1f;
+  background-image:
+    radial-gradient(circle at var(--cc-x1) var(--cc-y1), #cedfeb 0px, transparent var(--cc-s1)),
+    radial-gradient(circle at var(--cc-x2) var(--cc-y2), #f7ece9 0px, transparent var(--cc-s2)),
+    radial-gradient(circle at var(--cc-x3) var(--cc-y3), #b8c6d9 0px, transparent var(--cc-s3)),
+    radial-gradient(circle at var(--cc-x4) var(--cc-y4), #e8dfe0 0px, transparent var(--cc-s4));
+  animation:
+    cc-blob1 9s ease-in-out infinite,
+    cc-blob2 11s ease-in-out infinite,
+    cc-blob3 10s ease-in-out infinite,
+    cc-blob4 12s ease-in-out infinite,
+    cc-size1 7s ease-in-out infinite,
+    cc-size2 8.5s ease-in-out infinite,
+    cc-size3 7.5s ease-in-out infinite,
+    cc-size4 9.5s ease-in-out infinite;
+}
+
+@keyframes cc-blob1 {
+  0%,
+  100% {
+    --cc-x1: 5%;
+    --cc-y1: 5%;
+  }
+  25% {
+    --cc-x1: 45%;
+    --cc-y1: 20%;
+  }
+  50% {
+    --cc-x1: 30%;
+    --cc-y1: 55%;
+  }
+  75% {
+    --cc-x1: 0%;
+    --cc-y1: 30%;
+  }
+}
+@keyframes cc-blob2 {
+  0%,
+  100% {
+    --cc-x2: 95%;
+    --cc-y2: 5%;
+  }
+  33% {
+    --cc-x2: 55%;
+    --cc-y2: 35%;
+  }
+  66% {
+    --cc-x2: 80%;
+    --cc-y2: 65%;
+  }
+}
+@keyframes cc-blob3 {
+  0%,
+  100% {
+    --cc-x3: 5%;
+    --cc-y3: 95%;
+  }
+  40% {
+    --cc-x3: 45%;
+    --cc-y3: 65%;
+  }
+  70% {
+    --cc-x3: 25%;
+    --cc-y3: 100%;
+  }
+}
+@keyframes cc-blob4 {
+  0%,
+  100% {
+    --cc-x4: 95%;
+    --cc-y4: 95%;
+  }
+  30% {
+    --cc-x4: 60%;
+    --cc-y4: 70%;
+  }
+  60% {
+    --cc-x4: 100%;
+    --cc-y4: 50%;
+  }
+}
+
+@keyframes cc-size1 {
+  0%,
+  100% {
+    --cc-s1: 45%;
+  }
+  50% {
+    --cc-s1: 80%;
+  }
+}
+@keyframes cc-size2 {
+  0%,
+  100% {
+    --cc-s2: 45%;
+  }
+  50% {
+    --cc-s2: 85%;
+  }
+}
+@keyframes cc-size3 {
+  0%,
+  100% {
+    --cc-s3: 45%;
+  }
+  50% {
+    --cc-s3: 78%;
+  }
+}
+@keyframes cc-size4 {
+  0%,
+  100% {
+    --cc-s4: 45%;
+  }
+  50% {
+    --cc-s4: 82%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-animated-gradient {
+    animation: none;
   }
 }

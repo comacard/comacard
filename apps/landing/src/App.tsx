@@ -1,5 +1,5 @@
 import gsap from "gsap";
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -9,6 +9,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { ClosingFooter } from "./components/ClosingFooter";
+import { CounterSection } from "./components/CounterSection";
+import { InsightsSection } from "./components/InsightsSection";
+import { QuoteCarousel } from "./components/QuoteCarousel";
 
 const BG_IMAGE_1 =
   "https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260721_161708_64fad17a-06cc-4227-b6d2-1fefec159ec7.png&w=1920&q=85";
@@ -32,40 +36,18 @@ const UP_RELEASE = 120;
 const TOP_SETTLE_MS = 400;
 const TOP_EPSILON = 2;
 
-/** Deployed and verified. See contracts/README.md for the full list. */
-const CREDIT_LINE_URL =
-  "https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906";
-const VAULT_URL = "https://sepolia.etherscan.io/address/0x911290c37E9558C704870f4C44CBdEA1B2B33303";
-const REPO_URL = "https://github.com/comacard/comacard";
-const README_URL = `${REPO_URL}#readme`;
-
 const SECTION_FEATURES = "features";
 const SECTION_STEPS = "start";
+const SECTION_CARDHOLDERS = "cardholders";
+const SECTION_FAQ = "faq";
 
 type NavItem = { label: string; target?: string; href?: string };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Product", target: SECTION_FEATURES },
+  { label: "Why Comacard", target: SECTION_FEATURES },
   { label: "How it works", target: SECTION_STEPS },
-  { label: "Contracts", href: CREDIT_LINE_URL },
-  { label: "Docs", href: README_URL },
-  { label: "GitHub", href: REPO_URL },
-];
-
-/** The onboarding path, in the order a cardholder actually walks it. */
-const STEPS: { title: string; body: string }[] = [
-  {
-    title: "Verify your identity",
-    body: "One check, before your first draw. It happens off-chain and it does not repeat.",
-  },
-  {
-    title: "Lock CTC as collateral",
-    body: "It stays on the chain you locked it on. Creditcoin only ever reads a proof that the lock happened.",
-  },
-  {
-    title: "Draw against it, and repay",
-    body: "You start below what you locked. Close a cycle on time and the limit moves up.",
-  },
+  { label: "Cardholders", target: SECTION_CARDHOLDERS },
+  { label: "FAQ", target: SECTION_FAQ },
 ];
 
 /**
@@ -82,51 +64,31 @@ const TRANSCRIPT: { speaker: "you" | "card"; text: string; emphasis?: boolean }[
   { speaker: "card", text: "0.05 CTC, already back in your balance.", emphasis: true },
 ];
 
-const FEATURES: { title: string; body: ReactNode }[] = [
+/**
+ * Four columns, geometry measured off the equivalent section on kolo.xyz at
+ * 1636px: 384px columns with a 20px gap, a hairline rule above each, and a
+ * 384x350 card below holding a 150px icon and its number.
+ */
+const PILLARS: { title: string; blurb: string; src: string }[] = [
   {
-    title: "The limit is not your balance",
-    body: "You start below what you locked, at two thirds of it. Every cycle you close on time moves that up, until a clean record borrows more than it holds.",
+    title: "Verified once",
+    blurb: "One identity check, before your first draw",
+    src: "/profile-comacard.avif",
   },
   {
-    title: "A missed due date is public",
-    body: "Once a draw runs past its term, anyone can close it as a default. Nobody needs our permission, and it costs the borrower their limit.",
+    title: "Collateral stays put",
+    blurb: "It never leaves the chain you locked it on",
+    src: "/lock-comacard.avif",
   },
   {
-    title: "A watcher on the collateral",
-    body: (
-      <>
-        CTC moves, and what you can draw moves with it. A model reads the same numbers you can and
-        shifts collateral into USDT before a fall reaches your card.{" "}
-        <span className="text-[#18161B]/45">Not live yet. It is being built now.</span>
-      </>
-    ),
-  },
-];
-
-const PROOFS: { title: string; body: string; href: string; source: string }[] = [
-  {
-    title: "The contracts are published, not described",
-    body: "The credit line is live on Creditcoin and reads every number this page quotes. Open it before you trust it.",
-    href: CREDIT_LINE_URL,
-    source: "creditcoin-testnet.blockscout.com",
+    title: "Proved, not trusted",
+    blurb: "Creditcoin is shown a proof, never a promise",
+    src: "/network-comacard.webp",
   },
   {
-    title: "Your collateral never leaves Ethereum",
-    body: "It is locked in a vault on Sepolia and stays there. Creditcoin is only ever shown a proof that the lock happened.",
-    href: VAULT_URL,
-    source: "sepolia.etherscan.io",
-  },
-  {
-    title: "Your limit is arithmetic, not a model",
-    body: "Three numbers and three fixed weights. Read them off the chain and recompute your own limit by hand.",
-    href: REPO_URL,
-    source: "contracts/src/libraries/CreditScoring.sol",
-  },
-  {
-    title: "Nobody can borrow your history",
-    body: "A proof only ever credits the account that signed it, and the chain it happened on is read out of the transaction, not taken on trust.",
-    href: REPO_URL,
-    source: "contracts/src/libraries/HistoryProof.sol",
+    title: "Defaults are public",
+    blurb: "Past due, anyone can close the position",
+    src: "/shield-coma.webp",
   },
 ];
 
@@ -144,13 +106,6 @@ const STAGGER_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 const GUTTER = "px-5 sm:px-10 md:px-14";
 const CONTAINER = "mx-auto w-full";
 const WIDE = "max-w-5xl";
-const NARROW = "max-w-3xl";
-
-const HEADING_STYLE = {
-  fontSize: "clamp(1.9rem, 5.2vw, 3.5rem)",
-  lineHeight: 1.02,
-  letterSpacing: "-0.03em",
-} as const;
 
 const EYEBROW = "text-[11px] uppercase tracking-[0.2em] text-[#18161B]/45";
 
@@ -674,7 +629,10 @@ function SpendSection() {
  */
 function ReachSection() {
   return (
-    <section className="relative flex items-center justify-center overflow-hidden">
+    // The clip lives on the wrapper, not the section: the video carries its own
+    // near-white background, and rounding that band is what stops it meeting the
+    // page colour on a hard horizontal line.
+    <section className="relative my-16 flex items-center justify-center overflow-hidden rounded-[40px] md:my-28 md:rounded-[72px]">
       <video
         ref={(el) => {
           if (el) el.muted = true;
@@ -720,296 +678,68 @@ function ReachSection() {
 function FeaturesSection() {
   return (
     <section id={SECTION_FEATURES} className={`${GUTTER} scroll-mt-24 py-16 sm:py-24`}>
-      <div className={`${CONTAINER} ${WIDE}`}>
-        <Reveal>
-          <h2 className="max-w-2xl font-light text-[#18161B]" style={HEADING_STYLE}>
-            What the card actually does
-          </h2>
-        </Reveal>
+      <Reveal>
+        <p className={EYEBROW}>Built to be checked</p>
+      </Reveal>
 
-        <div className="mt-10 grid gap-4 sm:mt-14 md:grid-cols-3">
-          {FEATURES.map((feature, i) => (
-            <Reveal key={feature.title} delay={0.08 + i * 0.1} className="h-full">
-              <article className="flex h-full flex-col rounded-3xl border border-[#18161B]/10 bg-white/50 p-6 backdrop-blur-sm sm:p-8">
-                <h3 className="text-base font-medium text-[#18161B] sm:text-lg">{feature.title}</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-[#18161B]/65">{feature.body}</p>
-              </article>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+      <Reveal delay={0.08}>
+        <h2
+          className="mt-5 max-w-3xl font-light text-[#18161B]"
+          style={{
+            fontSize: "clamp(2.1rem, 6vw, 4.25rem)",
+            lineHeight: 0.98,
+            letterSpacing: "-0.03em",
+          }}
+        >
+          What the card actually does
+        </h2>
+      </Reveal>
 
-function StepsSection() {
-  return (
-    <section id={SECTION_STEPS} className={`${GUTTER} scroll-mt-24 py-16 sm:py-24`}>
-      <div className={`${CONTAINER} ${NARROW}`}>
-        <Reveal>
-          <p className={EYEBROW}>Start here</p>
-        </Reveal>
+      {/* 384px columns, 20px gutter, exactly as the reference lays them out. */}
+      <div className="mt-12 grid gap-5 sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
+        {PILLARS.map((pillar, i) => (
+          <Reveal key={pillar.title} delay={0.12 + i * 0.08}>
+            <div className="border-t border-[#18161B]/15 pt-5">
+              <h3 className="text-[15px] font-semibold text-[#18161B]">{pillar.title}</h3>
+              <p className="mt-1.5 text-[15px] leading-snug text-[#18161B]/45">{pillar.blurb}</p>
+            </div>
 
-        <Reveal delay={0.08}>
-          <h2 className="mt-5 font-light text-[#18161B]" style={HEADING_STYLE}>
-            Three steps, then your record does the rest
-          </h2>
-        </Reveal>
-
-        <div className="mt-10 flex flex-col gap-4 sm:mt-14">
-          {STEPS.map((step, i) => (
-            <Reveal key={step.title} delay={0.12 + i * 0.1}>
-              <article className="flex gap-5 rounded-3xl border border-[#18161B]/10 bg-white/50 p-6 backdrop-blur-sm sm:gap-7 sm:p-8">
-                <span className="font-code shrink-0 pt-1 text-[13px] text-[#18161B]/35">
-                  0{i + 1}
-                </span>
-                <div>
-                  <h3 className="text-base font-medium text-[#18161B] sm:text-lg">{step.title}</h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-[#18161B]/65">{step.body}</p>
-                </div>
-              </article>
-            </Reveal>
-          ))}
-        </div>
-
-        <Reveal delay={0.44}>
-          <p className="mt-6 text-[13px] leading-relaxed text-[#18161B]/50">
-            A lock takes about eight minutes to become provable. Creditcoin attests Sepolia a few
-            dozen blocks behind the head, and the proof only counts once the block it sits in has
-            been attested. Source at{" "}
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="underline decoration-[#18161B]/25 underline-offset-4 transition-colors hover:text-[#18161B]"
-            >
-              github.com/comacard/comacard
-            </a>
-            .
-          </p>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-function ProofSection() {
-  return (
-    <section className={`${GUTTER} scroll-mt-24 py-16 sm:py-24`}>
-      <div className={`${CONTAINER} ${WIDE}`}>
-        <Reveal>
-          <h2 className="max-w-2xl font-light text-[#18161B]" style={HEADING_STYLE}>
-            What you can check yourself
-          </h2>
-        </Reveal>
-        <Reveal delay={0.08}>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-[#18161B]/60">
-            Every claim on this page points at something you can open.
-          </p>
-        </Reveal>
-
-        <div className="mt-10 grid gap-4 sm:mt-14 sm:grid-cols-2">
-          {PROOFS.map((proof, i) => (
-            <Reveal key={proof.title} delay={0.08 + i * 0.08} className="h-full">
-              <a
-                href={proof.href}
-                target="_blank"
-                rel="noreferrer"
-                className="group flex h-full flex-col rounded-3xl border border-[#18161B]/10 bg-white/50 p-6 backdrop-blur-sm transition-colors hover:border-[#18161B]/25 hover:bg-white/70 sm:p-8"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-base font-medium text-[#18161B] sm:text-lg">{proof.title}</h3>
-                  <ArrowUpRight
-                    size={18}
-                    className="mt-1 shrink-0 text-[#18161B]/30 transition-all group-hover:text-[#18161B] motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
-                  />
-                </div>
-                <p className="mt-3 text-[15px] leading-relaxed text-[#18161B]/65">{proof.body}</p>
-                <span className="font-code mt-6 block break-words text-[11px] tracking-tight text-[#18161B]/40 sm:mt-auto sm:pt-6">
-                  {proof.source}
-                </span>
-              </a>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ClosingSection() {
-  return (
-    <section className={`${GUTTER} pb-24 pt-10 sm:pb-32 sm:pt-16`}>
-      <div className={`${CONTAINER} ${WIDE}`}>
-        <Reveal>
-          <h2
-            className="max-w-3xl font-light text-[#18161B]"
-            style={{
-              fontSize: "clamp(2.1rem, 7vw, 5rem)",
-              lineHeight: 0.98,
-              letterSpacing: "-0.03em",
-            }}
-          >
-            What would you rather be judged on?
-          </h2>
-        </Reveal>
-        <Reveal delay={0.12}>
-          <a
-            href={REPO_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#18161B] px-7 py-3.5 text-sm font-medium text-white transition-colors hover:bg-[#18161B]/90"
-          >
-            Open the repo
-            <ArrowUpRight size={15} />
-          </a>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className={`${GUTTER} border-t border-[#18161B]/10 bg-[#F4F0ED] py-14 sm:py-20`}>
-      <div className={`${CONTAINER} ${WIDE}`}>
-        <div className="flex flex-col gap-10 md:flex-row md:justify-between">
-          <div className="max-w-xs">
-            <div className="flex items-center gap-2.5">
+            <div className="relative mt-6 aspect-[384/350] rounded-2xl bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={LOGO_SRC}
+                src={pillar.src}
                 alt=""
-                width={20}
-                height={20}
-                className="h-5 w-5 shrink-0 object-contain"
                 aria-hidden
+                className="absolute inset-0 m-auto w-[39%] object-contain"
               />
-              <span className="text-sm font-medium uppercase tracking-wide text-[#18161B]">
-                Comacard
+              <span className="font-code absolute bottom-5 left-5 text-[12px] text-[#18161B]/35">
+                {`0${i + 1}`}
               </span>
             </div>
-            <p className="mt-4 text-[14px] leading-relaxed text-[#18161B]/55">
-              A card sized by what you have repaid, not what you hold. Built on Creditcoin.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-10 gap-y-8 sm:grid-cols-3">
-            <div>
-              <p className={EYEBROW}>Product</p>
-              <ul className="mt-4 flex flex-col gap-2.5 text-[14px] text-[#18161B]/70">
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection(SECTION_FEATURES)}
-                    className="transition-colors hover:text-[#18161B]"
-                  >
-                    How it works
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection(SECTION_STEPS)}
-                    className="transition-colors hover:text-[#18161B]"
-                  >
-                    Start here
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <p className={EYEBROW}>On the chain</p>
-              <ul className="mt-4 flex flex-col gap-2.5 text-[14px] text-[#18161B]/70">
-                <li>
-                  <a
-                    href={VAULT_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="transition-colors hover:text-[#18161B]"
-                  >
-                    SourceVault
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href={CREDIT_LINE_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="transition-colors hover:text-[#18161B]"
-                  >
-                    ASCCreditLine
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://docs.creditcoin.org"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="transition-colors hover:text-[#18161B]"
-                  >
-                    Creditcoin docs
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <p className={EYEBROW}>Source</p>
-              <ul className="mt-4 flex flex-col gap-2.5 text-[14px] text-[#18161B]/70">
-                <li>
-                  <a
-                    href={REPO_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="transition-colors hover:text-[#18161B]"
-                  >
-                    GitHub
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href={README_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="transition-colors hover:text-[#18161B]"
-                  >
-                    Docs
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-12 flex flex-col gap-3 border-t border-[#18161B]/10 pt-6 text-[13px] text-[#18161B]/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>Testnet only. Every token on this page is a test token with no value.</p>
-          <p>Collateral release is operator-approved until Attestcoin can write back.</p>
-        </div>
+          </Reveal>
+        ))}
       </div>
-    </footer>
+    </section>
   );
 }
 
 function Content() {
   return (
-    <main className="relative z-[4] bg-[#F4F0ED]">
+    <main className="relative z-[4] overflow-hidden rounded-t-[40px] bg-[#F4F0ED] md:rounded-t-[72px]">
       <ChatDemoSection />
       <SpendSection />
       <ReachSection />
       <FeaturesSection />
-      <StepsSection />
-      <ProofSection />
-      <ClosingSection />
-      <Footer />
+      <InsightsSection id={SECTION_STEPS} />
+      <CounterSection />
+      <QuoteCarousel id={SECTION_CARDHOLDERS} />
+      <ClosingFooter logoSrc={LOGO_SRC} faqId={SECTION_FAQ} />
     </main>
   );
 }
 
 function Nav({
   dark,
-  scrolled,
   activeTarget,
   menuOpen,
   onToggleMenu,
@@ -1017,7 +747,6 @@ function Nav({
   onNavigate,
 }: {
   dark: boolean;
-  scrolled: boolean;
   activeTarget: string;
   menuOpen: boolean;
   onToggleMenu: () => void;
@@ -1088,19 +817,13 @@ function Nav({
               onClick={() => onNavigate(SECTION_STEPS)}
               className="rounded-full bg-white px-5 py-2.5 text-sm font-medium text-gray-900"
             >
-              Get Started
+              Get Coma Card
             </button>
           </div>
         </nav>
       </div>
 
-      <header
-        className={`fixed inset-x-0 top-0 z-[60] flex items-center justify-between px-5 py-4 transition-colors duration-500 sm:px-8 sm:py-5 md:px-10 ${
-          scrolled && !menuOpen
-            ? "border-b border-[#18161B]/[0.07] bg-[#F4F0ED]/80 backdrop-blur-md"
-            : "border-b border-transparent"
-        }`}
-      >
+      <header className="fixed inset-x-0 top-0 z-[60] flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5 md:px-10">
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -1120,11 +843,7 @@ function Nav({
           </span>
         </div>
 
-        <nav
-          className={`absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center rounded-full px-1.5 py-1.5 backdrop-blur-md transition-colors duration-500 md:flex ${
-            d ? "bg-[#18161B]/10" : "bg-white/10"
-          }`}
-        >
+        <nav className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center rounded-full px-1.5 py-1.5 md:flex">
           {NAV_ITEMS.map((item) => (
             <a
               key={item.label}
@@ -1152,7 +871,7 @@ function Nav({
               d ? "bg-[#18161B] text-white" : "bg-white text-gray-900"
             }`}
           >
-            Get Started
+            Get Coma Card
           </button>
         </div>
 
@@ -1187,7 +906,6 @@ export default function App() {
   const [sectionVisible, setSectionVisible] = useState(false);
   const [imagesVisible, setImagesVisible] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [activeTarget, setActiveTarget] = useState(SECTION_FEATURES);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pendingScroll = useRef<string | null>(null);
@@ -1261,17 +979,15 @@ export default function App() {
     };
   }, [menuOpen]);
 
-  // Nav chrome + active item follow the document scroll once unlocked.
+  // The active nav item follows the document scroll once unlocked.
   useEffect(() => {
     if (!unlocked) {
-      setScrolled(false);
       setActiveTarget(SECTION_FEATURES);
       return;
     }
     let raf = 0;
     const update = () => {
       raf = 0;
-      setScrolled(window.scrollY > 8);
       const install = document.getElementById(SECTION_STEPS);
       const top = install ? install.getBoundingClientRect().top : Number.POSITIVE_INFINITY;
       setActiveTarget(top <= 240 ? SECTION_STEPS : SECTION_FEATURES);
@@ -1385,7 +1101,6 @@ export default function App() {
 
       <Nav
         dark={navDark}
-        scrolled={scrolled}
         activeTarget={activeTarget}
         menuOpen={menuOpen}
         onToggleMenu={() => setMenuOpen((v) => !v)}
