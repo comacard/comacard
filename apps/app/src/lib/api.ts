@@ -1,11 +1,14 @@
-/** NEXT_PUBLIC_* is inlined at build time; a missing one should fail there, not in a user's browser. */
-export function required(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`missing env ${name}`);
-  return v;
+/**
+ * Next inlines `process.env.NEXT_PUBLIC_*` only when the name is written out
+ * literally, so callers pass the value, not the key. A missing one fails at
+ * module load, on the server, before any user sees a broken page.
+ */
+export function required(name: string, value: string | undefined): string {
+  if (!value) throw new Error(`missing env ${name}`);
+  return value;
 }
 
-export const API_URL = required("NEXT_PUBLIC_API_URL");
+export const API_URL = required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL);
 
 export type Account = {
   wallet: string;

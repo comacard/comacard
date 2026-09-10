@@ -8,7 +8,13 @@ export const creditcoinTestnet = defineChain({
   id: 102031,
   name: "Creditcoin Testnet",
   nativeCurrency: { name: "Testnet CTC", symbol: "tCTC", decimals: 18 },
-  rpcUrls: { default: { http: [required("NEXT_PUBLIC_CREDITCOIN_RPC_URL")] } },
+  rpcUrls: {
+    default: {
+      http: [
+        required("NEXT_PUBLIC_CREDITCOIN_RPC_URL", process.env.NEXT_PUBLIC_CREDITCOIN_RPC_URL),
+      ],
+    },
+  },
   blockExplorers: {
     default: { name: "Blockscout", url: "https://creditcoin-testnet.blockscout.com" },
   },

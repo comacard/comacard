@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Cardholder app: KYC, credit state, draw and repay",
   "scripts": {
-    "dev": "bun --env-file=../../.env next dev -p 3000",
-    "build": "bun --env-file=../../.env next build",
+    "dev": "next dev -p 3000",
+    "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .next dist .turbo tsconfig.tsbuildinfo"

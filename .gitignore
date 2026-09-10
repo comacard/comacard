@@ -33,6 +33,8 @@ lcov.info
 .env
 .env.*
 !.env.example
+# symlink to the repository-root .env, so Next finds it without flags
+!apps/app/.env.local
 *.pem
 *.key
 *.keystore
