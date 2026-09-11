@@ -1,15 +1,16 @@
 "use client";
-import { useState } from "react";
-import { Button, Card, Skeleton } from "../../../components/ui";
+import { useEffect } from "react";
+import { Button, Card, Skeleton, Toast } from "../../../components/ui";
 import { useNav } from "../../../hooks/useNav";
-import { TotalHero } from "../../../components/home/TotalHero";
-import { FreezeBanner } from "../../../components/status/FreezeBanner";
-import { BucketRow } from "../../../components/bucket/BucketRow";
+import { AssetHero } from "../../../components/home/AssetHero";
+import { AssetRow } from "../../../components/home/AssetRow";
 import { ActivityList } from "../../../components/activity/ActivityList";
-import { ExitApproval } from "../../../components/proposal/ExitApproval";
-import { useBuckets } from "../../../hooks/useBuckets";
-import { useActivity } from "../../../hooks/useActivity";
-import { usePendingExit } from "../../../hooks/usePendingExit";
+import { useWalletAssets } from "../../../hooks/useWalletAssets";
+import { useTransactions } from "../../../hooks/useTransactions";
+import { useCardAccount } from "../../../hooks/useCardAccount";
+import { useKycStart } from "../../../hooks/useKycStart";
+import { CardFolderPanel } from "../../../components/card/CardFolderPanel";
+import { KycSheet } from "../../../components/card/KycSheet";
 import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { DesktopOverview } from "../../../components/home/DesktopOverview";
 
@@ -23,27 +24,45 @@ function CoinStackIcon() {
   );
 }
 
-function EmptyBucketsMobile() {
+function EmptyAssetsMobile() {
   return (
     <div className="flex flex-col items-center px-5 py-7 text-center">
       <div className="grid h-11 w-11 place-items-center rounded-full border border-line bg-white [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.2)]">
         <CoinStackIcon />
       </div>
-      <p className="mt-3 text-[13.5px] font-semibold text-ink">No deposits yet</p>
-      <p className="mt-1 max-w-[230px] text-[12.5px] leading-snug text-muted">Deposit your money to create your first earning bucket.</p>
+      <p className="mt-3 text-[13.5px] font-semibold text-ink">Nothing in this wallet yet</p>
+      <p className="mt-1 max-w-[230px] text-[12.5px] leading-snug text-muted">Fund it with Sepolia ETH or testnet CTC and the balances will show here.</p>
     </div>
   );
 }
 
 function MobileHome() {
   const nav = useNav();
-  const { loading, buckets, totalUsd } = useBuckets();
-  const { loading: activityLoading, items: activity } = useActivity();
-  const pend = usePendingExit();
-  const [exitOpen, setExitOpen] = useState(false);
-  const agentActivity = buckets.length === 0 ? [] : activity.filter((item) => item.cat === "auto");
-  const agentPreview = agentActivity.slice(0, 3);
-  const hasMoreAgentActivity = agentActivity.length > 3;
+  const { loading, assets, totalUsd } = useWalletAssets();
+  const { loading: txLoading, items: transactions } = useTransactions();
+  const { account, refresh } = useCardAccount();
+  const { verify, url: kycUrl, close: closeKyc, starting, error: kycError, clearError } = useKycStart();
+  const funded = assets.some((a) => a.amount > 0n);
+
+  // Didit answers through a webhook, never to the tab that opened it, so the card unlocks on the
+  // way back rather than on a response.
+  useEffect(() => {
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!kycError) return;
+    const timer = setTimeout(clearError, 4000);
+    return () => clearTimeout(timer);
+  }, [kycError, clearError]);
+
+  // Depositing into a card nobody has issued yet is not a thing you can do, so until identity
+  // clears the primary action is the step that actually unblocks the user.
+  const needsVerification = account !== null && !account.kyc.verified;
+  const preview = transactions.slice(0, 3);
+  const hasMore = transactions.length > 3;
 
   return (
     <div>
@@ -54,12 +73,19 @@ function MobileHome() {
           <Skeleton className="mx-auto mt-3 h-[46px] w-[210px] rounded-lg" />
         </div>
       ) : (
-        <TotalHero buckets={buckets} totalUsd={totalUsd} />
+        <AssetHero assets={assets} totalUsd={totalUsd} />
       )}
-      {pend && <FreezeBanner onReview={() => setExitOpen(true)} />}
-      <Button className="mb-[22px]" onClick={() => nav.forward("/deposit")}>Deposit</Button>
+      <CardFolderPanel account={account} className="mb-[26px]" />
 
-      <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Buckets</h2>
+      {needsVerification ? (
+        <Button className="mb-[22px]" onClick={verify} disabled={starting}>
+          {starting ? "Opening…" : "Verify identity"}
+        </Button>
+      ) : (
+        <Button className="mb-[22px]" onClick={() => nav.forward("/deposit")}>Deposit</Button>
+      )}
+
+      <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Assets</h2>
       <Card className="mb-[22px] px-5 py-1">
         {loading ? (
           <div className="flex flex-col gap-4 py-3">
@@ -74,35 +100,41 @@ function MobileHome() {
               </div>
             ))}
           </div>
-        ) : buckets.length === 0 ? (
-          <EmptyBucketsMobile />
+        ) : !funded ? (
+          <EmptyAssetsMobile />
         ) : (
-          <div className="fade-in">{buckets.map((b, i) => <BucketRow key={b.currency} bucket={b} first={i === 0} />)}</div>
+          <div className="fade-in">{assets.map((a, i) => <AssetRow key={a.token} asset={a} first={i === 0} />)}</div>
         )}
       </Card>
 
-      <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Agent</h2>
+      <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Transactions</h2>
       <Card className="px-5 pb-2 pt-1">
         <ActivityList
-          items={agentPreview}
-          loading={activityLoading}
-          onReview={() => setExitOpen(true)}
-          reviewed={!pend}
-          emptyTitle="No agent activity yet"
-          emptyDescription="Deposit first; automated moves will show here."
+          items={preview}
+          loading={txLoading}
+          reviewed
+          emptyTitle="No transactions yet"
+          emptyDescription="Locks, draws and repayments will show here once they are on chain."
         />
-        {hasMoreAgentActivity && (
+        {hasMore && (
           <button
-            onClick={() => nav.forward("/account/activity")}
+            onClick={() => nav.forward("/transactions")}
             className="mt-1.5 flex w-full items-center justify-center border-t border-line pb-[3px] pt-[13px] text-[13.5px] font-medium text-muted"
           >
-            View all activity
+            View all transactions
           </button>
         )}
       </Card>
       </div>
 
-      <ExitApproval open={exitOpen} onClose={() => setExitOpen(false)} />
+      <KycSheet
+        open={!!kycUrl}
+        url={kycUrl}
+        verified={!!account?.kyc.verified}
+        onClose={closeKyc}
+        onPoll={refresh}
+      />
+      <Toast open={!!kycError} message={kycError ?? ""} />
     </div>
   );
 }

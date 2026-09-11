@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
-import { canonicalize, eventKey, isSessionEvent, parseWebhook, verifyWebhook } from "../src/didit";
+import { canonicalize, eventKey, isSessionEvent, parseWebhook, verifyWebhook, nameFromDecision } from "../src/didit";
 
 const secret = "shh";
 const hmac = (s: string) => createHmac("sha256", secret).update(s).digest("hex");
@@ -59,5 +59,42 @@ describe("parseWebhook / isSessionEvent", () => {
     );
     expect(e && eventKey(e)).toBe("s1:Approved:status.updated:7");
     expect(eventKey({ event_id: "e9", webhook_type: "x", timestamp: 1 })).toBe("e9");
+  });
+});
+
+describe("nameFromDecision", () => {
+  test("reads the OCR'd name Didit already sends with an approval", () => {
+    // Shape per docs.didit.me/reference/data-models: the webhook's `decision` mirrors
+    // GET /v3/session/{id}/decision/, so this needs no second call to Didit.
+    expect(
+      nameFromDecision({
+        id_verifications: [
+          { first_name: "María", last_name: "García López", full_name: "María García López" },
+        ],
+      }),
+    ).toBe("María García López");
+  });
+
+  test("accepts the older singular object, which stored decisions may still use", () => {
+    expect(nameFromDecision({ id_verification: { full_name: "Axel Matsama" } })).toBe("Axel Matsama");
+  });
+
+  test("joins the halves when a document carries only first and last", () => {
+    // Every name field is nullable in Didit's schema.
+    expect(
+      nameFromDecision({ id_verifications: [{ first_name: "Axel", last_name: "Matsama" }] }),
+    ).toBe("Axel Matsama");
+    expect(nameFromDecision({ id_verifications: [{ first_name: "Axel", last_name: null }] })).toBe(
+      "Axel",
+    );
+  });
+
+  test("returns null rather than a guess", () => {
+    // A card with the wrong name is worse than a card with none.
+    expect(nameFromDecision(null)).toBeNull();
+    expect(nameFromDecision({})).toBeNull();
+    expect(nameFromDecision({ id_verifications: [] })).toBeNull();
+    expect(nameFromDecision({ id_verifications: [{ full_name: "   " }] })).toBeNull();
+    expect(nameFromDecision("not an object")).toBeNull();
   });
 });

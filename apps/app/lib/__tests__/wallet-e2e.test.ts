@@ -6,7 +6,7 @@ beforeEach(async () => {
 });
 
 test("the address is a well-formed Stellar public key", () => {
-  expect(E2E_ADDRESS).toMatch(/^G[A-Z2-7]{55}$/);
+  expect(E2E_ADDRESS).toMatch(/^0x[0-9a-fA-F]{40}$/);
 });
 
 test("connect resolves a deterministic address and wallet name", async () => {

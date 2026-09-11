@@ -161,6 +161,12 @@ export const openapi = {
             enum: ["kyc_required", "overdue"],
             description: "present only when active is false",
           },
+          holder: {
+            type: "string",
+            nullable: true,
+            description: "Cardholder name, OCR'd from the identity document during KYC.",
+            example: "María García López",
+          },
           number: { type: "string", nullable: true, example: "•••• •••• •••• 4821" },
           accountNumber: { type: "string", nullable: true, example: "482193027465" },
           expiry: { type: "string", nullable: true, example: "09/30" },
@@ -171,6 +177,12 @@ export const openapi = {
         type: "object",
         properties: {
           wallet: Address,
+          holder: {
+            type: "string",
+            nullable: true,
+            description: "Cardholder name, OCR'd from the identity document during KYC.",
+            example: "María García López",
+          },
           number: { type: "string", description: "16 digits, Luhn-valid, private BIN 9924" },
           masked: { type: "string" },
           accountNumber: { type: "string", description: "12 digits" },

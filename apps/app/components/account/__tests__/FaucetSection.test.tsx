@@ -1,76 +1,38 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { ToastProvider } from "../../../providers/ToastProvider";
+import { render, screen } from "@testing-library/react";
 import { FaucetSection } from "../FaucetSection";
 
-vi.hoisted(() => {
-  process.env.NEXT_PUBLIC_API_URL = "http://localhost:8787";
-  process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL = "https://horizon-testnet.stellar.org";
-  process.env.NEXT_PUBLIC_USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
-  process.env.NEXT_PUBLIC_EURC_ISSUER = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+/**
+ * The faucet section used to mint test USDC and EURC through the vault backend. Both faucets it
+ * points at now belong to somebody else and cannot be called from a browser, so these rows are
+ * links and the tests are about where they go.
+ */
+
+test("offers a Creditcoin and a Sepolia faucet, and nothing that mints", () => {
+  render(<FaucetSection />);
+
+  expect(screen.getByText("Creditcoin")).toBeInTheDocument();
+  expect(screen.getByText("Sepolia ETH")).toBeInTheDocument();
+  // Nothing is minted here, so nothing may say it is.
+  expect(screen.queryByRole("button", { name: /mint/i })).toBeNull();
+  expect(screen.queryByText(/USDC|EURC/)).toBeNull();
 });
 
-afterAll(() => {
-  delete process.env.NEXT_PUBLIC_API_URL;
-  delete process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL;
-  delete process.env.NEXT_PUBLIC_USDC_ISSUER;
-  delete process.env.NEXT_PUBLIC_EURC_ISSUER;
-});
+test("each Request opens the right faucet in a new tab", () => {
+  render(<FaucetSection />);
 
-const ADDRESS = "GDUY7J7A33TQWOSOQGDO776GGLM3UQERL4J3SPT56F6YS4ID7MLDERI4";
-const signTransaction = vi.fn(async (xdr: string) => `signed:${xdr}`);
+  const links = screen.getAllByRole("link", { name: "Request" });
+  expect(links).toHaveLength(2);
 
-vi.mock("../../../hooks/useWallet", () => ({
-  useWallet: () => ({ address: ADDRESS, isConnected: true, signTransaction }),
-}));
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-}
-
-test("renders USDC and EURC faucet rows with compact mint buttons", async () => {
-  localStorage.clear();
-  const fetchMock = vi.fn().mockResolvedValue(json({ ok: true, hash: "hash", currency: "USD", amount: "10000000000" }));
-  vi.stubGlobal("fetch", fetchMock);
-
-  render(
-    <ToastProvider>
-      <FaucetSection />
-    </ToastProvider>,
+  const [ctc, eth] = links;
+  expect(ctc).toHaveAttribute("href", "https://discord.gg/creditcoin");
+  expect(eth).toHaveAttribute(
+    "href",
+    "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
   );
-
-  expect(screen.getByText("Faucet")).toBeInTheDocument();
-  expect(screen.getByText("USDC")).toBeInTheDocument();
-  expect(screen.getByText("EURC")).toBeInTheDocument();
-  expect(screen.getByText("Mint test USDC")).toBeInTheDocument();
-  expect(screen.getByText("Mint test EURC")).toBeInTheDocument();
-  expect(screen.getAllByRole("button", { name: "Mint" })).toHaveLength(2);
-
-  await userEvent.setup().click(screen.getAllByRole("button", { name: "Mint" })[0]!);
-
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-  const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
-  expect(JSON.parse(String(init.body))).toEqual({ address: ADDRESS, currency: "USD" });
-  vi.unstubAllGlobals();
+  // A faucet that replaces the app is a faucet the user has to navigate back from.
+  for (const link of links) {
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+  }
 });
 
-test("cooldown is scoped per asset, not just per wallet", async () => {
-  localStorage.clear();
-  const fetchMock = vi.fn().mockResolvedValue(json({ ok: true, hash: "hash", currency: "USD", amount: "10000000000" }));
-  vi.stubGlobal("fetch", fetchMock);
-
-  render(
-    <ToastProvider>
-      <FaucetSection />
-    </ToastProvider>,
-  );
-
-  const buttons = screen.getAllByRole("button", { name: "Mint" });
-  await userEvent.setup().click(buttons[0]!);
-
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-  await waitFor(() => expect(buttons[0]).toHaveTextContent(/\d{2}:\d{2}:\d{2}/));
-  expect(buttons[1]).toHaveTextContent("Mint");
-  expect(buttons[1]).toBeEnabled();
-  vi.unstubAllGlobals();
-});

@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { AuthGate } from "../../components/AuthGate";
-import { CardArtwork } from "../../components/card/CardArtwork";
-import { CardFolder } from "../../components/motion/card-folder";
-import { Button, SubHeader, Toast } from "../../components/ui";
+import { CardFolderPanel } from "../../components/card/CardFolderPanel";
+import { KycSheet } from "../../components/card/KycSheet";
+import { Button, CopyButton, SubHeader, Toast, TransactionStatus } from "../../components/ui";
 import { useCardAccount } from "../../hooks/useCardAccount";
-import { useWallet } from "../../hooks/useWallet";
-import { startKyc } from "../../lib/comacard/api";
+import { useCreditLine } from "../../hooks/useCreditLine";
+import { useKycStart } from "../../hooks/useKycStart";
 
 /**
  * The card screen: one card in a beUI folder, and the single next step for whoever is looking at it.
@@ -43,40 +43,30 @@ export default function CardPage() {
 }
 
 function CardScreen() {
-  const { address } = useWallet();
   const { account, error, loading, refresh } = useCardAccount();
-  const [detailsVisible, setDetailsVisible] = useState(false);
-  const [starting, setStarting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const { verify, url: kycUrl, close: closeKyc, starting, error: kycError, clearError } = useKycStart();
+  // Null unless a draw, repay or lock is in flight. Nothing on this screen starts one yet; the
+  // pill is wired so the moment a spend control lands it reports without further plumbing.
+  const { txStatus, hash, error: txError } = useCreditLine();
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(timer);
-  }, [toast]);
+
 
   // Didit runs in its own tab and reports the verdict through a webhook, so the answer never comes
   // back to the call that opened it. Re-reading whenever this tab regains focus is what turns a
   // finished verification into an unlocked card without asking the user to reload.
+  useEffect(() => {
+    if (!kycError) return;
+    const timer = setTimeout(clearError, 4000);
+    return () => clearTimeout(timer);
+  }, [kycError, clearError]);
+
   useEffect(() => {
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [refresh]);
 
-  const verify = useCallback(async () => {
-    if (!address) return;
-    setStarting(true);
-    const result = await startKyc(address);
-    setStarting(false);
-    if (!result.ok) {
-      setToast(`Could not start verification: ${result.message}`);
-      return;
-    }
-    window.open(result.value.url, "_blank", "noopener,noreferrer");
-  }, [address]);
 
-  const holder = account?.card.holder ?? "Comacard holder";
   const step = describe({ account, error, loading, verify, starting });
 
   return (
@@ -84,25 +74,7 @@ function CardScreen() {
       <div className="stagger">
         <SubHeader title="Your card" />
 
-        <div className="flex justify-center py-2">
-          <CardFolder
-            title={holder}
-            cardNumber={account?.card.number ?? ""}
-            expiry={account?.card.expiry ?? "••/••"}
-            cvv={account?.card.cvv ?? "•••"}
-            detailsVisible={detailsVisible}
-            onDetailsVisibleChange={setDetailsVisible}
-            className="w-full max-w-[340px]"
-            card={
-              <CardArtwork
-                holder={holder}
-                number={account?.card.number}
-                expiry={account?.card.expiry}
-                detailsVisible={detailsVisible}
-              />
-            }
-          />
-        </div>
+        <CardFolderPanel account={account} className="py-2" />
 
         <section className="mt-7 rounded-[16px] border border-line bg-white px-4 py-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
           <h2 className="text-[15px] font-semibold">{step.title}</h2>
@@ -119,6 +91,31 @@ function CardScreen() {
           ) : null}
         </section>
 
+        {txStatus ? (
+          <TransactionStatus
+            status={txStatus}
+            detail={txError ? txError.message.split("\n")[0] : undefined}
+            href={hash ? `https://creditcoin-testnet.blockscout.com/tx/${hash}` : undefined}
+            className="mt-4"
+          />
+        ) : null}
+
+        {/* The account number is the one card figure a person reads out loud, so it gets a copy
+            control. The PAN does not: `GET /account/:wallet` only ever returns it masked. */}
+        {account?.card.accountNumber ? (
+          <div className="mt-4 flex items-center gap-3 rounded-[16px] border border-line bg-white px-4 py-3.5 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-faint">
+                Account number
+              </div>
+              <div className="mt-1 truncate font-mono text-[14px] font-semibold tabular-nums">
+                {account.card.accountNumber}
+              </div>
+            </div>
+            <CopyButton value={account.card.accountNumber} label="Copy account number" />
+          </div>
+        ) : null}
+
         {account?.credit ? (
           <dl className="mt-4 grid grid-cols-3 gap-2">
             <Stat label="Score" value={String(account.credit.score)} />
@@ -130,7 +127,14 @@ function CardScreen() {
 
       {/* Outside `.stagger`: `.stagger > *` animates every direct child to `opacity: 1`, and an
           animation beats a utility class, so a Toast in there stays visible with an empty message. */}
-      <Toast open={!!toast} message={toast ?? ""} />
+      <KycSheet
+        open={!!kycUrl}
+        url={kycUrl}
+        verified={!!account?.kyc.verified}
+        onClose={closeKyc}
+        onPoll={refresh}
+      />
+      <Toast open={!!kycError} message={kycError ?? ""} />
     </>
   );
 }

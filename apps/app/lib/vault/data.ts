@@ -6,6 +6,10 @@ export interface Stablecoin { sym: StablecoinSym; currency: Currency; chains: st
 export interface BucketMeta { currency: Currency; name: string; venue: string; tags: string[]; apy: number; }
 export interface ActivityItem {
   id: number; cat: "you" | "auto"; kind: string; detail: string; when: string; flag?: boolean; review?: boolean;
+  /** Block explorer link for a row that came off a chain. Absent on fixture rows. */
+  href?: string;
+  /** Which part of the product the row belongs to, for the transactions filter. */
+  group?: "card" | "deposit";
 }
 
 /** Buckets live in the app. CETES/MXN remains a coming-soon funding option, not an active bucket. */

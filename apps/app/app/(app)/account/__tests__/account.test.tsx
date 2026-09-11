@@ -22,11 +22,12 @@ function renderAccount(client = new MockVaultClient()) {
   render(<VaultProvider client={client}><AccountPage /></VaultProvider>);
 }
 
-test("shows the identicon, a truncated address, and the connected wallet", async () => {
+test("shows the identicon and a truncated address, and names no wallet product", async () => {
   renderAccount();
   expect(await screen.findByLabelText("Wallet identicon")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /GABC\.\.\.K3X9/ })).toBeInTheDocument();
-  expect(screen.getByText("Connected via Freighter")).toBeInTheDocument();
+  // Which extension signed in is the user's own business and tells them nothing they need.
+  expect(screen.queryByText(/Connected via/)).toBeNull();
 });
 
 test("does not claim a connection date it has no source for", async () => {
@@ -53,7 +54,7 @@ test("Activity routes to the central activity page", async () => {
   const user = userEvent.setup();
   renderAccount();
   await user.click(screen.getByRole("button", { name: /Activity/ }));
-  expect(push).toHaveBeenCalledWith("/account/activity");
+  expect(push).toHaveBeenCalledWith("/transactions");
 });
 
 test("auto-reinvest reads ON for a fresh user — the seam's default is enabled (unset = on)", async () => {

@@ -42,10 +42,20 @@ export type CardState = {
   spendable: string;
   spendableCtc: string;
   reason?: CardReason;
+  /** True the moment KYC clears. The card is derived, so there is nothing to wait for after that. */
+  issued?: boolean;
+  /**
+   * MASKED on `GET /account/:wallet` ("•••• •••• •••• 6363"), full only on
+   * `GET /account/:wallet/card`. The split is deliberate on the backend: a list screen has no
+   * business holding a PAN.
+   */
   number?: string;
+  /** 12 digits, the one number a person would read out to receive money. Safe to show in full. */
+  accountNumber?: string;
   expiry?: string;
   cvv?: string;
   holder?: string;
+  issuedAt?: number;
 };
 
 export type CreditState = {
@@ -102,3 +112,31 @@ export const getAccount = (wallet: string): Promise<Result<ComacardAccount>> =>
  *  through Didit's webhook, so the caller has to re-read `getAccount` to learn the outcome. */
 export const startKyc = (wallet: string): Promise<Result<{ sessionId: string; url: string }>> =>
   request<{ sessionId: string; url: string }>(`/account/${wallet}/kyc`, { method: "POST" });
+
+/**
+ * The full card: unmasked PAN, CVV, expiry.
+ *
+ * A second endpoint on purpose. `GET /account/:wallet` only ever returns the masked number and no
+ * CVV at all, so a screen that lists cards never holds a PAN. Call this only when the holder asks
+ * to see it, not on page load.
+ *
+ * 404s until KYC is Approved, which is the backend refusing to invent a card for an unverified
+ * person rather than an error to retry.
+ */
+export type FullCard = {
+  wallet: string;
+  number: string;
+  masked: string;
+  accountNumber: string;
+  cvv: string;
+  expiry: string;
+  expiresAt: number;
+  issuedAt: number;
+  active: boolean;
+  reason?: CardReason;
+  spendable: string;
+  spendableCtc: string;
+};
+
+export const getCard = (wallet: string): Promise<Result<FullCard>> =>
+  request<FullCard>(`/account/${wallet}/card`);

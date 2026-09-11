@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MockVaultClient } from "@sorosense/vault-client";
@@ -5,6 +6,21 @@ import { VaultProvider } from "../../../../providers/VaultProvider";
 import { ToastProvider } from "../../../../providers/ToastProvider";
 import { seedVault } from "../../../../lib/vault/seed";
 import HomePage from "../page";
+
+/**
+ * The card panel fetches its unmasked number through react-query, so Home needs a client. A fresh
+ * one per render keeps a cached card from one test out of the next.
+ */
+function withProviders(ui: React.ReactNode, client: MockVaultClient) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <VaultProvider client={client}>
+        <ToastProvider>{ui}</ToastProvider>
+      </VaultProvider>
+    </QueryClientProvider>,
+  );
+}
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -17,43 +33,132 @@ vi.mock("../../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }))
 const isDesktop = vi.fn(() => false);
 vi.mock("../../../../hooks/useIsDesktop", () => ({ useIsDesktop: () => isDesktop() }));
 
-test("home renders buckets, activity preview and a View all link", async () => {
-  useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
+/**
+ * Home's three new data sources are mocked here rather than provided. This file tests what the page
+ * composes — which hero, which primary action, which rows — and wiring a real WagmiProvider in
+ * would test wagmi's cache instead, over the network, from a unit test.
+ */
+const asset = (token: "CTC" | "ETH", amount: bigint, usd: number | null) => ({
+  token,
+  symbol: token === "CTC" ? "tCTC" : "ETH",
+  name: token === "CTC" ? "Creditcoin" : "Ethereum",
+  network: token === "CTC" ? "Creditcoin Testnet" : "Sepolia",
+  amount,
+  decimals: 18,
+  usd,
+  priceUsd: usd,
+});
+const walletAssets = vi.fn();
+vi.mock("../../../../hooks/useWalletAssets", () => ({
+  useWalletAssets: () => walletAssets(),
+  toNumber: (amount: bigint) => Number((amount * 10_000n) / 10n ** 18n) / 10_000,
+}));
+
+const cardAccount = vi.fn();
+vi.mock("../../../../hooks/useCardAccount", () => ({ useCardAccount: () => cardAccount() }));
+
+/** Four on-chain rows, in the shape the indexer hook emits. Mocked for the same reason as the two
+ *  above: this file tests what Home composes, not react-query's cache over a GraphQL endpoint. */
+const transactions = vi.fn();
+vi.mock("../../../../hooks/useTransactions", () => ({ useTransactions: () => transactions() }));
+
+const verify = vi.fn();
+vi.mock("../../../../hooks/useKycStart", () => ({
+  // Mirrors the real hook's shape: `verify` opens a session, the URL comes back through `url` for
+  // KycSheet to embed. A mock that drops those silently stops exercising the sheet.
+  useKycStart: () => ({
+    verify,
+    url: null,
+    close: vi.fn(),
+    starting: false,
+    error: null,
+    clearError: vi.fn(),
+  }),
+}));
+
+/** A funded wallet whose owner has cleared identity: the ordinary case. */
+function fundedAndVerified() {
+  walletAssets.mockReturnValue({
+    loading: false,
+    assets: [asset("CTC", 2_000n * 10n ** 18n, 191.08), asset("ETH", 3n * 10n ** 14n, 0.74)],
+    totalUsd: 191.82,
+    prices: null,
+    priceError: false,
+  });
+  cardAccount.mockReturnValue({
+    account: { kyc: { verified: true, status: "Approved", sessionId: "s" }, card: { issued: true } },
+    error: null,
+    loading: false,
+    refresh: vi.fn(),
+  });
+  transactions.mockReturnValue({
+    loading: false,
+    error: false,
+    items: [
+      { id: 0, cat: "you", kind: "repaid", when: "1m ago", detail: "Repaid 0.2400 tCTC and closed the cycle" },
+      { id: 1, cat: "you", kind: "drew", when: "3m ago", detail: "Borrowed 0.2400 tCTC against your card" },
+      { id: 2, cat: "auto", kind: "proved", when: "8m ago", detail: "0.0006 ETH of collateral confirmed on Creditcoin" },
+      { id: 3, cat: "you", kind: "collateral-locked", when: "16m ago", detail: "Locked 0.0006 ETH on Sepolia" },
+    ],
+  });
+}
+
+test("home renders wallet assets, the card, a transaction preview and a View all link", async () => {
+  useWallet.mockReturnValue({ address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0", isConnected: true });
+  fundedAndVerified();
   const client = new MockVaultClient();
-  await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><ToastProvider><HomePage /></ToastProvider></VaultProvider>);
-  await waitFor(() => expect(screen.getByText("USD Bucket")).toBeInTheDocument());
+  await seedVault(client, "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0");
+  withProviders(<HomePage />, client);
+
+  await waitFor(() => expect(screen.getByText("Creditcoin")).toBeInTheDocument());
+  expect(screen.getByText("Ethereum")).toBeInTheDocument();
+  expect(screen.getByText("2,000.00 tCTC")).toBeInTheDocument();
+  // The card moved onto Home. The fixture has no issued card, so the folder carries the
+  // not-issued label rather than a holder name.
+  expect(screen.getByRole("button", { name: /not issued yet/i })).toBeInTheDocument();
+  expect(screen.queryByText("Comacard holder")).toBeNull();
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
-  expect(screen.getByText("View all activity")).toBeInTheDocument();
-  expect(screen.getByText("Your earning is paused")).toBeInTheDocument(); // EUR pool seeded frozen
+  expect(screen.getByText("View all transactions")).toBeInTheDocument();
 });
 
-test("mobile Agent preview hides View all until there are more than three agent rows", async () => {
+test("an empty wallet says so and offers no activity link", async () => {
   useWallet.mockReturnValue({ address: null, isConnected: false });
-  render(<VaultProvider client={new MockVaultClient()}><ToastProvider><HomePage /></ToastProvider></VaultProvider>);
+  walletAssets.mockReturnValue({
+    loading: false,
+    assets: [asset("CTC", 0n, 0), asset("ETH", 0n, 0)],
+    totalUsd: 0,
+    prices: null,
+    priceError: false,
+  });
+  cardAccount.mockReturnValue({ account: null, error: null, loading: false, refresh: vi.fn() });
+  transactions.mockReturnValue({ loading: false, error: false, items: [] });
+  withProviders(<HomePage />, new MockVaultClient());
 
-  await waitFor(() => expect(screen.getByText("No deposits yet")).toBeInTheDocument());
-  expect(screen.getByText("No agent activity yet")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText("Nothing in this wallet yet")).toBeInTheDocument());
+  expect(screen.getByText("No transactions yet")).toBeInTheDocument();
   expect(screen.queryByText("View all activity")).toBeNull();
 });
 
-test("tapping the freeze banner opens the exit approval sheet", async () => {
-  useWallet.mockReturnValue({ address: "GUSER", isConnected: true, signTransaction: vi.fn(async (x: string) => x) });
-  const client = new MockVaultClient();
-  await seedVault(client, "GUSER");
+test("an unverified wallet is offered verification instead of Deposit", async () => {
+  useWallet.mockReturnValue({ address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0", isConnected: true });
+  fundedAndVerified();
+  cardAccount.mockReturnValue({
+    account: { kyc: { verified: false, status: "none", sessionId: null }, card: { issued: false } },
+    error: null,
+    loading: false,
+    refresh: vi.fn(),
+  });
   const user = userEvent.setup();
-  render(<VaultProvider client={client}><ToastProvider><HomePage /></ToastProvider></VaultProvider>);
+  withProviders(<HomePage />, new MockVaultClient());
 
-  await waitFor(() => expect(screen.getByText("Your earning is paused")).toBeInTheDocument());
-  // `hidden: true` includes the aria-hidden (closed) sheet — getByRole excludes it otherwise.
-  // Note: dom-accessibility-api's computeAccessibleName ignores the `hidden` query option for the
-  // root node itself, so an aria-hidden root always resolves to name "" — match by role alone
-  // (only one dialog renders on this page) and assert the label via the raw attribute instead.
-  const dialog = screen.getByRole("dialog", { hidden: true });
-  expect(dialog).toHaveAttribute("aria-label", "Approve safe exit");
-  expect(dialog).toHaveAttribute("aria-hidden", "true");
-  await user.click(screen.getByRole("button", { name: "Review paused pool" }));
-  await waitFor(() => expect(dialog).toHaveAttribute("aria-hidden", "false"));
+  const button = await screen.findByRole("button", { name: "Verify identity" });
+  expect(screen.queryByRole("button", { name: "Deposit" })).toBeNull();
+  await user.click(button);
+  expect(verify).toHaveBeenCalled();
+});
+
+beforeEach(() => {
+  fundedAndVerified();
 });
 
 test("desktop hero: eyebrow, flat Total segmented pressed, 'Earned this month' sub-stat, no risk words", async () => {
@@ -61,7 +166,7 @@ test("desktop hero: eyebrow, flat Total segmented pressed, 'Earned this month' s
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
   const client = new MockVaultClient();
   await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><ToastProvider><HomePage /></ToastProvider></VaultProvider>);
+  withProviders(<HomePage />, client);
 
   await waitFor(() => expect(screen.getByText(/your value/i)).toBeInTheDocument());
   const total = screen.getByRole("button", { name: "Total" });
@@ -80,7 +185,7 @@ test("desktop bottom row: Buckets, Growth (green bars), Agent; banner shows on f
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
   const client = new MockVaultClient();
   await seedVault(client, "GUSER"); // seeds a frozen EUR pool
-  render(<VaultProvider client={client}><ToastProvider><HomePage /></ToastProvider></VaultProvider>);
+  withProviders(<HomePage />, client);
 
   await waitFor(() => expect(screen.getByRole("heading", { name: "Buckets" })).toBeInTheDocument());
   expect(screen.getByRole("heading", { name: "Growth" })).toBeInTheDocument();
@@ -94,7 +199,7 @@ test("desktop FreezeBanner is hidden when nothing is frozen", async () => {
   isDesktop.mockReturnValue(true);
   useWallet.mockReturnValue({ address: "GEMPTY", isConnected: true });
   const client = new MockVaultClient(); // no seed → no frozen pool
-  render(<VaultProvider client={client}><ToastProvider><HomePage /></ToastProvider></VaultProvider>);
+  withProviders(<HomePage />, client);
 
   await waitFor(() => expect(screen.getByRole("heading", { name: "Buckets" })).toBeInTheDocument());
   expect(screen.queryByText(/your earning is paused/i)).toBeNull(); // no banner when not pending
@@ -106,7 +211,7 @@ test("desktop shows loading skeletons before data resolves, and none after", asy
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
   const client = new MockVaultClient();
   await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><ToastProvider><HomePage /></ToastProvider></VaultProvider>);
+  withProviders(<HomePage />, client);
   // First render: useBuckets is still loading → skeletons stand in for value/chart/buckets/growth.
   expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
   // Once the reads resolve, the skeletons are gone.

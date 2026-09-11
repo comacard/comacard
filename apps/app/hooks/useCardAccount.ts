@@ -14,9 +14,16 @@ import { useWallet } from "./useWallet";
  * request. `refresh` is what the screen calls when the user comes back from the Didit tab.
  */
 
-/** One settled read, tagged with the request it answered. The tag is what makes a stale response
- *  from a previous wallet or a previous `refresh` identifiable rather than merely late. */
-type Settled = { key: string; account: ComacardAccount | null; error: string | null };
+/**
+ * One settled read, tagged with the **wallet** it describes.
+ *
+ * Tagged by address and not by request. An earlier version keyed this on `address#nonce`, which
+ * meant every `refresh()` invalidated the data it already had: `account` went null for the length
+ * of the round trip, and Home read that null as "identity not required" and flipped its button from
+ * Verify identity to Deposit and back on every window focus. A refresh now refetches without
+ * discarding what it is refreshing. Only a change of wallet invalidates.
+ */
+type Settled = { address: string; account: ComacardAccount | null; error: string | null };
 
 export function useCardAccount() {
   const { address, hydrated } = useWallet();
@@ -25,18 +32,18 @@ export function useCardAccount() {
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 
-  // Null whenever there is nothing to fetch: still hydrating, no wallet, or no backend configured.
-  // Those three are derived during render rather than pushed into state from an effect, which is
-  // both what the lint rule asks for and what keeps "no wallet" from flashing through "loading".
-  const key = hydrated && address && comacardApiEnabled() ? `${address}#${nonce}` : null;
+  // False whenever there is nothing to fetch: still hydrating, no wallet, or no backend configured.
+  // Derived during render rather than pushed into state from an effect, which is both what the lint
+  // rule asks for and what keeps "no wallet" from flashing through "loading".
+  const canFetch = Boolean(hydrated && address && comacardApiEnabled());
 
   useEffect(() => {
-    if (!key || !address) return;
+    if (!canFetch || !address) return;
     let alive = true;
     void getAccount(address).then((result) => {
       if (!alive) return;
       setSettled({
-        key,
+        address,
         account: result.ok ? result.value : null,
         error: result.ok ? null : result.message,
       });
@@ -44,9 +51,10 @@ export function useCardAccount() {
     return () => {
       alive = false;
     };
-  }, [key, address]);
+    // `nonce` is what `refresh()` bumps; it belongs in the deps even though the body never reads it.
+  }, [canFetch, address, nonce]);
 
-  const current = settled?.key === key ? settled : null;
+  const current = settled?.address === address ? settled : null;
 
   const error = !hydrated
     ? null
@@ -59,7 +67,9 @@ export function useCardAccount() {
   return {
     account: current?.account ?? null,
     error,
-    loading: !hydrated || (key !== null && current === null),
+    // Only the FIRST read of a wallet is a loading state. A refresh keeps the previous answer on
+    // screen, so nothing downstream has to cope with the account briefly vanishing.
+    loading: !hydrated || (canFetch && current === null),
     refresh,
   };
 }

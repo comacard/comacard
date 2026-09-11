@@ -101,6 +101,13 @@ export const openapi = {
             example: "Approved",
           },
           verified: { type: "boolean", description: "true only when status is Approved" },
+          name: {
+            type: "string",
+            nullable: true,
+            description:
+              "Name OCR'd from the identity document, read out of the stored decision. Null until a decision exists or when it carries no readable name.",
+            example: "María García López",
+          },
           updatedAt: { type: "integer", nullable: true, description: "unix seconds" },
         },
       },

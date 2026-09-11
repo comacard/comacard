@@ -1,5 +1,12 @@
 import { Database } from "bun:sqlite";
-import { createSession, eventKey, isSessionEvent, parseWebhook, verifyWebhook } from "./didit";
+import {
+  createSession,
+  eventKey,
+  isSessionEvent,
+  nameFromDecision,
+  parseWebhook,
+  verifyWebhook,
+} from "./didit";
 import { docsHtml, openapi } from "./openapi";
 
 const port = Number(process.env.PORT ?? 3002);
@@ -124,11 +131,23 @@ const server = Bun.serve({
       const wallet = req.params.wallet.toLowerCase();
       if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
       const row = latest.get(wallet);
+      // The decision is already on disk; this only reads it. A malformed one yields null rather
+      // than failing the whole status read, which the card screen depends on.
+      let name: string | null = null;
+      if (row?.decision) {
+        try {
+          name = nameFromDecision(JSON.parse(row.decision));
+        } catch {
+          name = null;
+        }
+      }
       return Response.json({
         wallet,
         sessionId: row?.session_id ?? null,
         status: row?.status ?? "none",
         verified: row?.status === "Approved",
+        // OCR'd from the identity document, so it is the name that was actually verified.
+        name,
         updatedAt: row?.updated_at ?? null,
       });
     },

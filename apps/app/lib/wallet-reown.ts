@@ -1,167 +1,97 @@
-import type { AppKit } from "@reown/appkit";
-import type { AppKitNetwork } from "@reown/appkit/networks";
-import { toWalletError, WalletError, USER_CLOSED_MODAL } from "./wallet-error";
+import { getAppKit } from "./comacard/appkit";
+import { creditcoinTestnet, wagmiConfig } from "./comacard/wagmi";
+import { toWalletError, USER_CLOSED_MODAL, WalletError } from "./wallet-error";
 
 /**
- * Reown AppKit is the wallet layer: one modal that lists the injected extensions
- * (MetaMask, Rabby, ...) and every WalletConnect wallet behind the same project id.
+ * The five functions `lib/wallet.ts` re-exports, implemented on wagmi core actions.
  *
- * It replaces Stellar Wallets Kit (`wallet-real.ts`, kept unwired for reference) because
- * Comacard settles on Creditcoin, an EVM chain. The five exports at the bottom are the whole
- * seam `lib/wallet.ts` re-exports, so nothing above this file knows which kit is in use.
+ * Imperative rather than hooks on purpose. `WalletProvider` and every screen above it already
+ * consume this seam, and the whole point of keeping it is that swapping ethers for wagmi did not
+ * have to touch a single component. Wagmi's React hooks are still available to new code that wants
+ * them; `wagmi/actions` is the same machinery with the config passed explicitly.
  *
- * **Everything from `@reown/*` is imported dynamically, and that is load-bearing — not style.**
- * `WalletProvider` is a client component, so Next also renders it on the server, and a static
- * `import { EthersAdapter }` drags the adapter's optional Coinbase/Base account SDK into the
- * SSR graph. That SDK lazily imports `@x402/*` packages nobody installs, Turbopack cannot
- * resolve them, and *every route 500s* — on an import path this app never calls. Types are
- * `import type` (erased) and the two networks below are plain literals rather than
- * `defineChain()` calls for the same reason: nothing here may reach a real `@reown` module
- * until a browser asks for a wallet.
+ * Every wagmi action is imported dynamically, and that is load-bearing. `WalletProvider`
+ * is a client component, so Next renders it on the server too, and a static import drags the
+ * connector stack into the SSR graph where some of its optional deps do not resolve. Types are
+ * `import type` (erased); nothing here reaches a real wallet module until a browser asks.
  */
-
-/** Creditcoin CC3 testnet. Chain id and RPC match `contracts/foundry.toml`. */
-export const creditcoinTestnet: AppKitNetwork = {
-  id: 102031,
-  caipNetworkId: "eip155:102031",
-  chainNamespace: "eip155",
-  name: "Creditcoin Testnet",
-  nativeCurrency: { name: "Creditcoin", symbol: "CTC", decimals: 18 },
-  // Both keys are required and they are not interchangeable: the modal reads `default`,
-  // while AppKit's `wallet_addEthereumChain` reads `chainDefault` and sends an EMPTY rpcUrls
-  // array without it, which every wallet rejects.
-  rpcUrls: {
-    default: { http: ["https://rpc.cc3-testnet.creditcoin.network"] },
-    chainDefault: { http: ["https://rpc.cc3-testnet.creditcoin.network"] },
-  },
-  blockExplorers: {
-    default: { name: "Creditcoin Explorer", url: "https://creditcoin-testnet.blockscout.com" },
-  },
-  testnet: true,
-};
-
-/** Where the collateral lives (Attestcoin proves Sepolia transactions on Creditcoin). */
-export const sepolia: AppKitNetwork = {
-  id: 11155111,
-  caipNetworkId: "eip155:11155111",
-  chainNamespace: "eip155",
-  name: "Sepolia",
-  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: {
-    default: { http: ["https://ethereum-sepolia-rpc.publicnode.com"] },
-    chainDefault: { http: ["https://ethereum-sepolia-rpc.publicnode.com"] },
-  },
-  blockExplorers: { default: { name: "Etherscan", url: "https://sepolia.etherscan.io" } },
-  testnet: true,
-};
-
-/** WalletConnect ids for the wallets the connect screen illustrates. */
-const METAMASK_ID = "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96";
-const RABBY_ID = "18388be9ac2d02726dbac9777c96efaac06d744b2f6d580fccdd4127a6d01fd1";
 
 const EIP155 = "eip155" as const;
 
-let kit: AppKit | null = null;
-let building: Promise<AppKit> | null = null;
+// `wagmi/actions` re-exports `@wagmi/core/actions`, so importing it needs no extra dependency
+// and keeps the version pinned to whatever wagmi itself resolves.
+type CoreActions = typeof import("wagmi/actions");
+let core: CoreActions | null = null;
 
-function projectId() {
-  const id = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
-  if (!id) {
-    throw new WalletError(
-      "Reown project ID is not configured. Set NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID.",
-    );
-  }
-  return id;
+async function actions(): Promise<CoreActions> {
+  if (typeof window === "undefined") throw new WalletError("wallet is client-only");
+  if (!core) core = await import("wagmi/actions");
+  return core;
 }
 
-export function getKit(): Promise<AppKit> {
-  if (typeof window === "undefined") {
-    return Promise.reject(new WalletError("wallet is client-only"));
-  }
-  if (kit) return Promise.resolve(kit);
-  if (!building) {
-    building = (async () => {
-      const [{ createAppKit }, { EthersAdapter }] = await Promise.all([
-        import("@reown/appkit"),
-        import("@reown/appkit-adapter-ethers"),
-      ]);
-      kit = createAppKit({
-        adapters: [new EthersAdapter()],
-        // Sepolia, not Creditcoin, is the network AppKit connects on. See `connect()` below:
-        // the adapter always fires `wallet_switchEthereumChain` while connecting and never
-        // offers to ADD the chain, so a Creditcoin default dead-ends at "Connection declined"
-        // for every wallet that does not already have CC3. Sepolia is built into every wallet,
-        // so that switch always succeeds; Creditcoin is selected straight after.
-        networks: [sepolia, creditcoinTestnet],
-        defaultNetwork: sepolia,
-        projectId: projectId(),
-        metadata: {
-          name: "Comacard",
-          description: "A card sized by what you have repaid, not what you hold.",
-          url: window.location.origin,
-          icons: [`${window.location.origin}/brand/comacard-logo.png`],
-        },
-        featuredWalletIds: [METAMASK_ID, RABBY_ID],
-        // Email/social sign-in mints a wallet that cannot carry an on-chain credit history,
-        // and on-ramp/swap are out of scope. Wallet connect only.
-        features: { email: false, socials: false, onramp: false, swaps: false, analytics: false },
-        themeMode: "light",
-      });
-      return kit;
-    })();
-    building.catch(() => {
-      // A failed build must not be cached, or every later attempt replays the same error.
-      building = null;
-    });
-  }
-  return building;
+/** Reads that happen after a connect, where the module is already loaded. */
+const loaded = (): CoreActions | null => core;
+
+export function getWalletName(): string {
+  const c = loaded();
+  if (!c) return "Wallet";
+  return c.getAccount(wagmiConfig).connector?.name ?? "Wallet";
+}
+
+export function getWalletId(): string {
+  const c = loaded();
+  if (!c) return "reown";
+  return c.getAccount(wagmiConfig).connector?.id ?? "reown";
 }
 
 /**
- * `getWalletId()` / `getWalletName()` are called by `WalletProvider` *after* `connect()` has
- * resolved, so the kit is already built and a synchronous read is safe. They are the only two
- * places the seam is not async, which is why this exists rather than making them async too.
- */
-function builtKit(): AppKit | null {
-  return kit;
-}
-
-/**
- * AppKit reports a connection through `subscribeAccount`, not through a promise, and it
- * restores a previous session asynchronously on boot. Both `connect()` and `getAddress()`
- * therefore need the same thing: an address, or a decision that there is not going to be one.
+ * Moves the connected wallet onto Creditcoin, adding the chain when the wallet does not know it.
  *
- * `opts.openModal` distinguishes the two callers. With the modal open, closing it without
- * connecting is a *cancellation* (code -1, which `page.tsx` already swallows silently);
- * without it we are only re-verifying a stored session and a miss is an ordinary rejection.
+ * This has to happen after connecting rather than through `defaultNetwork`, because the two code
+ * paths differ: AppKit's connect-time switch throws on an unrecognised chain, while `switchChain`
+ * falls back to `wallet_addEthereumChain`. A refusal here is not a failed connection: the user
+ * stays on Sepolia, where the collateral lives anyway, and can switch later.
  */
-async function waitForAddress({ openModal }: { openModal: boolean }): Promise<string> {
-  const appKit = await getKit();
+async function selectCreditcoin(): Promise<void> {
+  try {
+    const { switchChain } = await actions();
+    await switchChain(wagmiConfig, { chainId: creditcoinTestnet.id as number });
+  } catch {
+    // Declined, or the wallet cannot hold a custom chain. Leave the session alone.
+  }
+}
 
-  return new Promise<string>((resolve, reject) => {
-    const existing = appKit.getAddress(EIP155);
+export async function connect(): Promise<{ address: string; name: string }> {
+  try {
+    const appKit = await getAppKit();
+    const { getAccount, watchAccount } = await actions();
+
+    const existing = getAccount(wagmiConfig).address;
     if (existing) {
-      resolve(existing);
-      return;
+      await appKit.close();
+      return { address: existing, name: getWalletName() };
     }
 
-    let settled = false;
-    const cleanups: Array<() => void> = [];
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      for (const c of cleanups) c();
-      fn();
-    };
+    const address = await new Promise<string>((resolve, reject) => {
+      let settled = false;
+      const cleanups: Array<() => void> = [];
+      const finish = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        for (const c of cleanups) c();
+        fn();
+      };
 
-    cleanups.push(
-      appKit.subscribeAccount((account) => {
-        if (account.address) finish(() => resolve(account.address as string));
-      }, EIP155),
-    );
+      cleanups.push(
+        watchAccount(wagmiConfig, {
+          onChange(account) {
+            if (account.address) finish(() => resolve(account.address as string));
+          },
+        }),
+      );
 
-    if (openModal) {
-      // A transition back to closed with no address is the user dismissing the picker.
+      // The modal closing with no account is the user dismissing the picker, which `page.tsx`
+      // already swallows silently by its code rather than by its message.
       let sawOpen = false;
       cleanups.push(
         appKit.subscribeState((state) => {
@@ -170,77 +100,68 @@ async function waitForAddress({ openModal }: { openModal: boolean }): Promise<st
             return;
           }
           if (!sawOpen) return;
-          if (appKit.getAddress(EIP155)) return;
+          if (getAccount(wagmiConfig).address) return;
           finish(() => reject(new WalletError("The user closed the modal.", USER_CLOSED_MODAL)));
         }),
       );
+
       void appKit.open({ view: "Connect", namespace: EIP155 }).catch((e) => {
         finish(() => reject(toWalletError(e)));
       });
-    } else {
-      // Reconnect only. AppKit rehydrates from its own storage; give it a bounded window
-      // rather than leaving hydration hanging on a wallet that will never answer.
-      const timer = window.setTimeout(() => {
-        finish(() => reject(new WalletError("No connected wallet.")));
-      }, 4000);
-      cleanups.push(() => window.clearTimeout(timer));
-      void appKit.ready().then(() => {
-        const address = appKit.getAddress(EIP155);
-        if (address) finish(() => resolve(address));
-      });
-    }
-  });
-}
+    });
 
-export function getWalletName(): string {
-  return builtKit()?.getWalletInfo(EIP155)?.name ?? "Wallet";
-}
-
-export function getWalletId(): string {
-  return builtKit()?.getWalletProviderType() ?? "reown";
-}
-
-/**
- * Moves the connected wallet onto Creditcoin, adding the chain first when the wallet does not
- * know it. This has to happen *after* connecting, not through `defaultNetwork`, because the two
- * code paths differ: the adapter's connect-time switch throws on an unrecognised chain, while
- * `switchNetwork()` catches that same error and falls back to `wallet_addEthereumChain`.
- *
- * A refusal here is not a failed connection. The user stays connected on Sepolia (where the
- * collateral lives anyway) and can switch from the account screen, which beats throwing away a
- * wallet session they already approved.
- */
-async function selectCreditcoin(appKit: AppKit): Promise<void> {
-  try {
-    await appKit.switchNetwork(creditcoinTestnet);
-  } catch {
-    // Declined, or the wallet cannot hold a custom chain. Leave the session alone.
-  }
-}
-
-export async function connect(): Promise<{ address: string; name: string }> {
-  try {
-    const address = await waitForAddress({ openModal: true });
-    const appKit = await getKit();
     await appKit.close();
-    await selectCreditcoin(appKit);
+    await selectCreditcoin();
     return { address, name: getWalletName() };
   } catch (e) {
     throw toWalletError(e);
   }
 }
 
+/**
+ * The address of a session wagmi has already restored, or a rejection.
+ *
+ * `WalletProvider` calls this to re-verify a saved address on hydration. Reconnection is async and
+ * cookie-driven, so a miss on the first tick is not proof of absence; the bounded wait is what
+ * stops hydration hanging on a wallet that will never answer.
+ */
 export async function getAddress(): Promise<string> {
-  return waitForAddress({ openModal: false });
+  const { getAccount, watchAccount } = await actions();
+  const now = getAccount(wagmiConfig);
+  if (now.address) return now.address;
+
+  return new Promise<string>((resolve, reject) => {
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      unwatch();
+      window.clearTimeout(timer);
+      fn();
+    };
+    const unwatch = watchAccount(wagmiConfig, {
+      onChange(account) {
+        if (account.address) finish(() => resolve(account.address as string));
+        else if (account.status === "disconnected") {
+          finish(() => reject(new WalletError("No connected wallet.")));
+        }
+      },
+    });
+    const timer = window.setTimeout(
+      () => finish(() => reject(new WalletError("No connected wallet."))),
+      4000,
+    );
+  });
 }
 
 /**
- * The vault seam still speaks Stellar: `MockVaultClient` hands out placeholder XDRs
- * ("mock-xdr-N") and the real bindings would hand out real ones. An EVM wallet can sign
- * neither, so the mock's placeholders are signed as an arbitrary message (`personal_sign`) —
- * the wallet still pops, the user still approves, and the mock discards the signature, which
- * keeps every flow demoable end to end. A *real* Stellar XDR is refused outright rather than
- * silently mis-signed; that path needs EVM contract calls, not this function.
+ * The vault seam still speaks Stellar: `MockVaultClient` hands out placeholder XDRs ("mock-xdr-N").
+ * An EVM wallet can sign neither those nor a real one, so the placeholders are signed as an
+ * arbitrary message, which keeps every mocked flow demoable end to end. A real Stellar XDR is
+ * refused outright rather than silently mis-signed.
+ *
+ * Creditcoin transactions do NOT come through here. They are `writeContract` calls in
+ * `lib/comacard/contracts.ts`, where the ABI makes the intent legible.
  */
 export async function signTransaction(xdr: string): Promise<string> {
   try {
@@ -249,26 +170,15 @@ export async function signTransaction(xdr: string): Promise<string> {
         "This wallet signs Creditcoin (EVM) transactions. A Stellar XDR cannot be signed here.",
       );
     }
-    const appKit = await getKit();
-    const provider = appKit.getWalletProvider() as
-      | { request: (args: { method: string; params: unknown[] }) => Promise<unknown> }
-      | undefined;
-    const address = appKit.getAddress(EIP155);
-    if (!provider || !address) throw new WalletError("No connected wallet.");
-    const hex = Array.from(new TextEncoder().encode(xdr))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    const signature = await provider.request({
-      method: "personal_sign",
-      params: [`0x${hex}`, address],
-    });
-    return String(signature);
+    const { signMessage } = await actions();
+    return await signMessage(wagmiConfig, { message: xdr });
   } catch (e) {
     throw toWalletError(e);
   }
 }
 
 export async function disconnect(): Promise<void> {
-  if (!kit) return;
-  await kit.disconnect(EIP155);
+  const c = loaded();
+  if (!c) return;
+  await c.disconnect(wagmiConfig);
 }

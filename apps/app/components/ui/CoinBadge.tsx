@@ -2,10 +2,10 @@ import type { Currency } from "@sorosense/vault-client";
 
 /**
  * The stablecoin whose brand logo represents each currency bucket, plus CTC. CTC is Creditcoin's
- * native coin, not a currency bucket, so it has no `Currency` mapping below: it is reachable only
- * by passing `token="CTC"` explicitly.
+ * native coin, and ETH, the collateral asset. Neither is a currency bucket, so neither has a
+ * `Currency` mapping below: both are reachable only by passing `token` explicitly.
  */
-export type TokenSym = "USDC" | "EURC" | "CETES" | "CTC";
+export type TokenSym = "USDC" | "EURC" | "CETES" | "CTC" | "ETH";
 
 const CURRENCY_TOKEN: Record<Currency, TokenSym> = { USD: "USDC", EUR: "EURC", MXN: "CETES" };
 
@@ -17,10 +17,11 @@ const FILE: Record<TokenSym, string> = {
   EURC: "/tokens/eurc.png",
   CETES: "/tokens/cetes.png",
   CTC: "/tokens/ctc.png",
+  ETH: "/tokens/eth.svg",
 };
 
 /**
- * Circular token logo. Pass a `token` (USDC/EURC/CETES/CTC) or a `currency` (USD/EUR/MXN); the currency
+ * Circular token logo. Pass a `token` (USDC/EURC/CETES/CTC/ETH) or a `currency` (USD/EUR/MXN); the currency
  * maps to its funding stablecoin's logo. `object-cover` keeps non-circular source art (CETES) inside
  * the round badge.
  */

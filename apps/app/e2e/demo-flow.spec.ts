@@ -110,7 +110,7 @@ test("no user surface exposes a risk label, tier, or score", async ({ page }) =>
 
   await page.getByRole("button", { name: "View all activity" }).click();
   await expect(page).toHaveURL(/\/account\/activity$/);
-  await expectNoRiskWording(page, "/account/activity");
+  await expectNoRiskWording(page, "/transactions");
   await page.goBack();
   await expect(page).toHaveURL(/\/home$/);
 

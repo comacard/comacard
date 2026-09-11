@@ -17,7 +17,7 @@ const mobilePanel =
 
 export default function AccountPage() {
   const nav = useNav();
-  const { address, walletName, disconnect } = useWallet();
+  const { address, disconnect } = useWallet();
   const [toast, setToast] = useState<{ message: string } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const notify = (message: string) => setToast({ message });
@@ -62,13 +62,12 @@ export default function AccountPage() {
             </svg>
             {truncate(address)}
           </button>
-          <p className="mt-2.5 text-[13px] text-muted">Connected via {walletName ?? "your wallet"}</p>
         </div>
 
         <section className="mt-5">
           <h2 className="ml-1 mb-2.5 text-sm font-medium text-muted">General</h2>
           <div className="space-y-2.5">
-            <button onClick={() => nav.forward("/account/activity")} className={mobilePanel}>
+            <button onClick={() => nav.forward("/transactions")} className={mobilePanel}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
                 <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
               </svg>

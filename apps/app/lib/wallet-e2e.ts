@@ -1,5 +1,5 @@
 /**
- * The wallet layer Playwright drives. Freighter is a browser extension: automating its popup would
+ * The wallet layer Playwright drives. A browser wallet is an extension: automating its popup would
  * mean loading an unpacked extension and a seed phrase into the test browser. Instead `lib/wallet.ts`
  * swaps this module in when NEXT_PUBLIC_E2E === "1", so the app under test signs without a popup.
  *
@@ -8,11 +8,17 @@
  * part of that path — the dispatcher simply never selects it outside an e2e run.
  */
 
-/** A well-formed Stellar public key. Deterministic, so specs can assert on the Account chip. */
-export const E2E_ADDRESS = "GA6HCMBLTZS5VYYBCATRBRZ3BZJMAFUDKYYF6AH6MVCMGWMRDNSWJPIH";
+/**
+ * The address specs run as. An **EVM** address since the wallet layer moved to wagmi: Home reads
+ * balances for whatever this returns, and a Stellar key would make every `eth_getBalance` fail.
+ *
+ * This is the funded testnet dev wallet, so a headless run sees real Sepolia and Creditcoin
+ * balances rather than zeroes. It holds nothing of value and its key is not in this repo.
+ */
+export const E2E_ADDRESS = "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0";
 
-/** The app persists the product name captured at connect time; the stub stands in for Freighter. */
-export const E2E_WALLET_NAME = "Freighter";
+/** The app persists the product name captured at connect time; the stub stands in for a wallet. */
+export const E2E_WALLET_NAME = "Dev Wallet";
 
 // Real Freighter keeps its connection in the extension, alive across page reloads. This stub must
 // mirror that: a module-scope flag would reset on every hard load, so getAddress() verification

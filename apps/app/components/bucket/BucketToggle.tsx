@@ -1,12 +1,15 @@
 "use client";
 import type { Currency } from "@sorosense/vault-client";
 import { CoinBadge } from "../ui";
+import type { TokenSym } from "../ui/CoinBadge";
 
 export interface ToggleView {
   /** Display name, e.g. "All buckets" or "USD bucket". */
   name: string;
   /** The bucket's currency; omitted for the "All buckets" aggregate. */
   currency?: Currency;
+  /** A token logo that has no `Currency` behind it, such as CTC or ETH. Takes precedence. */
+  token?: TokenSym;
 }
 
 /**
@@ -33,7 +36,9 @@ export function BucketToggle({
       aria-label="Switch bucket"
       className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-white bg-card pl-2 pr-4 text-[15px] font-semibold [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_8px_18px_-10px_rgba(17,19,22,.18)]"
     >
-      {v.currency ? (
+      {v.token ? (
+        <CoinBadge token={v.token} size={24} />
+      ) : v.currency ? (
         <CoinBadge currency={v.currency} size={24} />
       ) : (
         <span className="ml-1.5 h-[15px] w-[15px] rounded-full border-2 border-ink-2" />
