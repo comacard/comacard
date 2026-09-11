@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-import {CreditScoring} from "../../src/libraries/CreditScoring.sol";
 import {CreditErrors} from "../../src/types/CreditTypes.sol";
 import {VaultEvents} from "../../src/libraries/VaultEvents.sol";
 import {CreditLineHarness} from "../helpers/CreditLineHarness.sol";
@@ -24,7 +23,7 @@ contract CreditLifecycleTest is Test {
     /// Cached deliberately: reading a role off the contract is an external
     /// call, and an external call anywhere in a pranked statement — including
     /// inside an argument — consumes the prank before it reaches its target.
-    bytes32 internal GUARDIAN;
+    bytes32 internal guardianRole;
 
     uint64 internal constant MAINNET = 1;
     uint64 internal constant SEPOLIA = 11_155_111;
@@ -35,7 +34,7 @@ contract CreditLifecycleTest is Test {
         vaultOnSource = makeAddr("sourceVault");
         line = Deployers.creditLineHarness(vaultOnSource, 1, governance, operator);
 
-        GUARDIAN = line.GUARDIAN_ROLE();
+        guardianRole = line.GUARDIAN_ROLE();
 
         vm.deal(address(this), 200 ether);
         line.fund{value: 100 ether}();
@@ -252,7 +251,7 @@ contract CreditLifecycleTest is Test {
 
         address guardian = makeAddr("guardian");
         vm.prank(governance);
-        line.grantRole(GUARDIAN, guardian);
+        line.grantRole(guardianRole, guardian);
         vm.prank(guardian);
         line.pause();
 
@@ -273,7 +272,7 @@ contract CreditLifecycleTest is Test {
         _drawn(1 ether);
         address guardian = makeAddr("guardian");
         vm.prank(governance);
-        line.grantRole(GUARDIAN, guardian);
+        line.grantRole(guardianRole, guardian);
         vm.prank(guardian);
         line.pause();
 

@@ -29,6 +29,10 @@ contract CreditLineHarness is ASCCreditLine {
         _accounts[account].provenNonce = provenNonce;
     }
 
+    function applyTokenCollateral(bytes32 queryId, bytes memory encodedTx, bool isLock) external {
+        _applyTokenCollateral(queryId, encodedTx, isLock);
+    }
+
     function importHistory(bytes32 queryId, bytes memory encodedTx) external {
         _importHistory(queryId, encodedTx);
     }

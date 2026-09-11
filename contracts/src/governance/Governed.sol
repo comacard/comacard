@@ -67,7 +67,7 @@ abstract contract Governed is
 
     /// @param governance Multisig or timelock holding `DEFAULT_ADMIN_ROLE`.
     /// @param adminTransferDelay Seconds a governance handover must wait.
-    // solhint-disable-next-line func-name-mixedcase
+    // forge-lint: disable-next-line(mixed-case-function)
     function __Governed_init(address governance, uint48 adminTransferDelay)
         internal
         onlyInitializing

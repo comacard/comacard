@@ -33,6 +33,8 @@ export const ASC_ACTION = {
   collateralLocked: 0,
   collateralUnlocked: 1,
   historyImported: 2,
+  tokenLocked: 3,
+  tokenUnlocked: 4,
 } as const;
 
 export type AscAction = (typeof ASC_ACTION)[keyof typeof ASC_ACTION];
