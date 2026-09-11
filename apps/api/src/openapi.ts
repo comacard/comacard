@@ -55,6 +55,25 @@ export const openapi = {
         },
       },
     },
+    "/account/{wallet}/card": {
+      get: {
+        summary: "The wallet's card: full number, account number, CVV, expiry",
+        description:
+          "Exists as soon as KYC is Approved; nothing has to be requested. Treat the response as sensitive.",
+        parameters: [walletParam],
+        responses: {
+          "200": {
+            description: "Issued card",
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/IssuedCard" } },
+            },
+          },
+          "400": { description: "wallet is not a 0x address" },
+          "404": { description: "identity not verified, so no card exists yet" },
+          "502": { description: "KYC service or indexer unavailable" },
+        },
+      },
+    },
     "/account/{wallet}/activity": {
       get: {
         summary: "Draws, repayments, collateral locks and defaults, newest first",
@@ -104,6 +123,7 @@ export const openapi = {
           status: { type: "string", example: "Approved" },
           verified: { type: "boolean" },
           sessionId: { type: "string", nullable: true },
+          updatedAt: { type: "integer", nullable: true, description: "unix seconds" },
         },
       },
       Credit: {
@@ -112,8 +132,8 @@ export const openapi = {
         description: "null until the wallet has been seen by the indexer",
         properties: {
           score: { type: "integer", minimum: 0, maximum: 100 },
-          limit: Wei,
-          available: Wei,
+          limit: { ...Wei, description: "live from ASCCreditLine.limitOf, not the indexer" },
+          available: { ...Wei, description: "live from ASCCreditLine.availableOf" },
           drawn: Wei,
           collateral: Wei,
           pendingRelease: Wei,
@@ -129,15 +149,43 @@ export const openapi = {
       },
       Card: {
         type: "object",
+        description:
+          "Issued the moment KYC is Approved. Numbers are derived from the wallet, so they never change. The full PAN and CVV are only returned by /account/{wallet}/card.",
         properties: {
           active: { type: "boolean" },
+          issued: { type: "boolean" },
           spendable: Wei,
           spendableCtc: { type: "string" },
           reason: {
             type: "string",
-            enum: ["kyc_required", "overdue", "no_credit"],
+            enum: ["kyc_required", "overdue"],
             description: "present only when active is false",
           },
+          number: { type: "string", nullable: true, example: "•••• •••• •••• 4821" },
+          accountNumber: { type: "string", nullable: true, example: "482193027465" },
+          expiry: { type: "string", nullable: true, example: "09/30" },
+          issuedAt: { type: "integer", nullable: true, description: "unix seconds" },
+        },
+      },
+      IssuedCard: {
+        type: "object",
+        properties: {
+          wallet: Address,
+          number: { type: "string", description: "16 digits, Luhn-valid, private BIN 9924" },
+          masked: { type: "string" },
+          accountNumber: { type: "string", description: "12 digits" },
+          cvv: { type: "string", description: "3 digits" },
+          expiry: { type: "string", example: "09/30" },
+          expiresAt: { type: "integer" },
+          issuedAt: { type: "integer" },
+          active: { type: "boolean" },
+          reason: {
+            type: "string",
+            enum: ["overdue"],
+            description: "present only when active is false",
+          },
+          spendable: Wei,
+          spendableCtc: { type: "string" },
         },
       },
       Account: {
@@ -184,6 +232,11 @@ export const openapi = {
               lifetimeDefaulted: Wei,
               defaultCount: { type: "integer" },
             },
+          },
+          collateralPrice: {
+            type: "object",
+            description: "What one ETH of collateral is worth in CTC, live off the contract",
+            properties: { wei: Wei, ctcPerEth: { type: "string", example: "1000.0000" } },
           },
           liquidity: { type: "object", properties: { poolWei: Wei, poolCtc: { type: "string" } } },
           staking: {

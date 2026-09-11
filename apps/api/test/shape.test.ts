@@ -19,8 +19,8 @@ const account = (over: Partial<IndexedAccount> = {}): IndexedAccount => ({
   lastActiveAt: "0",
   ...over,
 });
-const verified = { status: "Approved", verified: true, sessionId: "s" };
-const unverified = { status: "none", verified: false, sessionId: null };
+const verified = { status: "Approved", verified: true, sessionId: "s", updatedAt: 1 };
+const unverified = { status: "none", verified: false, sessionId: null, updatedAt: null };
 
 describe("formatCtc", () => {
   test("four decimals, truncated, no float", () => {
@@ -33,21 +33,21 @@ describe("formatCtc", () => {
 
 describe("cardState", () => {
   test("kyc gate comes first", () => {
-    expect(cardState(unverified, account({ available: "5" }), 100)).toEqual({
+    expect(cardState(unverified, account(), 5n, 100)).toEqual({
       active: false,
       spendable: "0",
       reason: "kyc_required",
     });
   });
-  test("no indexed account → no credit", () => {
-    expect(cardState(verified, null, 100).active).toBe(false);
+  test("verified with no indexed account → active, nothing to spend yet", () => {
+    expect(cardState(verified, null, 0n, 100)).toEqual({ active: true, spendable: "0" });
   });
   test("overdue draw freezes the card", () => {
-    const state = cardState(verified, account({ drawn: "1", dueAt: "50", available: "5" }), 100);
+    const state = cardState(verified, account({ drawn: "1", dueAt: "50" }), 5n, 100);
     expect(state).toMatchObject({ active: false, reason: "overdue" });
   });
   test("verified with available credit is active", () => {
-    expect(cardState(verified, account({ available: "6666666666666666" }), 100)).toEqual({
+    expect(cardState(verified, account(), 6666666666666666n, 100)).toEqual({
       active: true,
       spendable: "6666666666666666",
     });

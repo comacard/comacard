@@ -19,6 +19,7 @@ export const env = {
   creditLine: must("ASC_CREDIT_LINE_ADDRESS"),
   stakingAdapter: must("STAKING_ADAPTER_ADDRESS"),
   corsOrigin: process.env.CORS_ORIGIN ?? "*",
+  cardSecret: must("CARD_SECRET"),
 };
 
 // ---------------------------------------------------------------- indexer
@@ -61,7 +62,13 @@ export const ACCOUNT_FIELDS =
 
 // ---------------------------------------------------------------- chain
 
-const SELECTOR = { idleBalance: "0xb1bbb310", totalAssets: "0x01e1d114" } as const;
+const SELECTOR = {
+  idleBalance: "0xb1bbb310",
+  totalAssets: "0x01e1d114",
+  limitOf: "0x546a2ca4",
+  availableOf: "0xd546da90",
+  collateralPrice: "0x5891de72",
+} as const;
 
 async function rpc<T>(method: string, params: unknown[]): Promise<T> {
   const res = await fetch(env.creditcoinRpc, {
@@ -80,6 +87,23 @@ export const balanceOf = async (address: string): Promise<bigint> =>
 
 const call = async (to: string, selector: string): Promise<bigint> =>
   BigInt(await rpc<string>("eth_call", [{ to, data: selector }, "latest"]));
+
+const pad = (address: string) => address.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+
+/**
+ * Limit and available credit straight off the contract. The indexer's copy is
+ * as of the account's last transaction; repricing collateral moves every
+ * limit at once without an event per account, so only the chain is current.
+ */
+export async function liveCredit(wallet: string) {
+  const [limit, available] = await Promise.all([
+    call(env.creditLine, SELECTOR.limitOf + pad(wallet)),
+    call(env.creditLine, SELECTOR.availableOf + pad(wallet)),
+  ]);
+  return { limit, available };
+}
+
+export const collateralPrice = () => call(env.creditLine, SELECTOR.collateralPrice);
 
 /** Live view of the staking adapter: what is idle vs bonded right now. */
 export async function stakingAdapterState() {
