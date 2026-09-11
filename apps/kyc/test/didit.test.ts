@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
-import { canonicalize, eventKey, isSessionEvent, parseWebhook, verifyWebhook } from "../src/didit";
+import {
+  canonicalize,
+  eventKey,
+  isSessionEvent,
+  nameFromDecision,
+  parseWebhook,
+  verifyWebhook,
+} from "../src/didit";
 
 const secret = "shh";
 const hmac = (s: string) => createHmac("sha256", secret).update(s).digest("hex");
@@ -59,5 +66,29 @@ describe("parseWebhook / isSessionEvent", () => {
     );
     expect(e && eventKey(e)).toBe("s1:Approved:status.updated:7");
     expect(eventKey({ event_id: "e9", webhook_type: "x", timestamp: 1 })).toBe("e9");
+  });
+});
+
+describe("nameFromDecision", () => {
+  test("full_name from the plural array", () => {
+    expect(nameFromDecision({ id_verifications: [{ full_name: " María García López " }] })).toBe(
+      "María García López",
+    );
+  });
+  test("falls back to first + last, either half alone", () => {
+    expect(
+      nameFromDecision({ id_verifications: [{ first_name: "Axel", last_name: "Atarubby" }] }),
+    ).toBe("Axel Atarubby");
+    expect(nameFromDecision({ id_verifications: [{ first_name: null, last_name: "Solo" }] })).toBe(
+      "Solo",
+    );
+  });
+  test("legacy singular object still read", () => {
+    expect(nameFromDecision({ id_verification: { full_name: "Old Shape" } })).toBe("Old Shape");
+  });
+  test("null rather than a guess", () => {
+    expect(nameFromDecision(null)).toBeNull();
+    expect(nameFromDecision({ id_verifications: [] })).toBeNull();
+    expect(nameFromDecision({ id_verifications: [{ full_name: "  " }] })).toBeNull();
   });
 });

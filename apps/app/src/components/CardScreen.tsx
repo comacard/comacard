@@ -140,7 +140,7 @@ function Card({ data }: { data: Account }) {
           <p className="font-code text-base tracking-widest">
             {card.number ?? "•••• •••• •••• ••••"}
           </p>
-          <p className="mt-1 font-code">{short(data.wallet)}</p>
+          <p className="mt-1 uppercase tracking-wider">{card.holder ?? short(data.wallet)}</p>
         </div>
         <div className="text-right">
           <p>{card.expiry ? `EXP ${card.expiry}` : ""}</p>

@@ -91,6 +91,9 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
         ...card,
         spendableCtc: formatCtc(BigInt(card.spendable)),
         issued: issued !== null,
+        // The name Didit read off the document, not one the user typed. Null
+        // leaves the card blank rather than inventing a holder.
+        holder: kyc.name,
         // Full PAN and CVV only through /account/:wallet/card, on purpose.
         number: issued?.masked ?? null,
         accountNumber: issued?.accountNumber ?? null,
@@ -119,6 +122,7 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
     const card = issueCard(wallet, kyc.updatedAt ?? now(), env.cardSecret);
     return Response.json({
       wallet,
+      holder: kyc.name,
       ...card,
       active: state.active,
       reason: state.active ? undefined : state.reason,

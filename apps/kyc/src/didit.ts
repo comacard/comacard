@@ -108,3 +108,38 @@ export function isSessionEvent(
     typeof e.vendor_data === "string"
   );
 }
+
+/**
+ * The verified person's name, out of the decision Didit sends with an approval.
+ *
+ * Nobody types this: Didit OCRs it off the identity document, which is the
+ * whole point. A name the user typed would not be the name that was verified.
+ * `id_verifications` is the current plural array; `id_verification` is the
+ * older singular object, still accepted because a stored decision may predate
+ * the rename. Returns null rather than a guess: a card with the wrong name is
+ * worse than a card with none.
+ */
+function nameOf(candidate: unknown): string | null {
+  if (!candidate || typeof candidate !== "object") return null;
+  const id = candidate as Record<string, unknown>;
+  const text = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const full = text(id.full_name);
+  if (full) return full;
+  // Didit marks every name field nullable, so a document may carry only one half.
+  const joined = [text(id.first_name), text(id.last_name)].filter(Boolean).join(" ");
+  return joined || null;
+}
+
+export function nameFromDecision(decision: unknown): string | null {
+  if (!decision || typeof decision !== "object") return null;
+  const root = decision as Record<string, unknown>;
+  const candidates: unknown[] = Array.isArray(root.id_verifications)
+    ? [...root.id_verifications]
+    : [];
+  if (root.id_verification) candidates.push(root.id_verification);
+  for (const candidate of candidates) {
+    const name = nameOf(candidate);
+    if (name) return name;
+  }
+  return null;
+}

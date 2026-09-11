@@ -123,6 +123,11 @@ export const openapi = {
           status: { type: "string", example: "Approved" },
           verified: { type: "boolean" },
           sessionId: { type: "string", nullable: true },
+          name: {
+            type: "string",
+            nullable: true,
+            description: "holder name from the identity document",
+          },
           updatedAt: { type: "integer", nullable: true, description: "unix seconds" },
         },
       },
@@ -154,6 +159,12 @@ export const openapi = {
         properties: {
           active: { type: "boolean" },
           issued: { type: "boolean" },
+          holder: {
+            type: "string",
+            nullable: true,
+            description:
+              "Legal name as OCR'd from the identity document by Didit; never typed by the user",
+          },
           spendable: Wei,
           spendableCtc: { type: "string" },
           reason: {
@@ -171,6 +182,12 @@ export const openapi = {
         type: "object",
         properties: {
           wallet: Address,
+          holder: {
+            type: "string",
+            nullable: true,
+            description:
+              "Legal name as OCR'd from the identity document by Didit; never typed by the user",
+          },
           number: { type: "string", description: "16 digits, Luhn-valid, private BIN 9924" },
           masked: { type: "string" },
           accountNumber: { type: "string", description: "12 digits" },
