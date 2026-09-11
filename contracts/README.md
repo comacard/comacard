@@ -130,6 +130,22 @@ collateralisation, and 0.01 ETH priced at 1000 CTC is 10 CTC of value, so
 `10 × 10000 / 12060 = 8.291873963515754560`. The chain agrees to the wei, and so
 does the indexer.
 
+Then a second asset, on the same account:
+
+```
+lock 500 tUSDC on Sepolia         0x0f1b9e2e…f610
+prove it to Creditcoin            0x12563f58…86eb    500 tUSDC credited
+
+                                                     collateral 10 → 510 CTC
+                                                     limit 8.389 → 427.852 CTC
+```
+
+The number that proves the decimals are handled: 500 tUSDC is 500,000,000 base
+units at 6 decimals. Valued as though it had 18, it would be worth
+0.0000000005 CTC and nothing would revert — the limit would simply be wrong.
+Scaled by its own decimals it is exactly 500 CTC, and the limit
+`510 × 10000 / 11920 = 427.852348993288590604` matches the chain to the wei.
+
 `minCycleDuration` is set to **60 seconds on this testnet deployment** so the
 loop can be demonstrated inside a recording. The default is a day, and it exists
 because a cycle opened and closed in one block proves nothing about a borrower.
