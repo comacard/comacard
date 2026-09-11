@@ -25,6 +25,23 @@ adapter and delegated toward staking, and every guardrail — drawing without
 collateral, defaulting a non-borrower, and each privileged call from an
 unauthorised address — was confirmed to revert on the live contracts.
 
+### Collateral assets
+
+Native ETH plus three ERC20s on Sepolia. Anyone can mint the test tokens from
+their `faucet(uint256 wholeTokens)` — they stand in for the real assets so the
+multi-asset path can be exercised without real funds.
+
+| Asset | Decimals | Priced at | Sepolia address |
+| --- | --- | --- | --- |
+| ETH (native) | 18 | 1,000 CTC | — |
+| tUSDC | 6 | 1 CTC | [`0x2eECfA1eb55154483726314235f74ac324e2660F`](https://sepolia.etherscan.io/address/0x2eECfA1eb55154483726314235f74ac324e2660F) |
+| tUSDT | 6 | 1 CTC | [`0xc370A0BC9db78d031c076b2fBEcCCb5f3291AB00`](https://sepolia.etherscan.io/address/0xc370A0BC9db78d031c076b2fBEcCCb5f3291AB00) |
+| tWETH | 18 | 1,000 CTC | [`0xC27FCc0A2547298d0ec86f7f70748Cc3CFC18da1`](https://sepolia.etherscan.io/address/0xC27FCc0A2547298d0ec86f7f70748Cc3CFC18da1) |
+
+Prices are operator-set testnet figures on a 1 CTC ≈ $1 model, not market
+quotes. The decimals column is the one that matters for correctness: a 6-decimal
+stablecoin valued as if it had 18 would count for a trillionth of itself.
+
 ## Layout
 
 ```

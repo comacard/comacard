@@ -123,3 +123,34 @@ type Protocol {
   lifetimeDefaulted: BigInt!
   defaultCount: Int!
 }
+
+"""
+A token the credit line accepts as collateral. The list an app shows a
+cardholder comes from here, so it can never offer an asset the contract would
+refuse.
+"""
+type Token {
+  id: ID! # source-chain token address
+  decimals: Int!
+  """
+  Credit-asset wei per one whole token, 18dp. Operator-fed on testnet.
+  """
+  price: BigInt!
+  listedAt: BigInt!
+  pricedAt: BigInt!
+  positions: [TokenPosition!]! @derivedFrom(field: "token")
+}
+
+"""
+One account's collateral in one token. Amounts are in the token's own base
+units — divide by 10^decimals from the Token row to show whole tokens.
+"""
+type TokenPosition {
+  id: ID! # account-token
+  account: String!
+  token: Token!
+  locked: BigInt!
+  credited: BigInt!
+  pendingRelease: BigInt!
+  lastActiveAt: BigInt!
+}
