@@ -131,8 +131,8 @@ const server = Bun.serve({
       const wallet = req.params.wallet.toLowerCase();
       if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
       const row = latest.get(wallet);
-      // The decision is already on disk; this only reads it. A malformed one yields null rather
-      // than failing the whole status read, which the card screen depends on.
+      // The decision is already on disk; this only reads it. One malformed row
+      // must not take down the status read the card screen depends on.
       let name: string | null = null;
       if (row?.decision) {
         try {
@@ -146,7 +146,7 @@ const server = Bun.serve({
         sessionId: row?.session_id ?? null,
         status: row?.status ?? "none",
         verified: row?.status === "Approved",
-        // OCR'd from the identity document, so it is the name that was actually verified.
+        // OCR'd from the identity document, so it is the name that was verified.
         name,
         updatedAt: row?.updated_at ?? null,
       });

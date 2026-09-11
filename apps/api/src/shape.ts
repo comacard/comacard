@@ -5,7 +5,7 @@ export type KycStatus = {
   status: string;
   verified: boolean;
   sessionId: string | null;
-  /** OCR'd from the identity document by the KYC service. Null until a decision has been stored. */
+  /** OCR'd from the identity document by the KYC service. Null until a decision is stored. */
   name: string | null;
   updatedAt: number | null;
 };

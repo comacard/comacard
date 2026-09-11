@@ -123,6 +123,11 @@ export const openapi = {
           status: { type: "string", example: "Approved" },
           verified: { type: "boolean" },
           sessionId: { type: "string", nullable: true },
+          name: {
+            type: "string",
+            nullable: true,
+            description: "holder name from the identity document",
+          },
           updatedAt: { type: "integer", nullable: true, description: "unix seconds" },
         },
       },
@@ -154,18 +159,18 @@ export const openapi = {
         properties: {
           active: { type: "boolean" },
           issued: { type: "boolean" },
+          holder: {
+            type: "string",
+            nullable: true,
+            description:
+              "Legal name as OCR'd from the identity document by Didit; never typed by the user",
+          },
           spendable: Wei,
           spendableCtc: { type: "string" },
           reason: {
             type: "string",
             enum: ["kyc_required", "overdue"],
             description: "present only when active is false",
-          },
-          holder: {
-            type: "string",
-            nullable: true,
-            description: "Cardholder name, OCR'd from the identity document during KYC.",
-            example: "María García López",
           },
           number: { type: "string", nullable: true, example: "•••• •••• •••• 4821" },
           accountNumber: { type: "string", nullable: true, example: "482193027465" },
@@ -180,8 +185,8 @@ export const openapi = {
           holder: {
             type: "string",
             nullable: true,
-            description: "Cardholder name, OCR'd from the identity document during KYC.",
-            example: "María García López",
+            description:
+              "Legal name as OCR'd from the identity document by Didit; never typed by the user",
           },
           number: { type: "string", description: "16 digits, Luhn-valid, private BIN 9924" },
           masked: { type: "string" },

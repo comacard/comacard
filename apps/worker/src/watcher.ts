@@ -1,4 +1,4 @@
-import { ASC_ACTION } from "@comacard/attestcoin";
+import { ASC_ACTION, type AscAction } from "@comacard/attestcoin";
 import { Contract, type EventLog, type JsonRpcProvider } from "ethers";
 import { config } from "./config.js";
 import type { Prover } from "./prover.js";
@@ -6,6 +6,8 @@ import type { Prover } from "./prover.js";
 const VAULT_ABI = [
   "event CollateralLocked(address indexed account, uint256 amount, uint256 nonce)",
   "event CollateralUnlocked(address indexed account, uint256 amount, uint256 nonce)",
+  "event TokenLocked(address indexed account, address indexed token, uint256 amount, uint256 nonce)",
+  "event TokenUnlocked(address indexed account, address indexed token, uint256 amount, uint256 nonce)",
 ];
 
 interface Pending {
@@ -36,9 +38,11 @@ export class Watcher {
   }
 
   async collect(fromBlock: number, toBlock: number): Promise<Pending[]> {
-    const [locked, unlocked] = await Promise.all([
+    const [locked, unlocked, tokenLocked, tokenUnlocked] = await Promise.all([
       this.vault.queryFilter("CollateralLocked", fromBlock, toBlock),
       this.vault.queryFilter("CollateralUnlocked", fromBlock, toBlock),
+      this.vault.queryFilter("TokenLocked", fromBlock, toBlock),
+      this.vault.queryFilter("TokenUnlocked", fromBlock, toBlock),
     ]);
 
     const toPending =
@@ -54,9 +58,23 @@ export class Watcher {
     const decoded = (logs: Awaited<ReturnType<Contract["queryFilter"]>>): EventLog[] =>
       logs.filter((log): log is EventLog => "args" in log);
 
+    // Token events carry the token as a second indexed topic, so the amount is
+    // the third argument rather than the second.
+    const toTokenPending =
+      (action: number) =>
+      (log: EventLog): Pending => ({
+        action,
+        txHash: log.transactionHash,
+        blockNumber: log.blockNumber,
+        account: log.args[0] as string,
+        amount: log.args[2] as bigint,
+      });
+
     return [
       ...decoded(locked).map(toPending(ASC_ACTION.collateralLocked)),
       ...decoded(unlocked).map(toPending(ASC_ACTION.collateralUnlocked)),
+      ...decoded(tokenLocked).map(toTokenPending(ASC_ACTION.tokenLocked)),
+      ...decoded(tokenUnlocked).map(toTokenPending(ASC_ACTION.tokenUnlocked)),
     ].sort((a, b) => a.blockNumber - b.blockNumber);
   }
 
@@ -70,7 +88,7 @@ export class Watcher {
 
       try {
         const result = await this.prover.prove(
-          item.action as 0 | 1,
+          item.action as AscAction,
           config.sepoliaChainKey,
           item.txHash,
           item.blockNumber,

@@ -25,6 +25,23 @@ adapter and delegated toward staking, and every guardrail — drawing without
 collateral, defaulting a non-borrower, and each privileged call from an
 unauthorised address — was confirmed to revert on the live contracts.
 
+### Collateral assets
+
+Native ETH plus three ERC20s on Sepolia. Anyone can mint the test tokens from
+their `faucet(uint256 wholeTokens)` — they stand in for the real assets so the
+multi-asset path can be exercised without real funds.
+
+| Asset | Decimals | Priced at | Sepolia address |
+| --- | --- | --- | --- |
+| ETH (native) | 18 | 1,000 CTC | — |
+| tUSDC | 6 | 1 CTC | [`0x2eECfA1eb55154483726314235f74ac324e2660F`](https://sepolia.etherscan.io/address/0x2eECfA1eb55154483726314235f74ac324e2660F) |
+| tUSDT | 6 | 1 CTC | [`0xc370A0BC9db78d031c076b2fBEcCCb5f3291AB00`](https://sepolia.etherscan.io/address/0xc370A0BC9db78d031c076b2fBEcCCb5f3291AB00) |
+| tWETH | 18 | 1,000 CTC | [`0xC27FCc0A2547298d0ec86f7f70748Cc3CFC18da1`](https://sepolia.etherscan.io/address/0xC27FCc0A2547298d0ec86f7f70748Cc3CFC18da1) |
+
+Prices are operator-set testnet figures on a 1 CTC ≈ $1 model, not market
+quotes. The decimals column is the one that matters for correctness: a 6-decimal
+stablecoin valued as if it had 18 would count for a trillionth of itself.
+
 ## Layout
 
 ```
@@ -112,6 +129,22 @@ The limit is arithmetic anyone can redo: a score of 42 asks for 120.6%
 collateralisation, and 0.01 ETH priced at 1000 CTC is 10 CTC of value, so
 `10 × 10000 / 12060 = 8.291873963515754560`. The chain agrees to the wei, and so
 does the indexer.
+
+Then a second asset, on the same account:
+
+```
+lock 500 tUSDC on Sepolia         0x0f1b9e2e…f610
+prove it to Creditcoin            0x12563f58…86eb    500 tUSDC credited
+
+                                                     collateral 10 → 510 CTC
+                                                     limit 8.389 → 427.852 CTC
+```
+
+The number that proves the decimals are handled: 500 tUSDC is 500,000,000 base
+units at 6 decimals. Valued as though it had 18, it would be worth
+0.0000000005 CTC and nothing would revert — the limit would simply be wrong.
+Scaled by its own decimals it is exactly 500 CTC, and the limit
+`510 × 10000 / 11920 = 427.852348993288590604` matches the chain to the wei.
 
 `minCycleDuration` is set to **60 seconds on this testnet deployment** so the
 loop can be demonstrated inside a recording. The default is a day, and it exists

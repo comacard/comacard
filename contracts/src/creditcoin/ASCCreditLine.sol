@@ -67,6 +67,33 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
 
     uint256 internal constant PRICE_SCALE = 1e18;
 
+    // ---- ERC20 collateral. Appended: every slot above holds live state. ----
+
+    /// @notice How the protocol values one listed token.
+    /// @param price Credit-asset wei per ONE WHOLE token, 18-decimal fixed point.
+    /// @param decimals The token's own decimals, needed to know what "one whole
+    ///        token" is. A 6-decimal stablecoin priced as if it had 18 would be
+    ///        valued at a trillionth of its worth.
+    struct TokenConfig {
+        uint256 price;
+        uint8 decimals;
+        bool listed;
+    }
+
+    /// @notice Every listed token, so collateral value can be summed across them.
+    address[] internal _tokens;
+
+    mapping(address => TokenConfig) public tokenConfig;
+
+    /// @notice Token collateral proved per account, keyed by source-chain token.
+    mapping(address => mapping(address => uint256)) public tokenCollateral;
+
+    /// @notice Token collateral already debited ahead of its source-chain release.
+    mapping(address => mapping(address => uint256)) public tokenPendingRelease;
+
+    /// @notice Listing more than this would make every limit check loop too far.
+    uint256 internal constant MAX_TOKENS = 16;
+
     uint64 internal constant MIN_TERM = 1 days;
     uint64 internal constant MAX_TERM = 365 days;
     uint64 internal constant MAX_CYCLE_DURATION = 30 days;
@@ -76,6 +103,17 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     event Defaulted(address indexed account, uint256 writtenOff, uint256 collateralSeized);
     event TermChanged(uint64 from, uint64 to);
     event CollateralPriceChanged(uint256 from, uint256 to);
+    event TokenListed(address indexed token, uint8 decimals, uint256 price);
+    event TokenPriceChanged(address indexed token, uint256 from, uint256 to);
+    event TokenCollateralCredited(
+        address indexed account, address indexed token, uint256 amount, bytes32 indexed queryId
+    );
+    event TokenCollateralReleased(
+        address indexed account, address indexed token, uint256 amount, bytes32 indexed queryId
+    );
+    event TokenReleaseHeld(
+        address indexed account, address indexed token, uint256 amount, uint256 pending
+    );
     event ReleaseHeld(address indexed account, uint256 amount, uint256 pending);
     event LiquidityWithdrawn(address indexed to, uint256 amount);
 
@@ -147,6 +185,10 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
             _applyCollateral(queryId, encodedTransaction, false);
         } else if (action == uint8(CreditAction.HistoryImported)) {
             _importHistory(queryId, encodedTransaction);
+        } else if (action == uint8(CreditAction.TokenLocked)) {
+            _applyTokenCollateral(queryId, encodedTransaction, true);
+        } else if (action == uint8(CreditAction.TokenUnlocked)) {
+            _applyTokenCollateral(queryId, encodedTransaction, false);
         } else {
             revert CreditErrors.UnknownAction(action);
         }
@@ -184,8 +226,10 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
                     }
                     account.collateral -= remainder;
                     // Releasing collateral must never strand outstanding debt.
-                    if (account.drawn > CreditScoring.limitFrom(_collateralValue(account), account))
-                    {
+                    if (
+                        account.drawn
+                            > CreditScoring.limitFrom(_collateralValue(e.account), account)
+                    ) {
                         revert CreditErrors.OutstandingDebt(account.drawn);
                     }
                 }
@@ -195,9 +239,20 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         }
     }
 
-    /// @notice Posted collateral, expressed in the asset the line lends.
-    function _collateralValue(CreditAccount storage account) internal view returns (uint256) {
-        return (account.collateral * collateralPrice) / PRICE_SCALE;
+    /// @notice All posted collateral — native and every listed token — valued in
+    ///         the asset the line lends.
+    /// @dev Each token is scaled by its own decimals before pricing. That is the
+    ///      whole difference between a correct limit and one that is off by
+    ///      twelve orders of magnitude for a 6-decimal stablecoin.
+    function _collateralValue(address who) internal view returns (uint256 value) {
+        value = (_accounts[who].collateral * collateralPrice) / PRICE_SCALE;
+        for (uint256 i = 0; i < _tokens.length; ++i) {
+            address token = _tokens[i];
+            uint256 held = tokenCollateral[who][token];
+            if (held == 0) continue;
+            TokenConfig storage cfg = tokenConfig[token];
+            value += (held * cfg.price) / (10 ** cfg.decimals);
+        }
     }
 
     /// @notice Price one whole unit of the collateral asset in the credit asset.
@@ -214,8 +269,8 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         emit ScoreChanged(
             borrower,
             CreditScoring.score(account),
-            CreditScoring.limitFrom(_collateralValue(account), account),
-            CreditScoring.availableFrom(_collateralValue(account), account)
+            CreditScoring.limitFrom(_collateralValue(borrower), account),
+            CreditScoring.availableFrom(_collateralValue(borrower), account)
         );
     }
 
@@ -237,7 +292,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         if (amount == 0) revert CreditErrors.ZeroAmount();
 
         CreditAccount storage account = _accounts[msg.sender];
-        uint256 available = CreditScoring.availableFrom(_collateralValue(account), account);
+        uint256 available = CreditScoring.availableFrom(_collateralValue(msg.sender), account);
         if (amount > available) revert CreditErrors.ExceedsAvailableCredit(amount, available);
 
         _ensureLiquidity(amount);
@@ -293,6 +348,51 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         _publishScore(msg.sender);
     }
 
+    /// @notice Credit or debit token collateral from a proved SourceVault event.
+    /// @dev An unlisted token is refused rather than credited at zero: silently
+    ///      accepting it would record collateral the line cannot price, and the
+    ///      borrower would reasonably believe it counted.
+    function _applyTokenCollateral(bytes32 queryId, bytes memory encodedTransaction, bool isLock)
+        internal
+    {
+        VaultEvents.TokenEvent[] memory events = VaultEvents.extractToken(
+            encodedTransaction,
+            isLock ? VaultEvents.TOKEN_LOCKED_SIG : VaultEvents.TOKEN_UNLOCKED_SIG,
+            sourceVault
+        );
+
+        for (uint256 i = 0; i < events.length; ++i) {
+            VaultEvents.TokenEvent memory e = events[i];
+            if (!tokenConfig[e.token].listed) revert CreditErrors.TokenNotListed(e.token);
+
+            if (isLock) {
+                tokenCollateral[e.account][e.token] += e.amount;
+                emit TokenCollateralCredited(e.account, e.token, e.amount, queryId);
+            } else {
+                // Consume a hold first, exactly as native collateral does, so an
+                // unlock proof arriving after the hold does not debit twice.
+                uint256 held = tokenPendingRelease[e.account][e.token];
+                uint256 consumed = e.amount > held ? held : e.amount;
+                tokenPendingRelease[e.account][e.token] = held - consumed;
+
+                uint256 remainder = e.amount - consumed;
+                if (remainder > 0) {
+                    if (remainder > tokenCollateral[e.account][e.token]) {
+                        revert CreditErrors.InsufficientCollateral();
+                    }
+                    tokenCollateral[e.account][e.token] -= remainder;
+                    CreditAccount storage account = _accounts[e.account];
+                    if (
+                        account.drawn
+                            > CreditScoring.limitFrom(_collateralValue(e.account), account)
+                    ) revert CreditErrors.OutstandingDebt(account.drawn);
+                }
+                emit TokenCollateralReleased(e.account, e.token, e.amount, queryId);
+            }
+            _publishScore(e.account);
+        }
+    }
+
     /// @notice Credit an account with track record proved on the history chain.
     /// @dev The proof credits its own signer: the nonce is claimed for the
     ///      transaction's `from`, so nobody can import somebody else's history.
@@ -331,7 +431,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         account.collateral -= amount;
         account.pendingRelease += amount;
 
-        uint256 remainingLimit = CreditScoring.limitFrom(_collateralValue(account), account);
+        uint256 remainingLimit = CreditScoring.limitFrom(_collateralValue(borrower), account);
         if (account.drawn > remainingLimit) {
             revert CreditErrors.ReleaseWouldStrandDebt(account.drawn, remainingLimit);
         }
@@ -374,6 +474,66 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
 
         emit Defaulted(borrower, outstanding, seized);
         _publishScore(borrower);
+    }
+
+    /// @notice Accept a source-chain token as collateral, with its decimals.
+    /// @dev Listing is governance: it decides what the protocol is exposed to.
+    ///      Repricing afterwards is the oracle's job, not governance's.
+    function listToken(address token, uint8 decimals, uint256 price)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (token == address(0)) revert CreditErrors.ZeroAddress();
+        if (tokenConfig[token].listed) revert CreditErrors.TokenAlreadyListed(token);
+        if (decimals > 36) revert CreditErrors.DecimalsOutOfRange(decimals);
+        if (price == 0) revert CreditErrors.ZeroAmount();
+        if (_tokens.length >= MAX_TOKENS) revert CreditErrors.TokenNotListed(token);
+
+        tokenConfig[token] = TokenConfig({price: price, decimals: decimals, listed: true});
+        _tokens.push(token);
+        emit TokenListed(token, decimals, price);
+    }
+
+    /// @notice Reprice a listed token, in credit-asset wei per whole token.
+    function setTokenPrice(address token, uint256 price) external onlyRole(ORACLE_ROLE) {
+        TokenConfig storage cfg = tokenConfig[token];
+        if (!cfg.listed) revert CreditErrors.TokenNotListed(token);
+        if (price == 0) revert CreditErrors.ZeroAmount();
+        emit TokenPriceChanged(token, cfg.price, price);
+        cfg.price = price;
+    }
+
+    /// @notice Debit token collateral here before it is released on Sepolia.
+    /// @dev The same race as native collateral, closed the same way: the credit
+    ///      has to disappear before the tokens can leave the vault.
+    function placeTokenReleaseHold(address borrower, address token, uint256 amount)
+        external
+        onlyRole(OPERATOR_ROLE)
+    {
+        if (amount == 0) revert CreditErrors.ZeroAmount();
+        uint256 held = tokenCollateral[borrower][token];
+        if (amount > held) revert CreditErrors.InsufficientCollateral();
+
+        tokenCollateral[borrower][token] = held - amount;
+        tokenPendingRelease[borrower][token] += amount;
+
+        CreditAccount storage account = _accounts[borrower];
+        uint256 remainingLimit = CreditScoring.limitFrom(_collateralValue(borrower), account);
+        if (account.drawn > remainingLimit) {
+            revert CreditErrors.ReleaseWouldStrandDebt(account.drawn, remainingLimit);
+        }
+        emit TokenReleaseHeld(borrower, token, amount, tokenPendingRelease[borrower][token]);
+        _publishScore(borrower);
+    }
+
+    /// @notice Every token the line accepts, in listing order.
+    function listedTokens() external view returns (address[] memory) {
+        return _tokens;
+    }
+
+    /// @notice Total collateral value for an account, in the credit asset.
+    function collateralValueOf(address account) external view returns (uint256) {
+        return _collateralValue(account);
     }
 
     /// @notice How long a draw may stay outstanding before it can be defaulted.
@@ -457,12 +617,12 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
 
     /// @inheritdoc ICreditLine
     function limitOf(address account) external view override returns (uint256) {
-        return CreditScoring.limitFrom(_collateralValue(_accounts[account]), _accounts[account]);
+        return CreditScoring.limitFrom(_collateralValue(account), _accounts[account]);
     }
 
     /// @inheritdoc ICreditLine
     function availableOf(address account) external view override returns (uint256) {
-        return CreditScoring.availableFrom(_collateralValue(_accounts[account]), _accounts[account]);
+        return CreditScoring.availableFrom(_collateralValue(account), _accounts[account]);
     }
 
     /// @inheritdoc ICreditLine

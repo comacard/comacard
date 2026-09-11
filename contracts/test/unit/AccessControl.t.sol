@@ -31,10 +31,10 @@ contract AccessControlTest is Test {
 
     // Cached: reading a role off the contract is an external call, and an
     // external call inside an expectRevert argument consumes the pending prank.
-    bytes32 internal ADMIN;
-    bytes32 internal OPERATOR;
-    bytes32 internal GUARDIAN;
-    bytes32 internal COMPLIANCE;
+    bytes32 internal adminRole;
+    bytes32 internal operatorRole;
+    bytes32 internal guardianRole;
+    bytes32 internal complianceRole;
 
     function setUp() public {
         governance = makeAddr("governance");
@@ -46,16 +46,16 @@ contract AccessControlTest is Test {
             address(line), governance, operator, makeAddr("stakingAccount")
         );
 
-        ADMIN = line.DEFAULT_ADMIN_ROLE();
-        OPERATOR = line.OPERATOR_ROLE();
-        GUARDIAN = line.GUARDIAN_ROLE();
-        COMPLIANCE = line.COMPLIANCE_ROLE();
+        adminRole = line.DEFAULT_ADMIN_ROLE();
+        operatorRole = line.OPERATOR_ROLE();
+        guardianRole = line.GUARDIAN_ROLE();
+        complianceRole = line.COMPLIANCE_ROLE();
 
         vm.startPrank(governance);
-        line.grantRole(GUARDIAN, guardian);
-        line.grantRole(COMPLIANCE, compliance);
-        vault.grantRole(GUARDIAN, guardian);
-        vault.grantRole(COMPLIANCE, compliance);
+        line.grantRole(guardianRole, guardian);
+        line.grantRole(complianceRole, compliance);
+        vault.grantRole(guardianRole, guardian);
+        vault.grantRole(complianceRole, compliance);
         vm.stopPrank();
     }
 
@@ -69,16 +69,16 @@ contract AccessControlTest is Test {
 
     function test_operatorCannotChangeConfiguration() public {
         vm.prank(operator);
-        vm.expectRevert(_denied(operator, ADMIN));
+        vm.expectRevert(_denied(operator, adminRole));
         line.setYieldAdapter(IYieldAdapter(address(adapter)));
     }
 
     function test_operatorCannotPauseOrFreeze() public {
         vm.startPrank(operator);
-        vm.expectRevert(_denied(operator, GUARDIAN));
+        vm.expectRevert(_denied(operator, guardianRole));
         line.pause();
 
-        vm.expectRevert(_denied(operator, COMPLIANCE));
+        vm.expectRevert(_denied(operator, complianceRole));
         line.setFrozen(alice, true, "test");
         vm.stopPrank();
     }
@@ -90,7 +90,7 @@ contract AccessControlTest is Test {
         assertTrue(line.paused());
 
         vm.prank(guardian);
-        vm.expectRevert(_denied(guardian, ADMIN));
+        vm.expectRevert(_denied(guardian, adminRole));
         line.unpause();
 
         vm.prank(governance);
@@ -100,7 +100,7 @@ contract AccessControlTest is Test {
 
     function test_guardianCannotMoveMoney() public {
         vm.prank(guardian);
-        vm.expectRevert(_denied(guardian, OPERATOR));
+        vm.expectRevert(_denied(guardian, operatorRole));
         line.deployLiquidity(1 ether);
     }
 
@@ -110,32 +110,32 @@ contract AccessControlTest is Test {
         assertTrue(line.frozen(alice));
 
         vm.prank(compliance);
-        vm.expectRevert(_denied(compliance, OPERATOR));
+        vm.expectRevert(_denied(compliance, operatorRole));
         line.deployLiquidity(1 ether);
     }
 
     function test_intruderHasNothing() public {
         vm.startPrank(intruder);
-        vm.expectRevert(_denied(intruder, OPERATOR));
+        vm.expectRevert(_denied(intruder, operatorRole));
         line.deployLiquidity(1 ether);
 
-        vm.expectRevert(_denied(intruder, GUARDIAN));
+        vm.expectRevert(_denied(intruder, guardianRole));
         line.pause();
 
-        vm.expectRevert(_denied(intruder, COMPLIANCE));
+        vm.expectRevert(_denied(intruder, complianceRole));
         line.setFrozen(alice, true, "nope");
 
-        vm.expectRevert(_denied(intruder, ADMIN));
+        vm.expectRevert(_denied(intruder, adminRole));
         line.setYieldAdapter(IYieldAdapter(address(adapter)));
         vm.stopPrank();
     }
 
     function test_vaultAndAdapterEnforceOperatorRole() public {
         vm.startPrank(intruder);
-        vm.expectRevert(_denied(intruder, OPERATOR));
+        vm.expectRevert(_denied(intruder, operatorRole));
         vault.approveRelease(intruder, 1 ether);
 
-        vm.expectRevert(_denied(intruder, OPERATOR));
+        vm.expectRevert(_denied(intruder, operatorRole));
         adapter.delegate(1 ether);
         vm.stopPrank();
     }
@@ -181,7 +181,7 @@ contract AccessControlTest is Test {
         address newImpl = address(new ASCCreditLine());
 
         vm.prank(operator);
-        vm.expectRevert(_denied(operator, ADMIN));
+        vm.expectRevert(_denied(operator, adminRole));
         line.upgradeToAndCall(newImpl, "");
 
         vm.prank(governance);

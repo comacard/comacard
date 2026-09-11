@@ -9,6 +9,9 @@ description: Credit lines sized by proved onchain history
 
 # Only what the handlers actually read. Every extra field is data pulled over
 # the wire for every event, which matters most on the RPC chain.
+# No per-contract `handler:` — every file in src/handlers is loaded. Naming one
+# file per contract makes Envio skip the rest, so token handlers living in their
+# own file would silently never run.
 field_selection:
   transaction_fields:
     - hash
@@ -21,11 +24,12 @@ chains:
       - name: SourceVault
         address:
           - 0x911290c37E9558C704870f4C44CBdEA1B2B33303
-        handler: src/handlers/SourceVault.ts
         events:
           - event: CollateralLocked(address indexed account, uint256 amount, uint256 nonce)
           - event: CollateralUnlocked(address indexed account, uint256 amount, uint256 nonce)
           - event: ReleaseApproved(address indexed account, uint256 amount)
+          - event: TokenLocked(address indexed account, address indexed token, uint256 amount, uint256 nonce)
+          - event: TokenUnlocked(address indexed account, address indexed token, uint256 amount, uint256 nonce)
 
   # ---- Creditcoin CC3 testnet: where credit lives ----
   - id: 102031
@@ -37,7 +41,6 @@ chains:
       - name: ASCCreditLine
         address:
           - 0x18052272cC69113DE2b45d2BDB4E1fB287F4E906
-        handler: src/handlers/CreditLine.ts
         events:
           - event: ScoreChanged(address indexed account, uint256 score, uint256 limit, uint256 available)
           - event: CollateralCredited(address indexed account, uint256 amount, bytes32 indexed queryId)
@@ -48,11 +51,15 @@ chains:
           - event: Defaulted(address indexed account, uint256 writtenOff, uint256 collateralSeized)
           - event: ReleaseHeld(address indexed account, uint256 amount, uint256 pending)
           - event: CollateralPriceChanged(uint256 from, uint256 to)
+          - event: TokenListed(address indexed token, uint8 decimals, uint256 price)
+          - event: TokenPriceChanged(address indexed token, uint256 from, uint256 to)
+          - event: TokenCollateralCredited(address indexed account, address indexed token, uint256 amount, bytes32 indexed queryId)
+          - event: TokenCollateralReleased(address indexed account, address indexed token, uint256 amount, bytes32 indexed queryId)
+          - event: TokenReleaseHeld(address indexed account, address indexed token, uint256 amount, uint256 pending)
 
       - name: CtcStakingAdapter
         address:
           - 0xA94218Dbdb142A10e32eF7b494105D27F47f7045
-        handler: src/handlers/StakingAdapter.ts
         events:
           - event: Delegated(address indexed stakingAccount, uint256 amount)
           - event: PrincipalReturned(uint256 amount)

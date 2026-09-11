@@ -19,8 +19,14 @@ const account = (over: Partial<IndexedAccount> = {}): IndexedAccount => ({
   lastActiveAt: "0",
   ...over,
 });
-const verified = { status: "Approved", verified: true, sessionId: "s", name: null, updatedAt: 1 };
-const unverified = { status: "none", verified: false, sessionId: null, name: null, updatedAt: null };
+const verified = { status: "Approved", verified: true, sessionId: "s", name: "Test", updatedAt: 1 };
+const unverified = {
+  status: "none",
+  verified: false,
+  sessionId: null,
+  name: null,
+  updatedAt: null,
+};
 
 describe("formatCtc", () => {
   test("four decimals, truncated, no float", () => {

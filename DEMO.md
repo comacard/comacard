@@ -96,6 +96,24 @@ We ran this against a wallet with 18,206,166 transactions. Its score went to 40
 out loud: **a busy wallet is still a stranger.** History earns a better rate,
 never a free loan.
 
+### 4b — More than one asset (optional, strong)
+
+Lock a stablecoin and watch the limit jump. Lock it before recording — it waits
+on attestation like any other lock.
+
+```sh
+cast send $tUSDC "faucet(uint256)" 1000 --rpc-url sepolia --private-key $WALLET_PK
+cast send $tUSDC "approve(address,uint256)" $SOURCE_VAULT_ADDRESS 500000000 \
+  --rpc-url sepolia --private-key $WALLET_PK
+cast send $SOURCE_VAULT_ADDRESS "lockToken(address,uint256)" $tUSDC 500000000 \
+  --rpc-url sepolia --private-key $WALLET_PK
+bun run prove <lock-tx-hash> token_locked
+```
+
+We ran it: 500 tUSDC took the limit from 8.39 to 427.85 CTC. The line worth
+saying is about decimals — USDC has 6, ETH has 18, and valuing one as the other
+is off by a trillion with no error to warn you.
+
 ### 5 — The moment (2:00–2:40)
 
 ```sh

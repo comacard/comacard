@@ -112,37 +112,34 @@ export function isSessionEvent(
 /**
  * The verified person's name, out of the decision Didit sends with an approval.
  *
- * Nobody types this: Didit OCRs it off the identity document, which is the whole point. A name the
- * user typed would not be the name that was verified.
- *
- * The decision on a `status.updated` webhook mirrors `GET /v3/session/{id}/decision/`, so this needs
- * no second call to Didit. `id_verifications` is the current plural array; `id_verification` is the
- * older singular object, still accepted because a stored decision may predate the rename.
- *
- * Returns null rather than a guess. A card with the wrong name on it is worse than a card with
- * none, so anything unreadable stays blank.
+ * Nobody types this: Didit OCRs it off the identity document, which is the
+ * whole point. A name the user typed would not be the name that was verified.
+ * `id_verifications` is the current plural array; `id_verification` is the
+ * older singular object, still accepted because a stored decision may predate
+ * the rename. Returns null rather than a guess: a card with the wrong name is
+ * worse than a card with none.
  */
+function nameOf(candidate: unknown): string | null {
+  if (!candidate || typeof candidate !== "object") return null;
+  const id = candidate as Record<string, unknown>;
+  const text = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const full = text(id.full_name);
+  if (full) return full;
+  // Didit marks every name field nullable, so a document may carry only one half.
+  const joined = [text(id.first_name), text(id.last_name)].filter(Boolean).join(" ");
+  return joined || null;
+}
+
 export function nameFromDecision(decision: unknown): string | null {
   if (!decision || typeof decision !== "object") return null;
   const root = decision as Record<string, unknown>;
-
-  const candidates: unknown[] = [];
-  const plural = root.id_verifications;
-  if (Array.isArray(plural)) candidates.push(...plural);
+  const candidates: unknown[] = Array.isArray(root.id_verifications)
+    ? [...root.id_verifications]
+    : [];
   if (root.id_verification) candidates.push(root.id_verification);
-
   for (const candidate of candidates) {
-    if (!candidate || typeof candidate !== "object") continue;
-    const id = candidate as Record<string, unknown>;
-
-    const full = typeof id.full_name === "string" ? id.full_name.trim() : "";
-    if (full) return full;
-
-    // Didit marks every name field nullable, so a document may carry only one half.
-    const first = typeof id.first_name === "string" ? id.first_name.trim() : "";
-    const last = typeof id.last_name === "string" ? id.last_name.trim() : "";
-    const joined = [first, last].filter(Boolean).join(" ");
-    if (joined) return joined;
+    const name = nameOf(candidate);
+    if (name) return name;
   }
   return null;
 }

@@ -5,7 +5,7 @@ import { Prover } from "./prover.js";
 /**
  * Prove one transaction by hand.
  *
- *   bun run prove <txHash> [collateral_locked|collateral_unlocked|history]
+ *   bun run prove <txHash> [collateral_locked|collateral_unlocked|token_locked|token_unlocked|history]
  *
  * Useful for the demo, and for checking a single proof without leaving the
  * watcher running.
@@ -14,6 +14,8 @@ const ACTIONS = {
   collateral_locked: ASC_ACTION.collateralLocked,
   collateral_unlocked: ASC_ACTION.collateralUnlocked,
   history: ASC_ACTION.historyImported,
+  token_locked: ASC_ACTION.tokenLocked,
+  token_unlocked: ASC_ACTION.tokenUnlocked,
 } as const;
 
 async function main(): Promise<void> {

@@ -27,6 +27,23 @@ library TxFixtures {
         });
     }
 
+    function tokenLog(
+        address emitter,
+        bytes32 sig,
+        address account,
+        address token,
+        uint256 amount,
+        uint256 nonce
+    ) internal pure returns (EvmV1Decoder.LogEntryTuple memory) {
+        bytes32[] memory topics = new bytes32[](3);
+        topics[0] = sig;
+        topics[1] = bytes32(uint256(uint160(account)));
+        topics[2] = bytes32(uint256(uint160(token)));
+        return EvmV1Decoder.LogEntryTuple({
+            address_: emitter, topics: topics, data: abi.encode(amount, nonce)
+        });
+    }
+
     function logWithSignature(address emitter, bytes32 sig, address account, uint256 amount)
         internal
         pure

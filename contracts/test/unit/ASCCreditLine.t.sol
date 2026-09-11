@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {CreditLineHarness} from "../helpers/CreditLineHarness.sol";
 import {CtcStakingAdapter} from "../../src/creditcoin/CtcStakingAdapter.sol";
-import {CreditScoring} from "../../src/libraries/CreditScoring.sol";
 import {CreditErrors} from "../../src/types/CreditTypes.sol";
 import {VaultEvents} from "../../src/libraries/VaultEvents.sol";
 import {TxFixtures} from "../helpers/TxFixtures.sol";

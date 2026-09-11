@@ -8,7 +8,9 @@ pragma solidity ^0.8.28;
 enum CreditAction {
     CollateralLocked,
     CollateralUnlocked,
-    HistoryImported
+    HistoryImported,
+    TokenLocked,
+    TokenUnlocked
 }
 
 /// @notice Per-borrower state backing a revolving credit line.
@@ -59,4 +61,7 @@ library CreditErrors {
     error DurationOutOfRange(uint64 duration);
     error ReleaseWouldStrandDebt(uint256 outstanding, uint256 remainingLimit);
     error WrongChain(uint64 expected, uint64 actual);
+    error TokenNotListed(address token);
+    error TokenAlreadyListed(address token);
+    error DecimalsOutOfRange(uint8 decimals);
 }
