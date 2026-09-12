@@ -260,6 +260,11 @@ another chart:
 Say these before a judge asks. Being first to name a limitation reads as
 competence; being caught reads as the opposite.
 
+- **Wormhole's testnet guardian set has one member.** Every VAA we deliver
+  carries a single signature, not the 13-of-19 people associate with the name.
+  The same contracts against mainnet Wormhole inherit 13-of-19 unchanged, but on
+  this deployment the cross-chain leg rests on one key. Say the number before
+  someone parses a VAA and finds it.
 - **The collateral price is operator-fed.** Attestcoin proves transactions, not
   prices, and Creditcoin has no feed. It sits behind its own role, and that is
   the bound on the damage — not an oracle.
