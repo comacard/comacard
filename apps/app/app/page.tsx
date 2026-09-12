@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useWallet } from "../hooks/useWallet";
+import { type ReactNode, useEffect, useState } from "react";
 import { Button, CoinBadge, Toast } from "../components/ui";
 import type { TokenSym } from "../components/ui/CoinBadge";
-import { WalletError, USER_CLOSED_MODAL } from "../lib/wallet-error";
+import { useWallet } from "../hooks/useWallet";
+import { USER_CLOSED_MODAL, WalletError } from "../lib/wallet-error";
 import styles from "./Onboarding.module.css";
 
 type TourScreen = {
@@ -104,8 +104,22 @@ export default function Landing() {
       <div className={styles.onboardingPanel}>
         <header className={styles.tourHeader}>
           {step > 0 ? (
-            <button aria-label="Back" onClick={() => setStep(step - 1)} className={styles.backButton}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+            <button
+              type="button"
+              aria-label="Back"
+              onClick={() => setStep(step - 1)}
+              className={styles.backButton}
+            >
+              <svg
+                aria-hidden="true"
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+              >
                 <path d="M15 6l-6 6 6 6" />
               </svg>
             </button>
@@ -157,13 +171,30 @@ function SplashScreen() {
   );
 }
 
-function ConnectScreen({ error, onBack, onConnect }: { error: string | null; onBack: () => void; onConnect: () => void }) {
+function ConnectScreen({
+  error,
+  onBack,
+  onConnect,
+}: {
+  error: string | null;
+  onBack: () => void;
+  onConnect: () => void;
+}) {
   return (
     <main className={`${styles.screen} ${styles.tourScreen} ${styles.connectScreen}`}>
       <div className={styles.onboardingPanel}>
         <header className={styles.tourHeader}>
-          <button aria-label="Back" onClick={onBack} className={styles.backButton}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+          <button type="button" aria-label="Back" onClick={onBack} className={styles.backButton}>
+            <svg
+              aria-hidden="true"
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+            >
               <path d="M15 6l-6 6 6 6" />
             </svg>
           </button>
@@ -172,7 +203,10 @@ function ConnectScreen({ error, onBack, onConnect }: { error: string | null; onB
         </header>
 
         <section className={styles.tourBody}>
-          <div key="connect-wallet" className={`${styles.visualStage} ${styles.connectVisualStage}`}>
+          <div
+            key="connect-wallet"
+            className={`${styles.visualStage} ${styles.connectVisualStage}`}
+          >
             <div className={styles.connectVisual} aria-hidden="true">
               <WalletIcon kind="metamask" />
               <WalletIcon kind="walletconnect" />
@@ -215,15 +249,32 @@ function WalletIcon({ kind }: { kind: "metamask" | "walletconnect" | "ledger" | 
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`${styles.brand} ${compact ? styles.brandCompact : ""}`}>
-      <Image src="/brand/comacard-logo.png" alt="Comacard" width={1024} height={1024} className={styles.brandLogo} priority />
+      <Image
+        src="/brand/comacard-logo.png"
+        alt="Comacard"
+        width={1024}
+        height={1024}
+        className={styles.brandLogo}
+        priority
+      />
     </div>
   );
 }
 
 function Stepper({ current, total }: { current: number; total: number }) {
   return (
-    <div className={styles.stepper} aria-label={`Onboarding step ${current + 1} of ${total}`}>
+    // A step indicator is a progress bar, not a group of controls — which is
+    // both the honest role and the one that carries the numbers.
+    <div
+      className={styles.stepper}
+      role="progressbar"
+      aria-valuemin={1}
+      aria-valuemax={total}
+      aria-valuenow={current + 1}
+      aria-label={`Onboarding step ${current + 1} of ${total}`}
+    >
       {Array.from({ length: total }).map((_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length literal array, the index is the identity
         <span key={i} className={i === current ? styles.stepActive : ""} />
       ))}
     </div>
@@ -233,9 +284,23 @@ function Stepper({ current, total }: { current: number; total: number }) {
 function BucketsVisual() {
   return (
     <div className={styles.assetStack} aria-hidden="true">
-      <AssetRow asset="EURC" tags={["Blend Pool"]} value="$1,240" apy="6.2% APY" token="EURC" loading />
+      <AssetRow
+        asset="EURC"
+        tags={["Blend Pool"]}
+        value="$1,240"
+        apy="6.2% APY"
+        token="EURC"
+        loading
+      />
       <AssetRow asset="CTC" tags={[]} value="$5,420" apy="7.8% APY" token="CTC" highlight />
-      <AssetRow asset="CETES" tags={["Etherfuse"]} value="$2,416" apy="8.4% APY" token="CETES" loading />
+      <AssetRow
+        asset="CETES"
+        tags={["Etherfuse"]}
+        value="$2,416"
+        apy="8.4% APY"
+        token="CETES"
+        loading
+      />
     </div>
   );
 }
@@ -259,7 +324,17 @@ function AgentVisual() {
       </div>
       <div className={styles.safeExitCard}>
         <span className={styles.safeExitIcon}>
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            aria-hidden="true"
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             <path d="M12 9v4M12 17h.01" />
           </svg>
@@ -287,6 +362,7 @@ function EarningChartVisual() {
       </div>
       <div className={styles.earningBars}>
         {bars.map((height, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length literal array, the index is the identity
           <span key={i} style={{ height: `${height}%` }} />
         ))}
       </div>
@@ -294,7 +370,17 @@ function EarningChartVisual() {
   );
 }
 
-function HomeBucketMini({ token, title, value, apy }: { token: TokenSym; title: string; value: string; apy: string }) {
+function HomeBucketMini({
+  token,
+  title,
+  value,
+  apy,
+}: {
+  token: TokenSym;
+  title: string;
+  value: string;
+  apy: string;
+}) {
   return (
     <div className={styles.homeBucketMini}>
       <CoinBadge token={token} size={26} />
@@ -329,7 +415,11 @@ function AssetRow({
 }) {
   return (
     <div className={`${styles.assetRow} ${highlight ? styles.assetRowActive : ""}`}>
-      {loading ? <span className={styles.tokenSkeleton} /> : <CoinBadge token={token} size={44} className={styles.tokenLogo} />}
+      {loading ? (
+        <span className={styles.tokenSkeleton} />
+      ) : (
+        <CoinBadge token={token} size={44} className={styles.tokenLogo} />
+      )}
       {loading ? (
         <>
           <span className={`${styles.assetText} ${styles.assetSkeletonText}`}>

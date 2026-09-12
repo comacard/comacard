@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { type MouseEvent, useEffect, useRef, useState } from "react";
 
 /**
  * Organic green area chart for the desktop Overview hero — value over time. Interactive: hovering
@@ -30,7 +30,8 @@ function smooth(p: Pt[]): string {
   return d;
 }
 
-const money = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (v: number) =>
+  `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function ValueChart({ data: raw }: { data: number[] }) {
   // A non-finite point would put `NaN` straight into the SVG path and blank the chart. The series now
@@ -138,11 +139,33 @@ export function ValueChart({ data: raw }: { data: number[] }) {
         />
         {hover && (
           <>
-            <line x1={hover.x} y1={padT} x2={hover.x} y2={h - padB} stroke="rgba(17,19,22,.2)" strokeWidth={1} strokeDasharray="3 3" />
-            <circle cx={hover.x} cy={hover.y} r={4.5} fill="#16a34a" stroke="#fff" strokeWidth={2.5} />
+            <line
+              x1={hover.x}
+              y1={padT}
+              x2={hover.x}
+              y2={h - padB}
+              stroke="rgba(17,19,22,.2)"
+              strokeWidth={1}
+              strokeDasharray="3 3"
+            />
+            <circle
+              cx={hover.x}
+              cy={hover.y}
+              r={4.5}
+              fill="#16a34a"
+              stroke="#fff"
+              strokeWidth={2.5}
+            />
           </>
         )}
-        <circle cx={last.x.toFixed(1)} cy={last.y.toFixed(1)} r={4.5} fill="#16a34a" stroke="#fff" strokeWidth={2.5} />
+        <circle
+          cx={last.x.toFixed(1)}
+          cy={last.y.toFixed(1)}
+          r={4.5}
+          fill="#16a34a"
+          stroke="#fff"
+          strokeWidth={2.5}
+        />
       </svg>
       {hover && (
         <div

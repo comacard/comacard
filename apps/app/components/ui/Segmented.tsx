@@ -46,9 +46,11 @@ export function Segmented<T extends string>({
   const container = fluid ? `flex ${gap}` : "inline-flex gap-1";
   const button = fluid ? `h-9 flex-1 ${text}` : "h-[30px] px-3.5 text-[12.5px]";
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role=group on a styled container; fieldset brings layout and legend semantics this is not
     <div className={`${container} ${className}`} role="group" aria-label={label}>
       {options.map((option) => (
         <button
+          type="button"
           key={option}
           onClick={() => onChange(option)}
           aria-pressed={option === value}

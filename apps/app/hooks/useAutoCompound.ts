@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useWallet } from "./useWallet";
-import { useVault } from "./useVault";
 import { depositorSigner } from "../lib/vault/signer";
 import { toWalletError, USER_CLOSED_MODAL } from "../lib/wallet-error";
+import { useVault } from "./useVault";
+import { useWallet } from "./useWallet";
 
 /**
  * The depositor's auto-compound (reinvest-rewards) preference — a live, revocable toggle over the
@@ -65,16 +65,23 @@ export function useAutoCompound(onError?: (message: string) => void): {
       // A re-read for a *different* depositor: the displayed value belongs to the previous one, so go
       // back to loading (which dims the switch) rather than leaving it pressable over a stale answer.
       // A `version` bump for the same depositor keeps showing the last known value — no flicker.
-      if (known.current?.address !== address) setState((s) => (s.loading ? s : { ...s, loading: true }));
+      if (known.current?.address !== address)
+        setState((s) => (s.loading ? s : { ...s, loading: true }));
       try {
         const enabled = await client.autoCompoundEnabled(address);
         if (!fresh()) return;
         known.current = { address, enabled };
         setState({ loading: false, enabled });
       } catch (e) {
-        console.error("useAutoCompound: autoCompoundEnabled read failed, keeping the last known value", e);
+        console.error(
+          "useAutoCompound: autoCompoundEnabled read failed, keeping the last known value",
+          e,
+        );
         if (!fresh()) return;
-        setState({ loading: false, enabled: known.current?.address === address ? known.current.enabled : true });
+        setState({
+          loading: false,
+          enabled: known.current?.address === address ? known.current.enabled : true,
+        });
       }
     })();
 

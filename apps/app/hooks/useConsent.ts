@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useWallet } from "./useWallet";
 import { useVault } from "./useVault";
+import { useWallet } from "./useWallet";
 
 /**
  * Whether the depositor has signed the auto-optimize mandate. The seam exposes only `hasConsent`

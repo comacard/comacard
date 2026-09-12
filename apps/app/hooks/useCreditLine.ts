@@ -1,6 +1,5 @@
 "use client";
 import { useCallback } from "react";
-import type { TxStatus } from "../components/ui/TransactionStatus";
 import {
   useAccount,
   useConfig,
@@ -9,6 +8,7 @@ import {
   useWriteContract,
 } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
+import type { TxStatus } from "../components/ui/TransactionStatus";
 import {
   CREDIT_LINE,
   CREDITCOIN_CHAIN_ID,

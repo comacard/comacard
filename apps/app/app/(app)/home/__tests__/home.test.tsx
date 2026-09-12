@@ -1,10 +1,10 @@
+import { MockVaultClient } from "@sorosense/vault-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../../providers/VaultProvider";
-import { ToastProvider } from "../../../../providers/ToastProvider";
 import { seedVault } from "../../../../lib/vault/seed";
+import { ToastProvider } from "../../../../providers/ToastProvider";
+import { VaultProvider } from "../../../../providers/VaultProvider";
 import HomePage from "../page";
 
 /**
@@ -90,7 +90,9 @@ const DEFAULT_LINE = {
   reset: vi.fn(),
   onSepolia: true,
 };
-vi.mock("wagmi", () => ({ useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }) }));
+vi.mock("wagmi", () => ({
+  useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }),
+}));
 
 /** Four on-chain rows, in the shape the indexer hook emits. Mocked for the same reason as the two
  *  above: this file tests what Home composes, not react-query's cache over a GraphQL endpoint. */
@@ -135,16 +137,43 @@ function fundedAndVerified() {
     loading: false,
     error: false,
     items: [
-      { id: 0, cat: "you", kind: "repaid", when: "1m ago", detail: "Repaid 0.2400 tCTC and closed the cycle" },
-      { id: 1, cat: "you", kind: "drew", when: "3m ago", detail: "Borrowed 0.2400 tCTC against your card" },
-      { id: 2, cat: "auto", kind: "proved", when: "8m ago", detail: "0.0006 ETH of collateral confirmed on Creditcoin" },
-      { id: 3, cat: "you", kind: "collateral-locked", when: "16m ago", detail: "Locked 0.0006 ETH on Sepolia" },
+      {
+        id: 0,
+        cat: "you",
+        kind: "repaid",
+        when: "1m ago",
+        detail: "Repaid 0.2400 tCTC and closed the cycle",
+      },
+      {
+        id: 1,
+        cat: "you",
+        kind: "drew",
+        when: "3m ago",
+        detail: "Borrowed 0.2400 tCTC against your card",
+      },
+      {
+        id: 2,
+        cat: "auto",
+        kind: "proved",
+        when: "8m ago",
+        detail: "0.0006 ETH of collateral confirmed on Creditcoin",
+      },
+      {
+        id: 3,
+        cat: "you",
+        kind: "collateral-locked",
+        when: "16m ago",
+        detail: "Locked 0.0006 ETH on Sepolia",
+      },
     ],
   });
 }
 
 test("leads with what the card can spend, not with what the wallet holds", async () => {
-  useWallet.mockReturnValue({ address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0", isConnected: true });
+  useWallet.mockReturnValue({
+    address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0",
+    isConnected: true,
+  });
   fundedAndVerified();
   const client = new MockVaultClient();
   await seedVault(client, "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0");
@@ -194,7 +223,10 @@ test("an empty wallet says so and offers no activity link", async () => {
 });
 
 test("an unverified wallet is offered verification instead of Deposit", async () => {
-  useWallet.mockReturnValue({ address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0", isConnected: true });
+  useWallet.mockReturnValue({
+    address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0",
+    isConnected: true,
+  });
   fundedAndVerified();
   cardAccount.mockReturnValue({
     account: { kyc: { verified: false, status: "none", sessionId: null }, card: { issued: false } },
@@ -215,12 +247,11 @@ beforeEach(() => {
   fundedAndVerified();
 });
 
-
-
-
-
 test("an open balance leads with Repay but never hides Deposit", async () => {
-  useWallet.mockReturnValue({ address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0", isConnected: true });
+  useWallet.mockReturnValue({
+    address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0",
+    isConnected: true,
+  });
   fundedAndVerified();
   creditLine.mockReturnValue({ ...DEFAULT_LINE, drawn: 1_000_000_000_000_000_000n, available: 5n });
   withProviders(<HomePage />, new MockVaultClient());

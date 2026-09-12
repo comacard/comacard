@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import { BucketToggle } from "../bucket/BucketToggle";
-import { CountUp } from "../ui";
 import type { WalletAsset } from "../../hooks/useWalletAssets";
 import { toNumber } from "../../hooks/useWalletAssets";
+import { BucketToggle } from "../bucket/BucketToggle";
+import { CountUp } from "../ui";
 
 /**
  * Home's headline figure: everything the wallet holds, in USD, with the same cycle pill the bucket
@@ -12,9 +12,16 @@ import { toNumber } from "../../hooks/useWalletAssets";
  * When a price cannot be read the total is not rendered as $0.00. A zero balance and an unknown
  * price look identical in dollars and mean opposite things, so the unknown says so.
  */
-const dec = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dec = (n: number) =>
+  n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function AssetHero({ assets, totalUsd }: { assets: WalletAsset[]; totalUsd: number | null }) {
+export function AssetHero({
+  assets,
+  totalUsd,
+}: {
+  assets: WalletAsset[];
+  totalUsd: number | null;
+}) {
   const views = [
     {
       label: "Total value",
@@ -63,7 +70,11 @@ export function AssetHero({ assets, totalUsd }: { assets: WalletAsset[]; totalUs
         format={v.fmt}
         className="mt-2 block whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] [font-variant-numeric:tabular-nums]"
       />
-      <BucketToggle views={views} index={index} onCycle={() => setI((n) => (n + 1) % views.length)} />
+      <BucketToggle
+        views={views}
+        index={index}
+        onCycle={() => setI((n) => (n + 1) % views.length)}
+      />
     </div>
   );
 }

@@ -2,11 +2,17 @@ import { renderHook } from "@testing-library/react";
 import { useIsDesktop } from "../useIsDesktop";
 
 function mockMatchMedia(matches: boolean) {
-  window.matchMedia = (q: string) => ({
-    matches, media: q, onchange: null,
-    addEventListener: () => {}, removeEventListener: () => {},
-    addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
-  }) as unknown as MediaQueryList;
+  window.matchMedia = (q: string) =>
+    ({
+      matches,
+      media: q,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList;
 }
 
 test("false before mount, true when the desktop query matches", () => {

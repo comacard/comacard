@@ -1,4 +1,4 @@
-import { mockSigner, type Currency, type MockVaultClient } from "@sorosense/vault-client";
+import { type Currency, type MockVaultClient, mockSigner } from "@sorosense/vault-client";
 import { SEED_POOLS, SEED_SAFE_EXIT } from "../vault/seed";
 import { toAmount } from "../vault/units";
 
@@ -38,7 +38,8 @@ const REBALANCE_TARGET: Record<Currency, string> = {
 export function createKeeperBridge(client: MockVaultClient, bump: () => void): KeeperBridge {
   const keeper = mockSigner("keeper");
   // Before the first allocate a bucket has no active pool; the seed's pool id is its natural home.
-  const activePool = async (c: Currency): Promise<string> => (await client.activePool(c)) ?? SEED_POOLS[c];
+  const activePool = async (c: Currency): Promise<string> =>
+    (await client.activePool(c)) ?? SEED_POOLS[c];
 
   return {
     async allocate(currency, amount) {

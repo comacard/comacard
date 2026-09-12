@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
 import type { Currency } from "@sorosense/vault-client";
+import { useState } from "react";
+import { PERIOD_DAYS, type PeriodName, simulate, simulateCurve } from "../../lib/earn/simulate";
 import { Card, CountUp, Segmented } from "../ui";
-import { PERIOD_DAYS, simulate, simulateCurve, type PeriodName } from "../../lib/earn/simulate";
 
 /** The picker offers USD and EUR only (R3) — MXN has no user-facing control on any surface. */
 const CURRENCIES: readonly Currency[] = ["USD", "EUR"];
@@ -11,7 +11,12 @@ const PERIODS: readonly PeriodName[] = ["day", "week", "month", "year"];
  * Labels are capitalized in the DOM, not with a `capitalize` class: CSS text-transform does not
  * change a button's accessible name, so `getByRole("button", { name: "Month" })` would never match.
  */
-const PERIOD_LABEL: Record<PeriodName, string> = { day: "Day", week: "Week", month: "Month", year: "Year" };
+const PERIOD_LABEL: Record<PeriodName, string> = {
+  day: "Day",
+  week: "Week",
+  month: "Month",
+  year: "Year",
+};
 /**
  * MXN keeps its entry even though the picker no longer offers it: the map is `Record<Currency, string>`
  * and `Currency` still carries MXN, so dropping the key is a type error, not a cleanup. It also
@@ -79,15 +84,29 @@ export function Simulator({
       <div className="flex items-center justify-between">
         <div className="whitespace-nowrap text-[15px] font-semibold">Simulate earnings</div>
         {/* `.hstep`: two dimensional round buttons around the figure — no track behind them. */}
+        {/* biome-ignore lint/a11y/useSemanticElements: role=group on a styled container; fieldset brings layout and legend semantics this is not */}
         <div className="flex shrink-0 items-center gap-[7px]" role="group" aria-label="Amount">
-          <button onClick={() => step(-STEP)} aria-label="Decrease" className={STEP_BUTTON}>
+          <button
+            type="button"
+            onClick={() => step(-STEP)}
+            aria-label="Decrease"
+            className={STEP_BUTTON}
+          >
             −
           </button>
-          <span data-testid="amount" className="min-w-[52px] text-center text-[15px] font-semibold [font-variant-numeric:tabular-nums]">
+          <span
+            data-testid="amount"
+            className="min-w-[52px] text-center text-[15px] font-semibold [font-variant-numeric:tabular-nums]"
+          >
             {SYMBOL[currency]}
             {amount.toLocaleString("en-US")}
           </span>
-          <button onClick={() => step(STEP)} aria-label="Increase" className={STEP_BUTTON}>
+          <button
+            type="button"
+            onClick={() => step(STEP)}
+            aria-label="Increase"
+            className={STEP_BUTTON}
+          >
             +
           </button>
         </div>
@@ -108,7 +127,9 @@ export function Simulator({
         format={(n) => money(n, currency)}
         className="block text-[38px] font-semibold leading-none tracking-[-.02em] [font-variant-numeric:tabular-nums]"
       />
-      <span data-testid="projection" className="sr-only">{money(projectedEarnings, currency)}</span>
+      <span data-testid="projection" className="sr-only">
+        {money(projectedEarnings, currency)}
+      </span>
 
       <div className="relative my-3.5">
         <div
@@ -119,11 +140,16 @@ export function Simulator({
           onMouseLeave={() => setHover(null)}
         >
           {curve.map((v, i) => (
+            // biome-ignore lint/a11y/noStaticElementInteractions: onMouseLeave only clears a hover tooltip; there is no keyboard hover to mirror
             <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length literal array, the index is the identity
               key={i}
               data-testid="bar"
               onMouseEnter={() => setHover(i)}
-              style={{ height: `${8 + (v / max) * (CHART_H - 8)}px`, animationDelay: `${i * 26}ms` }}
+              style={{
+                height: `${8 + (v / max) * (CHART_H - 8)}px`,
+                animationDelay: `${i * 26}ms`,
+              }}
               className="grow-bar min-h-[6px] flex-1 rounded-t-[5px] rounded-b-[2px] [background:linear-gradient(180deg,#22c55e,var(--color-pos))] transition-[height,opacity] duration-500 hover:opacity-[.82]"
             />
           ))}
@@ -131,9 +157,13 @@ export function Simulator({
         {hv !== undefined && (
           <div
             className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[125%] whitespace-nowrap rounded-[10px] border border-line bg-white px-2.5 py-1.5 text-[12.5px] font-semibold [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_8px_18px_-10px_rgba(17,19,22,.18)]"
-            style={{ left: `${((hover! + 0.5) / curve.length) * 100}%`, top: `${CHART_H * (1 - hv / max)}px` }}
+            style={{
+              left: `${((hover! + 0.5) / curve.length) * 100}%`,
+              top: `${CHART_H * (1 - hv / max)}px`,
+            }}
           >
-            {progressLabel(period, hover!, curve.length)} · <span className="text-pos">+{money(hv, currency)}</span>
+            {progressLabel(period, hover!, curve.length)} ·{" "}
+            <span className="text-pos">+{money(hv, currency)}</span>
           </div>
         )}
       </div>

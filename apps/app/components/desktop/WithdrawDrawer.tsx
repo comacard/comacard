@@ -1,16 +1,16 @@
 "use client";
+import { type Currency, SHARE_PRICE_SCALE, type TxResult } from "@sorosense/vault-client";
 import { useState } from "react";
-import { SHARE_PRICE_SCALE, type Currency, type TxResult } from "@sorosense/vault-client";
-import { Drawer } from "../ui/Drawer";
-import { Button, CoinBadge, TransferStatus } from "../ui";
 import { useBuckets } from "../../hooks/useBuckets";
+import { useTransferFlow } from "../../hooks/useTransferFlow";
 import { useVault } from "../../hooks/useVault";
 import { useWallet } from "../../hooks/useWallet";
-import { useTransferFlow } from "../../hooks/useTransferFlow";
-import { sanitizeAmount } from "../../lib/vault/sanitize";
-import { toAmount, fromAmount, formatCurrency } from "../../lib/vault/units";
-import { depositorSigner } from "../../lib/vault/signer";
 import { recordWithdraw } from "../../lib/vault/contributions";
+import { sanitizeAmount } from "../../lib/vault/sanitize";
+import { depositorSigner } from "../../lib/vault/signer";
+import { formatCurrency, fromAmount, toAmount } from "../../lib/vault/units";
+import { Button, CoinBadge, TransferStatus } from "../ui";
+import { Drawer } from "../ui/Drawer";
 
 /**
  * Desktop withdraw drawer: mirrors WithdrawKeypad with an <input> instead of the numpad. The
@@ -69,7 +69,9 @@ export function WithdrawDrawer({ open, onClose }: { open: boolean; onClose: () =
       ? await client.balanceOf(address, currency)
       : (enteredAmount * SHARE_PRICE_SCALE) / (await client.sharePrice(currency));
     if (shares <= 0n) return;
-    const result = await client.withdraw(address, currency, shares).signAndSubmit(depositorSigner(address, signTransaction));
+    const result = await client
+      .withdraw(address, currency, shares)
+      .signAndSubmit(depositorSigner(address, signTransaction));
     // Cost basis moves only for a burn the chain confirmed; a rejected one leaves the bucket intact.
     if (result.success) {
       recordWithdraw(currency, isMax ? active.value : enteredAmount);
@@ -87,8 +89,24 @@ export function WithdrawDrawer({ open, onClose }: { open: boolean; onClose: () =
     <Drawer open={open} onClose={close} label="Withdraw">
       <div className="flex items-center justify-between border-b border-line px-[22px] pb-3.5 pt-5">
         <span className="text-[17px] font-semibold">{title}</span>
-        <button aria-label="Close" onClick={close} className="grid h-[34px] w-[34px] place-items-center rounded-full bg-pill text-ink-2 transition-colors hover:bg-line-2">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={close}
+          className="grid h-[34px] w-[34px] place-items-center rounded-full bg-pill text-ink-2 transition-colors hover:bg-line-2"
+        >
+          <svg
+            aria-hidden="true"
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
         </button>
       </div>
 
@@ -109,6 +127,7 @@ export function WithdrawDrawer({ open, onClose }: { open: boolean; onClose: () =
         <div className="flex flex-1 flex-col overflow-auto px-[22px] py-5">
           <div className="mb-2 flex justify-center">
             <button
+              type="button"
               aria-label="Choose bucket"
               onClick={cycle}
               className="inline-flex h-10 items-center gap-2.5 rounded-full bg-[#ECECEC] pl-2.5 pr-4 text-[15px] font-semibold transition-colors hover:bg-line-2"
@@ -116,12 +135,27 @@ export function WithdrawDrawer({ open, onClose }: { open: boolean; onClose: () =
               <CoinBadge currency={active?.currency ?? "USD"} size={22} />
               {bucketName}
               {multi && (
-                <svg data-testid="bucket-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4" /></svg>
+                <svg
+                  aria-hidden="true"
+                  data-testid="bucket-chevron"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
+                </svg>
               )}
             </button>
           </div>
           <p className="mb-3.5 text-center text-[12.5px] text-muted">
-            {active ? `${formatCurrency(active.value, active.currency)} available` : "No bucket selected"}
+            {active
+              ? `${formatCurrency(active.value, active.currency)} available`
+              : "No bucket selected"}
           </p>
           <p className="mb-2 text-[12.5px] font-medium text-muted">Amount</p>
           <div className="flex items-center gap-1.5 rounded-2xl border border-line-2 bg-white px-4 py-3.5 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_8px_18px_-10px_rgba(17,19,22,.18)]">
@@ -139,13 +173,35 @@ export function WithdrawDrawer({ open, onClose }: { open: boolean; onClose: () =
             />
           </div>
           <div className="mt-3 flex gap-2.5">
-            <button onClick={() => quick(0.1)} className="h-[46px] flex-1 rounded-[14px] bg-pill text-sm font-semibold text-ink transition-colors hover:bg-line-2">10%</button>
-            <button onClick={() => quick(0.5)} className="h-[46px] flex-1 rounded-[14px] bg-pill text-sm font-semibold text-ink transition-colors hover:bg-line-2">50%</button>
-            <button onClick={() => quick(1)} className="h-[46px] flex-1 rounded-[14px] bg-pill text-sm font-semibold text-ink transition-colors hover:bg-line-2">Max</button>
+            <button
+              type="button"
+              onClick={() => quick(0.1)}
+              className="h-[46px] flex-1 rounded-[14px] bg-pill text-sm font-semibold text-ink transition-colors hover:bg-line-2"
+            >
+              10%
+            </button>
+            <button
+              type="button"
+              onClick={() => quick(0.5)}
+              className="h-[46px] flex-1 rounded-[14px] bg-pill text-sm font-semibold text-ink transition-colors hover:bg-line-2"
+            >
+              50%
+            </button>
+            <button
+              type="button"
+              onClick={() => quick(1)}
+              className="h-[46px] flex-1 rounded-[14px] bg-pill text-sm font-semibold text-ink transition-colors hover:bg-line-2"
+            >
+              Max
+            </button>
           </div>
-          {exceeded && <p className="mt-2.5 text-center text-[12.5px] text-neg">Not enough balance</p>}
+          {exceeded && (
+            <p className="mt-2.5 text-center text-[12.5px] text-neg">Not enough balance</p>
+          )}
           <div className="mt-auto pt-6">
-            <Button onClick={onConfirm} disabled={exceeded || !active || entered <= 0n}>Withdraw</Button>
+            <Button onClick={onConfirm} disabled={exceeded || !active || entered <= 0n}>
+              Withdraw
+            </Button>
           </div>
         </div>
       )}

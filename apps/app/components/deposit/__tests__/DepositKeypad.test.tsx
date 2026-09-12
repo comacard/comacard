@@ -1,11 +1,11 @@
+import { MockVaultClient } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../providers/VaultProvider";
-import { ToastProvider } from "../../../providers/ToastProvider";
-import { DepositKeypad } from "../DepositKeypad";
 import { getContributions, resetContributions } from "../../../lib/vault/contributions";
 import { UNIT } from "../../../lib/vault/units";
+import { ToastProvider } from "../../../providers/ToastProvider";
+import { VaultProvider } from "../../../providers/VaultProvider";
+import { DepositKeypad } from "../DepositKeypad";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn() }) }));
@@ -15,12 +15,21 @@ vi.mock("../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }));
 /** The offline default: no NEXT_PUBLIC_API_URL, no Horizon env — every network branch is dead. */
 const fetchSpy = vi.fn();
 
-function setup(sym: string, signImpl: (xdr: string) => Promise<string> = async (xdr: string) => `sig:${xdr}`) {
+function setup(
+  sym: string,
+  signImpl: (xdr: string) => Promise<string> = async (xdr: string) => `sig:${xdr}`,
+) {
   const sign = vi.fn(signImpl);
   useWallet.mockReturnValue({ address: "GNEW", isConnected: true, signTransaction: sign });
   const client = new MockVaultClient(); // fresh: hasConsent=false → consent required
   vi.stubGlobal("fetch", fetchSpy);
-  render(<VaultProvider client={client}><ToastProvider><DepositKeypad sym={sym} /></ToastProvider></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ToastProvider>
+        <DepositKeypad sym={sym} />
+      </ToastProvider>
+    </VaultProvider>,
+  );
   return { sign, client };
 }
 
@@ -41,7 +50,9 @@ test("with no Horizon env the fixture balance renders, no faucet button, and not
   // The offline guarantee: neither the Horizon read nor the faucet exists without their env vars.
   await waitFor(() => expect(screen.getByText("$9,076.00")).toBeInTheDocument());
   expect(screen.queryByRole("button", { name: /Get test/ })).toBeNull();
-  await waitFor(() => expect(screen.getByRole("button", { name: "Deposit fund" })).toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Deposit fund" })).toBeInTheDocument(),
+  );
   expect(fetchSpy).not.toHaveBeenCalled();
 });
 
@@ -75,7 +86,10 @@ test("first deposit signs consent then deposit (two signatures)", async () => {
   expect(screen.getByText("Transaction hash")).toBeInTheDocument();
   const txLink = screen.getByRole("link", { name: "Open transaction hash in explorer" });
   expect(txLink).toHaveTextContent(/mock-tx-\d+/);
-  expect(txLink).toHaveAttribute("href", expect.stringContaining("https://stellar.expert/explorer/testnet/tx/mock-tx-"));
+  expect(txLink).toHaveAttribute(
+    "href",
+    expect.stringContaining("https://stellar.expert/explorer/testnet/tx/mock-tx-"),
+  );
   expect(txLink).toHaveAttribute("target", "_blank");
   await user.click(screen.getByRole("button", { name: "Back to Home" }));
   expect(push).toHaveBeenCalledWith("/home");

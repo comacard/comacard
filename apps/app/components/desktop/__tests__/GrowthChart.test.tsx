@@ -62,7 +62,9 @@ test("before the first deposit it renders a compact earnings simulator", async (
   expect(screen.getByRole("group", { name: "Simulation period" })).toBeInTheDocument();
   const bar = screen.getByRole("button", { name: "Month 2 $20.00" });
   await userEvent.hover(bar);
-  expect(screen.getAllByText((_, el) => el?.textContent === "Month 2 · +$20.00").length).toBeGreaterThan(0);
+  expect(
+    screen.getAllByText((_, el) => el?.textContent === "Month 2 · +$20.00").length,
+  ).toBeGreaterThan(0);
   expect(screen.queryByTestId("growth-zero")).toBeNull();
 });
 

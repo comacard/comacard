@@ -11,9 +11,9 @@
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { addTrustline } from "../../../lib/wallet/changeTrust";
 import { ToastProvider } from "../../../providers/ToastProvider";
 import { FaucetButton } from "../FaucetButton";
-import { addTrustline } from "../../../lib/wallet/changeTrust";
 
 vi.hoisted(() => {
   process.env.NEXT_PUBLIC_API_URL = "http://localhost:8787";
@@ -48,7 +48,10 @@ let fetchMock: ReturnType<typeof vi.fn>;
 let sign: ReturnType<typeof vi.fn>;
 
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 }
 
 beforeEach(() => {
@@ -109,15 +112,15 @@ test("a 200 mint toasts success and asks the caller to re-read the balance", asy
 
   await user.click(screen.getByRole("button", { name: "Get test USDC" }));
 
-  await waitFor(() => expect(screen.getByText("Successfully minted 1000.00 USDC")).toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.getByText("Successfully minted 1000.00 USDC")).toBeInTheDocument(),
+  );
   expect(onMinted).toHaveBeenCalledTimes(1);
   expect(trustline).not.toHaveBeenCalled();
 });
 
 test("a 409 signs a changeTrust, then retries the mint EXACTLY once", async () => {
-  fetchMock
-    .mockResolvedValueOnce(json(NEEDS_TRUSTLINE, 409))
-    .mockResolvedValueOnce(json(MINTED));
+  fetchMock.mockResolvedValueOnce(json(NEEDS_TRUSTLINE, 409)).mockResolvedValueOnce(json(MINTED));
   const { user, onMinted } = setup("USD");
 
   await user.click(screen.getByRole("button", { name: "Get test USDC" }));

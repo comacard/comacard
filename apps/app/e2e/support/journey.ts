@@ -20,7 +20,10 @@ export async function connectWallet(page: Page): Promise<void> {
   const connect = page.getByRole("button", { name: "Connect wallet" });
   const showsButton = await Promise.race([
     connect.waitFor({ state: "visible" }).then(() => true),
-    page.getByRole("button", { name: "Skip" }).waitFor({ state: "visible" }).then(() => false),
+    page
+      .getByRole("button", { name: "Skip" })
+      .waitFor({ state: "visible" })
+      .then(() => false),
     page.waitForURL(/\/home$/).then(() => false),
   ]).catch(() => false);
 
@@ -75,14 +78,14 @@ export async function depositEurc(page: Page, amount: string): Promise<void> {
  * "safe exit" is the vetted ExitApproval action name, always mounted, and is not a risk label.
  */
 export async function expectDesktopHome(page: Page): Promise<void> {
-  await expect(page.getByText("Comacard")).toBeVisible();          // desktop TopBar brand
-  await expect(page.getByText(/your value/i)).toBeVisible();        // hero eyebrow
+  await expect(page.getByText("Comacard")).toBeVisible(); // desktop TopBar brand
+  await expect(page.getByText(/your value/i)).toBeVisible(); // hero eyebrow
   await expect(page.getByRole("button", { name: "Deposit" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Buckets" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Growth" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Agent" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden(); // BottomNav CSS-hidden at lg
-  await expect(page.getByText(/\b(risk|score|sentinel)\b/i)).toHaveCount(0);  // R11
+  await expect(page.getByText(/\b(risk|score|sentinel)\b/i)).toHaveCount(0); // R11
 }
 
 /**
@@ -91,7 +94,11 @@ export async function expectDesktopHome(page: Page): Promise<void> {
  * Dialog → success stays in the drawer until the final action. Caller must already be on desktop
  * /home.
  */
-export async function depositViaDrawer(page: Page, coin: "USDC" | "EURC" | "CETES", amount: string): Promise<void> {
+export async function depositViaDrawer(
+  page: Page,
+  coin: "USDC" | "EURC" | "CETES",
+  amount: string,
+): Promise<void> {
   await page.getByRole("button", { name: "Deposit" }).click();
   const drawer = page.getByRole("dialog", { name: "Deposit" });
   await expect(drawer).toBeVisible();

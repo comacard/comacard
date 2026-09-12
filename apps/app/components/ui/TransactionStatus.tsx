@@ -30,7 +30,16 @@ function Mark({ status, size }: { status: TxStatus; size: number }) {
   if (status === "confirmed") return <SuccessCheck size={size} />;
   if (status === "failed") {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true">
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        aria-hidden="true"
+      >
         <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
         <path d="M15 9l-6 6M9 9l6 6" />
       </svg>
@@ -57,11 +66,7 @@ export function TransactionStatus({
 }) {
   const large = size === "large";
   const tone =
-    status === "failed"
-      ? "text-neg"
-      : status === "confirmed"
-        ? "text-pos"
-        : "text-ink-2";
+    status === "failed" ? "text-neg" : status === "confirmed" ? "text-pos" : "text-ink-2";
 
   return (
     <div

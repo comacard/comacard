@@ -6,10 +6,11 @@
  * category, `kind` drives the two affordances the list has (a freeze is flagged, a proposed exit is
  * reviewable), and `ts` becomes a relative time read **after mount**. The offline half is next door.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+
 import { MockVaultClient } from "@sorosense/vault-client";
+import { render, screen, waitFor } from "@testing-library/react";
 import { VaultProvider } from "../../providers/VaultProvider";
-import { useActivity, relativeTime, itemFromEntry } from "../useActivity";
+import { itemFromEntry, relativeTime, useActivity } from "../useActivity";
 
 vi.hoisted(() => {
   process.env.NEXT_PUBLIC_API_URL = "http://localhost:8787";
@@ -26,11 +27,46 @@ const HOUR = 3_600_000;
 /** The feed as the backend sends it: most-recent-first, agent rows and user rows interleaved. */
 function feed(now: number) {
   return [
-    { seq: 9, actor: "agent", currency: "USD", kind: "rebalanced", detail: "Switched to DeFindex", ts: now - 3 * HOUR },
-    { seq: 8, actor: "agent", currency: "EUR", kind: "froze", detail: "Paused EURC pool for safety", ts: now - 6 * HOUR },
-    { seq: 7, actor: "agent", currency: "EUR", kind: "proposed-exit", detail: "Proposed safe exit from EURC pool", ts: now - 6 * HOUR },
-    { seq: 6, actor: "you", currency: "USD", kind: "deposit", detail: "Deposited to USD bucket", depositor: "GUSER", ts: now - 30 * HOUR },
-    { seq: 5, actor: "you", kind: "sign-mandate", detail: "Signed auto-optimize mandate", depositor: "GUSER" }, // no ts
+    {
+      seq: 9,
+      actor: "agent",
+      currency: "USD",
+      kind: "rebalanced",
+      detail: "Switched to DeFindex",
+      ts: now - 3 * HOUR,
+    },
+    {
+      seq: 8,
+      actor: "agent",
+      currency: "EUR",
+      kind: "froze",
+      detail: "Paused EURC pool for safety",
+      ts: now - 6 * HOUR,
+    },
+    {
+      seq: 7,
+      actor: "agent",
+      currency: "EUR",
+      kind: "proposed-exit",
+      detail: "Proposed safe exit from EURC pool",
+      ts: now - 6 * HOUR,
+    },
+    {
+      seq: 6,
+      actor: "you",
+      currency: "USD",
+      kind: "deposit",
+      detail: "Deposited to USD bucket",
+      depositor: "GUSER",
+      ts: now - 30 * HOUR,
+    },
+    {
+      seq: 5,
+      actor: "you",
+      kind: "sign-mandate",
+      detail: "Signed auto-optimize mandate",
+      depositor: "GUSER",
+    }, // no ts
   ];
 }
 
@@ -49,7 +85,12 @@ afterEach(() => {
 
 function respondWith(body: unknown, status = 200) {
   fetchMock.mockImplementation(() =>
-    Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })),
+    Promise.resolve(
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
+    ),
   );
 }
 
@@ -85,8 +126,12 @@ test("the feed is read for this depositor, and an agent row and a user row land 
   expect(url).toBe("http://localhost:8787/activity?depositor=GUSER");
 
   // actor 'agent' → the Agent tab; actor 'you' → the Yours tab.
-  expect(screen.getByTestId("row-9").textContent).toContain("auto|rebalanced|Switched to DeFindex|3h ago");
-  expect(screen.getByTestId("row-6").textContent).toContain("you|deposit|Deposited to USD bucket|1d ago");
+  expect(screen.getByTestId("row-9").textContent).toContain(
+    "auto|rebalanced|Switched to DeFindex|3h ago",
+  );
+  expect(screen.getByTestId("row-6").textContent).toContain(
+    "you|deposit|Deposited to USD bucket|1d ago",
+  );
 });
 
 test("a froze row is flagged, a proposed-exit row is reviewable, and nothing else is", async () => {
@@ -113,7 +158,9 @@ test("a row the source gave no timestamp renders no time, not a fabricated one",
 
   await waitFor(() => expect(screen.getByTestId("row-5")).toBeInTheDocument());
   // `sign-mandate` came through with no `ts`: the row is real, its time is simply unknown.
-  expect(screen.getByTestId("row-5").textContent).toBe("you|sign-mandate|Signed auto-optimize mandate||-|-");
+  expect(screen.getByTestId("row-5").textContent).toBe(
+    "you|sign-mandate|Signed auto-optimize mandate||-|-",
+  );
 });
 
 test("a failed read falls back to the fixture — an empty feed would claim nothing had happened", async () => {
@@ -140,8 +187,17 @@ test("relativeTime spans the units it claims, and never runs backwards", () => {
 
 test("no risk, label, score or tier field reaches a feed row (safety is invisible)", () => {
   const rogue = {
-    seq: 1, actor: "agent", kind: "froze", detail: "Paused EURC pool for safety", ts: 0,
-    risk: "high", label: "toxic", score: 3, tier: "C",
+    seq: 1,
+    actor: "agent",
+    kind: "froze",
+    detail: "Paused EURC pool for safety",
+    ts: 0,
+    risk: "high",
+    label: "toxic",
+    score: 3,
+    tier: "C",
   } as never;
-  expect(Object.keys(itemFromEntry(rogue, 0)).sort().join(",")).toBe("cat,detail,flag,id,kind,when");
+  expect(Object.keys(itemFromEntry(rogue, 0)).sort().join(",")).toBe(
+    "cat,detail,flag,id,kind,when",
+  );
 });

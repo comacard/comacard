@@ -15,7 +15,14 @@ vi.mock("../../../hooks/useCreditHistory", () => ({ useCreditHistory: () => hist
 
 beforeEach(() => {
   vi.clearAllMocks();
-  history.mockReturnValue({ borrowed: 0n, repaid: 0n, cyclesClosed: 0, events: [], loading: false, error: false });
+  history.mockReturnValue({
+    borrowed: 0n,
+    repaid: 0n,
+    cyclesClosed: 0,
+    events: [],
+    loading: false,
+    error: false,
+  });
 });
 
 test("states zero rather than hiding the row", () => {
@@ -58,7 +65,14 @@ test("does not net repayments off: this is what was taken, not what is owed", ()
 });
 
 test("withholds the row until the first read lands", () => {
-  history.mockReturnValue({ borrowed: 0n, repaid: 0n, cyclesClosed: 0, events: [], loading: true, error: false });
+  history.mockReturnValue({
+    borrowed: 0n,
+    repaid: 0n,
+    cyclesClosed: 0,
+    events: [],
+    loading: true,
+    error: false,
+  });
   const { container } = render(<SpentTotal />);
 
   // An unresolved query is not a zero, and printing one would state something not yet known.

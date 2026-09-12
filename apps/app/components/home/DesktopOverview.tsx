@@ -1,12 +1,12 @@
 "use client";
 import { useEffect } from "react";
 import { formatUnits } from "viem";
-import { useNav } from "../../hooks/useNav";
-import { usePanel } from "../../hooks/usePanel";
 import { useCardAccount } from "../../hooks/useCardAccount";
 import { useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { useKycStart } from "../../hooks/useKycStart";
+import { useNav } from "../../hooks/useNav";
+import { usePanel } from "../../hooks/usePanel";
 import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { useTransactions } from "../../hooks/useTransactions";
 import { useWalletAssets } from "../../hooks/useWalletAssets";
@@ -87,9 +87,7 @@ export function DesktopOverview() {
                 <div className="mb-2.5 rounded-[16px] border border-line bg-white px-4 py-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-[13px] text-muted">Current balance</span>
-                    <span className="text-[16px] font-semibold tabular-nums">
-                      {owedLabel} tCTC
-                    </span>
+                    <span className="text-[16px] font-semibold tabular-nums">{owedLabel} tCTC</span>
                   </div>
                   <Button className="mt-3" onClick={() => nav.forward("/pay")}>
                     Repay

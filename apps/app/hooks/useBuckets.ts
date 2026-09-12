@@ -1,16 +1,21 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
 import type { Currency } from "@sorosense/vault-client";
-import { useWallet } from "./useWallet";
-import { useVault } from "./useVault";
+import { useEffect, useMemo, useState } from "react";
+import { toBigInt } from "../lib/api/client";
+import { apiEnabled } from "../lib/api/config";
+import type { Holding } from "../lib/api/types";
+import {
+  ACTIVE_BUCKET_CURRENCIES,
+  getBucketMeta,
+  getFxRateToUsd,
+  isActiveBucketCurrency,
+} from "../lib/vault/data";
+import { UNIT } from "../lib/vault/units";
 import { apyFrom } from "./useApy";
 import { useHoldings } from "./useHoldings";
 import { useRates } from "./useRates";
-import { apiEnabled } from "../lib/api/config";
-import { toBigInt } from "../lib/api/client";
-import type { Holding } from "../lib/api/types";
-import { ACTIVE_BUCKET_CURRENCIES, getBucketMeta, getFxRateToUsd, isActiveBucketCurrency } from "../lib/vault/data";
-import { UNIT } from "../lib/vault/units";
+import { useVault } from "./useVault";
+import { useWallet } from "./useWallet";
 
 const CURRENCIES = ACTIVE_BUCKET_CURRENCIES;
 
@@ -59,14 +64,23 @@ function rowFromHolding(h: Holding): BucketView {
  *
  * The seam read therefore runs in both modes: in real mode it is the fallback that catches a 503.
  */
-export function useBuckets(): { loading: boolean; error: string | null; buckets: BucketView[]; totalUsd: number } {
+export function useBuckets(): {
+  loading: boolean;
+  error: string | null;
+  buckets: BucketView[];
+  totalUsd: number;
+} {
   const { address } = useWallet();
   const { client, version } = useVault();
   const { loading: holdingsLoading, holdings } = useHoldings();
   // Only reached on the seam path below: a bucket the browser's mock funded this session has no
   // `/holdings` row in a mock-mode backend (KTD4), and `/rates` is the honest rate for it.
   const { rates } = useRates();
-  const [state, setState] = useState<{ loading: boolean; error: string | null; buckets: BucketView[] }>({
+  const [state, setState] = useState<{
+    loading: boolean;
+    error: string | null;
+    buckets: BucketView[];
+  }>({
     loading: true,
     error: null,
     buckets: [],
@@ -103,7 +117,8 @@ export function useBuckets(): { loading: boolean; error: string | null; buckets:
 
   const buckets = useMemo(() => {
     // Real mode: the backend's rows verbatim.
-    if (apiEnabled() && holdings !== null) return holdings.filter((h) => isActiveBucketCurrency(h.currency)).map(rowFromHolding);
+    if (apiEnabled() && holdings !== null)
+      return holdings.filter((h) => isActiveBucketCurrency(h.currency)).map(rowFromHolding);
     // Offline: the seam's rows, whose `meta.apy` is the fixture. With the API off `rates` is `null`
     // too, so `apyFrom(null, null, …)` resolves to that same fixture and this stays byte-for-byte
     // today's behavior.

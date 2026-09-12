@@ -46,7 +46,13 @@ export function simulate(input: SimulateInput): SimulateResult {
   }
   const { apy } = input;
   const projectedEarnings = Number((input.amount * growthFactor(apy, input.periodDays)).toFixed(2));
-  return { currency: input.currency, amount: input.amount, periodDays: input.periodDays, apy, projectedEarnings };
+  return {
+    currency: input.currency,
+    amount: input.amount,
+    periodDays: input.periodDays,
+    apy,
+    projectedEarnings,
+  };
 }
 
 /**
@@ -56,5 +62,8 @@ export function simulate(input: SimulateInput): SimulateResult {
  */
 export function simulateCurve(input: SimulateInput, n = 20): number[] {
   const { apy } = input;
-  return Array.from({ length: n }, (_, i) => input.amount * growthFactor(apy, (input.periodDays * (i + 1)) / n));
+  return Array.from(
+    { length: n },
+    (_, i) => input.amount * growthFactor(apy, (input.periodDays * (i + 1)) / n),
+  );
 }

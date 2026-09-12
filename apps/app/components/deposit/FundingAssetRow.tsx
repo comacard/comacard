@@ -1,7 +1,7 @@
 "use client";
 
-import { CoinBadge } from "../ui";
 import type { StablecoinSym } from "../../lib/vault/data";
+import { CoinBadge } from "../ui";
 
 type FundingAsset = {
   sym: StablecoinSym;
@@ -64,6 +64,7 @@ export function FundingAssetRow({
         </span>
       ) : (
         <svg
+          aria-hidden="true"
           width="18"
           height="18"
           viewBox="0 0 24 24"

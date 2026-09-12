@@ -1,10 +1,10 @@
 "use client";
 import { formatUnits } from "viem";
+import { type CollateralAsset, useCollateral } from "../../hooks/useCollateral";
+import { useNav } from "../../hooks/useNav";
+import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { AssetIcon, badgeForSymbol, Card, CoinBadge, Skeleton } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
-import { useCollateral, type CollateralAsset } from "../../hooks/useCollateral";
-import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
-import { useNav } from "../../hooks/useNav";
 
 /**
  * What a Comacard deposit actually is, and the screen that says so.

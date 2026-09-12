@@ -1,11 +1,11 @@
+import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../providers/VaultProvider";
-import { ToastProvider } from "../../../providers/ToastProvider";
+import { getContributions, resetContributions } from "../../../lib/vault/contributions";
 import { seedVault } from "../../../lib/vault/seed";
 import { UNIT } from "../../../lib/vault/units";
-import { getContributions, resetContributions } from "../../../lib/vault/contributions";
+import { ToastProvider } from "../../../providers/ToastProvider";
+import { VaultProvider } from "../../../providers/VaultProvider";
 import { WithdrawKeypad } from "../WithdrawKeypad";
 
 const push = vi.fn();
@@ -25,7 +25,13 @@ test("shows a bucket chevron with >=2 buckets and signs a Max withdrawal", async
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true, signTransaction: sign });
   const client = new MockVaultClient();
   await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><ToastProvider><WithdrawKeypad /></ToastProvider></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ToastProvider>
+        <WithdrawKeypad />
+      </ToastProvider>
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByLabelText("Choose bucket")).toBeInTheDocument());
   expect(screen.getByTestId("bucket-chevron")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Max" }));
@@ -50,7 +56,13 @@ test("Max withdraws the full share balance even with sub-cent NAV precision (no 
   await client.deposit("GUSER", "USD", 1000n * UNIT).signAndSubmit(dep);
   client.simulateYield("USD", 1_234_567n);
 
-  render(<VaultProvider client={client}><ToastProvider><WithdrawKeypad /></ToastProvider></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ToastProvider>
+        <WithdrawKeypad />
+      </ToastProvider>
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByLabelText("Choose bucket")).toBeInTheDocument());
   await user.click(screen.getByRole("button", { name: "Max" }));
   await user.click(screen.getByRole("button", { name: "Withdraw" }));
@@ -66,7 +78,13 @@ test("a rejected withdrawal shows a failure: shares intact, no cost-basis change
   await seedVault(client, "GUSER");
   const shares = await client.balanceOf("GUSER", "USD");
   const basis = getContributions("USD");
-  render(<VaultProvider client={client}><ToastProvider><WithdrawKeypad /></ToastProvider></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ToastProvider>
+        <WithdrawKeypad />
+      </ToastProvider>
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByLabelText("Choose bucket")).toBeInTheDocument());
   client.simulateFailure();
 
@@ -88,7 +106,13 @@ test("failed withdrawal shows one return action back to the form", async () => {
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true, signTransaction: sign });
   const client = new MockVaultClient();
   await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><ToastProvider><WithdrawKeypad /></ToastProvider></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ToastProvider>
+        <WithdrawKeypad />
+      </ToastProvider>
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByLabelText("Choose bucket")).toBeInTheDocument());
   await user.click(screen.getByRole("button", { name: "1" }));

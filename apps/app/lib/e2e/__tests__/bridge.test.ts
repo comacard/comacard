@@ -1,5 +1,5 @@
-import { beforeEach, expect, test } from "vitest";
 import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
+import { beforeEach, expect, test } from "vitest";
 import { SEED_POOLS, SEED_SAFE_EXIT } from "../../vault/seed";
 import { createKeeperBridge } from "../bridge";
 

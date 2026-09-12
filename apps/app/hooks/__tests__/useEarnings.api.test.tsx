@@ -12,10 +12,11 @@
  * `lib/api/config.ts` reads `NEXT_PUBLIC_API_URL` at module scope the way Next inlines it, so the var is
  * set in a `vi.hoisted` block — it runs before this file's imports.
  */
+
+import { type Currency, MockVaultClient } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
-import { MockVaultClient, type Currency } from "@sorosense/vault-client";
-import { VaultProvider } from "../../providers/VaultProvider";
 import { seedVault } from "../../lib/vault/seed";
+import { VaultProvider } from "../../providers/VaultProvider";
 import { useEarnings } from "../useEarnings";
 
 vi.hoisted(() => {
@@ -75,14 +76,28 @@ const ZERO_YIELD = {
 /** The matching `//holdings` rows — the Home surface reads these; `useEarnings` must not. */
 const HOLDINGS = [
   {
-    currency: "USD", name: "DeFindex USDC vault", venue: "DeFindex", kind: "vault",
-    tags: ["DeFindex", "Vault"], apy: 8.2, shares: "10240000000", value: "11160000000",
-    valueUsd: 1116, frozen: false,
+    currency: "USD",
+    name: "DeFindex USDC vault",
+    venue: "DeFindex",
+    kind: "vault",
+    tags: ["DeFindex", "Vault"],
+    apy: 8.2,
+    shares: "10240000000",
+    value: "11160000000",
+    valueUsd: 1116,
+    frozen: false,
   },
   {
-    currency: "EUR", name: "Blend EURC pool", venue: "Blend", kind: "lending",
-    tags: ["Blend", "Fixed pool"], apy: 4.9, shares: "30000000000", value: "30000000000",
-    valueUsd: 3435, frozen: false,
+    currency: "EUR",
+    name: "Blend EURC pool",
+    venue: "Blend",
+    kind: "lending",
+    tags: ["Blend", "Fixed pool"],
+    apy: 4.9,
+    shares: "30000000000",
+    value: "30000000000",
+    valueUsd: 3435,
+    frozen: false,
   },
 ];
 
@@ -110,7 +125,10 @@ function serve(earnings: unknown, { holdings = HOLDINGS as unknown, status = 200
     const url = typeof input === "string" ? input : input.toString();
     const body = url.includes("/earnings") ? earnings : holdings;
     return Promise.resolve(
-      new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }),
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
     );
   };
 }
@@ -125,10 +143,16 @@ function Probe() {
       <span data-testid="apy">{view.apy}</span>
       <span data-testid="earnedUsd">{view.earnedUsd}</span>
       <span data-testid="buckets">
-        {view.buckets.map((b) => `${b.currency}:${b.nativeValue}:${b.usdValue}:${b.earnedUsd}`).join("|")}
+        {view.buckets
+          .map((b) => `${b.currency}:${b.nativeValue}:${b.usdValue}:${b.earnedUsd}`)
+          .join("|")}
       </span>
-      <span data-testid="chart">{view.chart.map((p) => `${p.ts}:${p.valueUsd}:${p.earnedUsd}`).join("|")}</span>
-      <span data-testid="monthly">{view.monthly.map((m) => `${m.label}:${m.earnedUsd}`).join("|")}</span>
+      <span data-testid="chart">
+        {view.chart.map((p) => `${p.ts}:${p.valueUsd}:${p.earnedUsd}`).join("|")}
+      </span>
+      <span data-testid="monthly">
+        {view.monthly.map((m) => `${m.label}:${m.earnedUsd}`).join("|")}
+      </span>
     </div>
   );
 }
@@ -152,7 +176,9 @@ test("the view is the backend's response, verbatim — nothing is re-derived in 
   expect(screen.getByTestId("balanceUsd").textContent).toBe("4551");
   expect(screen.getByTestId("apy").textContent).toBe("5.71");
   // `nativeValue` arrives as a decimal string and is decoded with `toBigInt` — the one transformation.
-  expect(screen.getByTestId("buckets").textContent).toBe("USD:11160000000:1116:0|EUR:30000000000:3435:0");
+  expect(screen.getByTestId("buckets").textContent).toBe(
+    "USD:11160000000:1116:0|EUR:30000000000:3435:0",
+  );
   expect(screen.getByTestId("buckets").textContent).not.toContain("MXN");
   expect(screen.getByTestId("chart").textContent).toBe("1700000000000:0:0|1700000600000:4551:0");
   expect(screen.getByTestId("monthly").textContent).toBe("2026-06:0|2026-07:0");
@@ -169,7 +195,9 @@ test("MXN/CETES rows from the backend are not active Earn buckets while CETES is
   await renderFunded();
 
   await waitFor(() => expect(screen.getByTestId("buckets")).toBeInTheDocument());
-  expect(screen.getByTestId("buckets").textContent).toBe("USD:11160000000:1116:0|EUR:30000000000:3435:0");
+  expect(screen.getByTestId("buckets").textContent).toBe(
+    "USD:11160000000:1116:0|EUR:30000000000:3435:0",
+  );
   expect(screen.getByTestId("buckets").textContent).not.toMatch(/MXN|CETES/);
 });
 
@@ -190,7 +218,10 @@ test("the value timeline steps on the deposit while earned stays flat — that i
   await renderFunded();
 
   await waitFor(() => expect(screen.getByTestId("chart")).toBeInTheDocument());
-  const points = screen.getByTestId("chart").textContent!.split("|").map((p) => p.split(":").map(Number));
+  const points = screen
+    .getByTestId("chart")
+    .textContent!.split("|")
+    .map((p) => p.split(":").map(Number));
   expect(points.map((p) => p[1])).toEqual([0, 4551]); // valueUsd: a step, on real money
   expect(points.map((p) => p[2])).toEqual([0, 0]); // earnedUsd: flat, because nothing accrued
 });

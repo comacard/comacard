@@ -1,70 +1,55 @@
-import { Buffer } from "buffer";
-import { Address } from "@stellar/stellar-sdk";
+import type { i128, Option, u64 } from "@stellar/stellar-sdk/contract";
 import {
-  AssembledTransaction,
+  type AssembledTransaction,
   Client as ContractClient,
-  ClientOptions as ContractClientOptions,
-  MethodOptions,
-  Result,
+  type ClientOptions as ContractClientOptions,
   Spec as ContractSpec,
+  type MethodOptions,
 } from "@stellar/stellar-sdk/contract";
-import type {
-  u32,
-  i32,
-  u64,
-  i64,
-  u128,
-  i128,
-  u256,
-  i256,
-  Option,
-  Timepoint,
-  Duration,
-} from "@stellar/stellar-sdk/contract";
+import { Buffer } from "buffer";
+
 export * from "@stellar/stellar-sdk";
 export * as contract from "@stellar/stellar-sdk/contract";
 export * as rpc from "@stellar/stellar-sdk/rpc";
 
 if (typeof window !== "undefined") {
-  //@ts-ignore Buffer exists
+  //@ts-expect-error Buffer exists
   window.Buffer = window.Buffer || Buffer;
 }
-
 
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
     contractId: "CCK5G4FQ53Y7TIQY6CZLOSLCF5DKL44XV2LNFKCMHTSCWNWEAI3D457Y",
-  }
-} as const
+  },
+} as const;
 
 /**
  * Typed panics. `#[contracterror]` lets tests assert the exact failure via the
  * `try_*` client entrypoints instead of matching panic strings.
  */
 export const Errors = {
-  1: {message:"Paused"},
-  2: {message:"TokenNotSet"},
-  3: {message:"NoConsent"},
-  4: {message:"NonPositiveAmount"},
-  5: {message:"BelowMinFirstDeposit"},
-  6: {message:"InsufficientShares"},
-  7: {message:"PoolFrozen"},
-  8: {message:"CapExceeded"},
-  9: {message:"InsufficientHoldings"},
-  10: {message:"EmptyBucket"},
-  11: {message:"NoPendingExit"},
-  12: {message:"NotAStakeholder"},
+  1: { message: "Paused" },
+  2: { message: "TokenNotSet" },
+  3: { message: "NoConsent" },
+  4: { message: "NonPositiveAmount" },
+  5: { message: "BelowMinFirstDeposit" },
+  6: { message: "InsufficientShares" },
+  7: { message: "PoolFrozen" },
+  8: { message: "CapExceeded" },
+  9: { message: "InsufficientHoldings" },
+  10: { message: "EmptyBucket" },
+  11: { message: "NoPendingExit" },
+  12: { message: "NotAStakeholder" },
   /**
    * Target pool is not in the admin-vetted Safe set (KTD-SC1 allowlist).
    */
-  13: {message:"PoolNotAllowed"},
+  13: { message: "PoolNotAllowed" },
   /**
    * A freeze-exit was approved for a pool that is not actually frozen.
    */
-  14: {message:"SourceNotFrozen"}
-}
-
+  14: { message: "SourceNotFrozen" },
+};
 
 /**
  * Instance config set at `init`. Pool addresses live in their own per-currency
@@ -73,30 +58,32 @@ export const Errors = {
  */
 export interface Config {
   /**
- * Minimum first deposit into an empty bucket (secondary inflation-attack guard).
- */
-min_first_deposit: i128;
+   * Minimum first deposit into an empty bucket (secondary inflation-attack guard).
+   */
+  min_first_deposit: i128;
   /**
- * Max holdings a single pool may hold, per pool (guard against over-concentration).
- */
-per_pool_cap: i128;
+   * Max holdings a single pool may hold, per pool (guard against over-concentration).
+   */
+  per_pool_cap: i128;
   /**
- * Virtual shares/assets offset defeating the donation-inflation attack (KTD-SC3).
- */
-virtual_offset: i128;
+   * Virtual shares/assets offset defeating the donation-inflation attack (KTD-SC3).
+   */
+  virtual_offset: i128;
 }
 
 /**
  * Bucket denomination. One bucket per currency the depositor actually funded —
  * never split or converted (R3, R23).
  */
-export type Currency = {tag: "Usd", values: void} | {tag: "Eur", values: void} | {tag: "Mxn", values: void};
+export type Currency =
+  | { tag: "Usd"; values: void }
+  | { tag: "Eur"; values: void }
+  | { tag: "Mxn"; values: void };
 
 /**
  * Pool lifecycle status, matching the interface's `'active' | 'frozen'` union.
  */
-export type PoolStatus = {tag: "Active", values: void} | {tag: "Frozen", values: void};
-
+export type PoolStatus = { tag: "Active"; values: void } | { tag: "Frozen"; values: void };
 
 /**
  * A keeper-proposed safe exit after a Sentinel freeze; the depositor approves it (F3).
@@ -108,43 +95,56 @@ export interface ExitProposal {
   to_pool: string;
 }
 
-
-
-
-
-
-
-
-
-
-
-export type DataKey = {tag: "Admin", values: void} | {tag: "Keeper", values: void} | {tag: "Config", values: void} | {tag: "Paused", values: void} | {tag: "ExitCounter", values: void} | {tag: "Token", values: readonly [Currency]} | {tag: "ConfiguredPool", values: readonly [Currency]} | {tag: "AllowedPool", values: readonly [string]} | {tag: "Shares", values: readonly [string, Currency]} | {tag: "TotalShares", values: readonly [Currency]} | {tag: "TotalAssets", values: readonly [Currency]} | {tag: "ActivePool", values: readonly [Currency]} | {tag: "PoolHoldings", values: readonly [Currency, string]} | {tag: "Consent", values: readonly [string]} | {tag: "AutoCompound", values: readonly [string]} | {tag: "Frozen", values: readonly [string]} | {tag: "PendingExit", values: readonly [Currency]};
+export type DataKey =
+  | { tag: "Admin"; values: void }
+  | { tag: "Keeper"; values: void }
+  | { tag: "Config"; values: void }
+  | { tag: "Paused"; values: void }
+  | { tag: "ExitCounter"; values: void }
+  | { tag: "Token"; values: readonly [Currency] }
+  | { tag: "ConfiguredPool"; values: readonly [Currency] }
+  | { tag: "AllowedPool"; values: readonly [string] }
+  | { tag: "Shares"; values: readonly [string, Currency] }
+  | { tag: "TotalShares"; values: readonly [Currency] }
+  | { tag: "TotalAssets"; values: readonly [Currency] }
+  | { tag: "ActivePool"; values: readonly [Currency] }
+  | { tag: "PoolHoldings"; values: readonly [Currency, string] }
+  | { tag: "Consent"; values: readonly [string] }
+  | { tag: "AutoCompound"; values: readonly [string] }
+  | { tag: "Frozen"; values: readonly [string] }
+  | { tag: "PendingExit"; values: readonly [Currency] };
 
 export interface Client {
   /**
    * Construct and simulate a pause transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Emergency global pause of state-changing entrypoints. Admin-only.
    */
-  pause: (options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  pause: (options?: MethodOptions) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a freeze transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Protective freeze — blocks flows into `pool` without moving funds. Keeper-only.
    */
-  freeze: ({pool}: {pool: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  freeze: (
+    { pool }: { pool: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a deposit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Deposit `amount` of the currency's stablecoin into that bucket. Requires
    * prior consent (KTD-SC2), so every principal in a pooled bucket is consented.
    */
-  deposit: ({depositor, currency, amount}: {depositor: string, currency: Currency, amount: i128}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  deposit: (
+    { depositor, currency, amount }: { depositor: string; currency: Currency; amount: i128 },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a unpause transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Lift the global pause. Admin-only.
    */
-  unpause: (options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  unpause: (options?: MethodOptions) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a upgrade transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -154,7 +154,10 @@ export interface Client {
    * funds. Admin-only; a compromised admin could swap logic, so production
    * should move this behind a timelock/multisig (deferred, see plan).
    */
-  upgrade: ({new_wasm_hash}: {new_wasm_hash: Buffer}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  upgrade: (
+    { new_wasm_hash }: { new_wasm_hash: Buffer },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a allocate transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -162,13 +165,19 @@ export interface Client {
    * has consented deposits); the allowlist / frozen / cap guards are enforced by
    * `supply_to_pool` so every inbound path shares one definition.
    */
-  allocate: ({pool, currency, amount}: {pool: string, currency: Currency, amount: i128}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  allocate: (
+    { pool, currency, amount }: { pool: string; currency: Currency; amount: i128 },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a unfreeze transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Lift a freeze once a pool is healthy again. Keeper-only.
    */
-  unfreeze: ({pool}: {pool: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  unfreeze: (
+    { pool }: { pool: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a value_of transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -176,50 +185,74 @@ export interface Client {
    * full share balance today. Derived straight from NAV rather than composed from
    * `share_price`, so the caller never eats a second rounding truncation.
    */
-  value_of: ({user, currency}: {user: string, currency: Currency}, options?: MethodOptions) => Promise<AssembledTransaction<i128>>
+  value_of: (
+    { user, currency }: { user: string; currency: Currency },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<i128>>;
 
   /**
    * Construct and simulate a withdraw transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Burn `shares` from the depositor's bucket and return the stablecoin.
    * Assumes the redeemed value is liquid in the vault (backend deallocates first).
    */
-  withdraw: ({depositor, currency, shares}: {depositor: string, currency: Currency, shares: i128}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  withdraw: (
+    { depositor, currency, shares }: { depositor: string; currency: Currency; shares: i128 },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a set_token transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Register the SEP-41 stablecoin SAC backing a currency bucket. Admin-only.
    */
-  set_token: ({currency, token}: {currency: Currency, token: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  set_token: (
+    { currency, token }: { currency: Currency; token: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a balance_of transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Shares the user holds in a currency bucket.
    */
-  balance_of: ({user, currency}: {user: string, currency: Currency}, options?: MethodOptions) => Promise<AssembledTransaction<i128>>
+  balance_of: (
+    { user, currency }: { user: string; currency: Currency },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<i128>>;
 
   /**
    * Construct and simulate a deallocate transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Withdraw pooled funds from a pool back to the vault. Keeper-only.
    */
-  deallocate: ({pool, currency, amount}: {pool: string, currency: Currency, amount: i128}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  deallocate: (
+    { pool, currency, amount }: { pool: string; currency: Currency; amount: i128 },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a active_pool transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * The pool currently holding a currency bucket's funds, if allocated.
    */
-  active_pool: ({currency}: {currency: Currency}, options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
+  active_pool: (
+    { currency }: { currency: Currency },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
 
   /**
    * Construct and simulate a has_consent transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Whether the depositor has recorded the one-time safety-mandate consent.
    */
-  has_consent: ({depositor}: {depositor: string}, options?: MethodOptions) => Promise<AssembledTransaction<boolean>>
+  has_consent: (
+    { depositor }: { depositor: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 
   /**
    * Construct and simulate a pool_status transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Whether a pool is accepting flows or frozen by the keeper.
    */
-  pool_status: ({pool}: {pool: string}, options?: MethodOptions) => Promise<AssembledTransaction<PoolStatus>>
+  pool_status: (
+    { pool }: { pool: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<PoolStatus>>;
 
   /**
    * Construct and simulate a share_price transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -228,7 +261,10 @@ export interface Client {
    * surfaces read this to turn shares into an asset value, since `balance_of`
    * reports shares alone.
    */
-  share_price: ({currency}: {currency: Currency}, options?: MethodOptions) => Promise<AssembledTransaction<i128>>
+  share_price: (
+    { currency }: { currency: Currency },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<i128>>;
 
   /**
    * Construct and simulate a approve_exit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -236,32 +272,47 @@ export interface Client {
    * funds to the safe pool. Bound to a stakeholder: the caller must hold shares
    * in the exiting bucket (KTD-SC5).
    */
-  approve_exit: ({depositor, exit_id}: {depositor: string, exit_id: u64}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  approve_exit: (
+    { depositor, exit_id }: { depositor: string; exit_id: u64 },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a pending_exit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * A pending safe-exit proposal for a currency bucket, if any.
    */
-  pending_exit: ({currency}: {currency: Currency}, options?: MethodOptions) => Promise<AssembledTransaction<Option<ExitProposal>>>
+  pending_exit: (
+    { currency }: { currency: Currency },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<ExitProposal>>>;
 
   /**
    * Construct and simulate a pool_allowed transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Whether a pool is in the allowlist (read).
    */
-  pool_allowed: ({pool}: {pool: string}, options?: MethodOptions) => Promise<AssembledTransaction<boolean>>
+  pool_allowed: (
+    { pool }: { pool: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 
   /**
    * Construct and simulate a propose_exit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Record a keeper-proposed safe exit for a frozen bucket; a depositor approves
    * it later via `approve_exit`. Keeper-only.
    */
-  propose_exit: ({currency, from_pool, to_pool}: {currency: Currency, from_pool: string, to_pool: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  propose_exit: (
+    { currency, from_pool, to_pool }: { currency: Currency; from_pool: string; to_pool: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a configured_pool transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * The configured/target pool for a bucket (the demo re-target seam).
    */
-  configured_pool: ({currency}: {currency: Currency}, options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
+  configured_pool: (
+    { currency }: { currency: Currency },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
 
   /**
    * Construct and simulate a set_pool_allowed transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -270,7 +321,10 @@ export interface Client {
    * is the on-chain backstop: even a compromised keeper can only move funds into
    * an admin-vetted pool. Admin-only.
    */
-  set_pool_allowed: ({pool, allowed}: {pool: string, allowed: boolean}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  set_pool_allowed: (
+    { pool, allowed }: { pool: string; allowed: boolean },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a set_auto_compound transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -281,14 +335,17 @@ export interface Client {
    * one depositor's shares from the rest (STE-38 opsi 2, KTD3 + KTD-SC2 intact).
    * Turning it off stops reinvestment only — allocate, rebalance, and the
    * freeze-exit path are untouched.
-   * 
+   *
    * The contract records the preference; it does not enforce it. There is no
    * on-chain compound entrypoint to gate — yield re-supply is a pool-level
    * `allocate`, and a pooled bucket cannot attribute it per depositor without
    * per-depositor accounting the vault does not keep. The keeper reads this and
    * skips compound for depositors who are off (STE-40), fail-closed.
    */
-  set_auto_compound: ({depositor, enabled}: {depositor: string, enabled: boolean}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  set_auto_compound: (
+    { depositor, enabled }: { depositor: string; enabled: boolean },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a set_policy_consent transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -297,7 +354,10 @@ export interface Client {
    * user action (signed + paid), so it becomes a "Yours" activity row; a re-call
    * is a genuine no-op and emits nothing so the feed can't double.
    */
-  set_policy_consent: ({depositor}: {depositor: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  set_policy_consent: (
+    { depositor }: { depositor: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a set_configured_pool transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -306,19 +366,24 @@ export interface Client {
    * actually go is enforced by the allowlist (`set_pool_allowed`), not here.
    * Admin-only.
    */
-  set_configured_pool: ({currency, pool}: {currency: Currency, pool: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  set_configured_pool: (
+    { currency, pool }: { currency: Currency; pool: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a auto_compound_enabled transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Whether the depositor wants rewards auto-compounded. Unset reads `true`.
    */
-  auto_compound_enabled: ({depositor}: {depositor: string}, options?: MethodOptions) => Promise<AssembledTransaction<boolean>>
-
+  auto_compound_enabled: (
+    { depositor }: { depositor: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 }
 export class Client extends ContractClient {
   static async deploy<T = Client>(
-        /** Constructor/Initialization Args for the contract's `__constructor` method */
-        {admin, keeper, config}: {admin: string, keeper: string, config: Config},
+    /** Constructor/Initialization Args for the contract's `__constructor` method */
+    { admin, keeper, config }: { admin: string; keeper: string; config: Config },
     /** Options for initializing a Client as well as for calling a method, with extras specific to deploying. */
     options: MethodOptions &
       Omit<ContractClientOptions, "contractId"> & {
@@ -328,13 +393,14 @@ export class Client extends ContractClient {
         salt?: Buffer | Uint8Array;
         /** The format used to decode `wasmHash`, if it's provided as a string. */
         format?: "hex" | "base64";
-      }
+      },
   ): Promise<AssembledTransaction<T>> {
-    return ContractClient.deploy({admin, keeper, config}, options)
+    return ContractClient.deploy({ admin, keeper, config }, options);
   }
   constructor(public readonly options: ContractClientOptions) {
     super(
-      new ContractSpec([ "AAAAAAAAAEFFbWVyZ2VuY3kgZ2xvYmFsIHBhdXNlIG9mIHN0YXRlLWNoYW5naW5nIGVudHJ5cG9pbnRzLiBBZG1pbi1vbmx5LgAAAAAAAAVwYXVzZQAAAAAAAAAAAAAA",
+      new ContractSpec([
+        "AAAAAAAAAEFFbWVyZ2VuY3kgZ2xvYmFsIHBhdXNlIG9mIHN0YXRlLWNoYW5naW5nIGVudHJ5cG9pbnRzLiBBZG1pbi1vbmx5LgAAAAAAAAVwYXVzZQAAAAAAAAAAAAAA",
         "AAAAAAAAAFFQcm90ZWN0aXZlIGZyZWV6ZSDigJQgYmxvY2tzIGZsb3dzIGludG8gYHBvb2xgIHdpdGhvdXQgbW92aW5nIGZ1bmRzLiBLZWVwZXItb25seS4AAAAAAAAGZnJlZXplAAAAAAABAAAAAAAAAARwb29sAAAAEwAAAAA=",
         "AAAAAAAAAJVEZXBvc2l0IGBhbW91bnRgIG9mIHRoZSBjdXJyZW5jeSdzIHN0YWJsZWNvaW4gaW50byB0aGF0IGJ1Y2tldC4gUmVxdWlyZXMKcHJpb3IgY29uc2VudCAoS1RELVNDMiksIHNvIGV2ZXJ5IHByaW5jaXBhbCBpbiBhIHBvb2xlZCBidWNrZXQgaXMgY29uc2VudGVkLgAAAAAAAAdkZXBvc2l0AAAAAAMAAAAAAAAACWRlcG9zaXRvcgAAAAAAABMAAAAAAAAACGN1cnJlbmN5AAAH0AAAAAhDdXJyZW5jeQAAAAAAAAAGYW1vdW50AAAAAAALAAAAAA==",
         "AAAAAAAAACJMaWZ0IHRoZSBnbG9iYWwgcGF1c2UuIEFkbWluLW9ubHkuAAAAAAAHdW5wYXVzZQAAAAAAAAAAAA==",
@@ -376,36 +442,37 @@ export class Client extends ContractClient {
         "AAAABQAAAAAAAAAAAAAADEV4aXRBcHByb3ZlZAAAAAEAAAANZXhpdF9hcHByb3ZlZAAAAAAAAAIAAAAAAAAACGN1cnJlbmN5AAAH0AAAAAhDdXJyZW5jeQAAAAEAAAAAAAAAAmlkAAAAAAAGAAAAAAAAAAI=",
         "AAAABQAAAAAAAAAAAAAADEV4aXRQcm9wb3NlZAAAAAEAAAANZXhpdF9wcm9wb3NlZAAAAAAAAAIAAAAAAAAACGN1cnJlbmN5AAAH0AAAAAhDdXJyZW5jeQAAAAEAAAAAAAAAAmlkAAAAAAAGAAAAAAAAAAI=",
         "AAAABQAAAN5FbWl0dGVkIG9uIGV2ZXJ5IGBzZXRfYXV0b19jb21wb3VuZGAsIGluY2x1ZGluZyBhIHJlLXNldCB0byB0aGUgc2FtZSB2YWx1ZSDigJQKdGhlIGZyb250ZW5kIGRlcml2ZXMgdGhlICJZb3VycyIgYWN0aXZpdHkgcm93IGZyb20gdGhpcywgc28gYSBzaWxlbnQgbm8tb3AKd291bGQgZHJvcCBhIHVzZXIgYWN0aW9uIHRoZSBkZXBvc2l0b3IgYWN0dWFsbHkgc2lnbmVkIGFuZCBwYWlkIGZvci4AAAAAAAAAAAAPQXV0b0NvbXBvdW5kU2V0AAAAAAEAAAARYXV0b19jb21wb3VuZF9zZXQAAAAAAAACAAAAAAAAAAlkZXBvc2l0b3IAAAAAAAATAAAAAQAAAAAAAAAHZW5hYmxlZAAAAAABAAAAAAAAAAI=",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAAEQAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAGS2VlcGVyAAAAAAAAAAAAAAAAAAZDb25maWcAAAAAAAAAAAAAAAAABlBhdXNlZAAAAAAAAAAAAAAAAAALRXhpdENvdW50ZXIAAAAAAQAAAAAAAAAFVG9rZW4AAAAAAAABAAAH0AAAAAhDdXJyZW5jeQAAAAEAAAAAAAAADkNvbmZpZ3VyZWRQb29sAAAAAAABAAAH0AAAAAhDdXJyZW5jeQAAAAEAAAAAAAAAC0FsbG93ZWRQb29sAAAAAAEAAAATAAAAAQAAAAAAAAAGU2hhcmVzAAAAAAACAAAAEwAAB9AAAAAIQ3VycmVuY3kAAAABAAAAAAAAAAtUb3RhbFNoYXJlcwAAAAABAAAH0AAAAAhDdXJyZW5jeQAAAAEAAAAAAAAAC1RvdGFsQXNzZXRzAAAAAAEAAAfQAAAACEN1cnJlbmN5AAAAAQAAAAAAAAAKQWN0aXZlUG9vbAAAAAAAAQAAB9AAAAAIQ3VycmVuY3kAAAABAAAAAAAAAAxQb29sSG9sZGluZ3MAAAACAAAH0AAAAAhDdXJyZW5jeQAAABMAAAABAAAAAAAAAAdDb25zZW50AAAAAAEAAAATAAAAAQAAAAAAAAAMQXV0b0NvbXBvdW5kAAAAAQAAABMAAAABAAAAAAAAAAZGcm96ZW4AAAAAAAEAAAATAAAAAQAAAAAAAAALUGVuZGluZ0V4aXQAAAAAAQAAB9AAAAAIQ3VycmVuY3k=" ]),
-      options
-    )
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAAEQAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAGS2VlcGVyAAAAAAAAAAAAAAAAAAZDb25maWcAAAAAAAAAAAAAAAAABlBhdXNlZAAAAAAAAAAAAAAAAAALRXhpdENvdW50ZXIAAAAAAQAAAAAAAAAFVG9rZW4AAAAAAAABAAAH0AAAAAhDdXJyZW5jeQAAAAEAAAAAAAAADkNvbmZpZ3VyZWRQb29sAAAAAAABAAAH0AAAAAhDdXJyZW5jeQAAAAEAAAAAAAAAC0FsbG93ZWRQb29sAAAAAAEAAAATAAAAAQAAAAAAAAAGU2hhcmVzAAAAAAACAAAAEwAAB9AAAAAIQ3VycmVuY3kAAAABAAAAAAAAAAtUb3RhbFNoYXJlcwAAAAABAAAH0AAAAAhDdXJyZW5jeQAAAAEAAAAAAAAAC1RvdGFsQXNzZXRzAAAAAAEAAAfQAAAACEN1cnJlbmN5AAAAAQAAAAAAAAAKQWN0aXZlUG9vbAAAAAAAAQAAB9AAAAAIQ3VycmVuY3kAAAABAAAAAAAAAAxQb29sSG9sZGluZ3MAAAACAAAH0AAAAAhDdXJyZW5jeQAAABMAAAABAAAAAAAAAAdDb25zZW50AAAAAAEAAAATAAAAAQAAAAAAAAAMQXV0b0NvbXBvdW5kAAAAAQAAABMAAAABAAAAAAAAAAZGcm96ZW4AAAAAAAEAAAATAAAAAQAAAAAAAAALUGVuZGluZ0V4aXQAAAAAAQAAB9AAAAAIQ3VycmVuY3k=",
+      ]),
+      options,
+    );
   }
   public readonly fromJSON = {
     pause: this.txFromJSON<null>,
-        freeze: this.txFromJSON<null>,
-        deposit: this.txFromJSON<null>,
-        unpause: this.txFromJSON<null>,
-        upgrade: this.txFromJSON<null>,
-        allocate: this.txFromJSON<null>,
-        unfreeze: this.txFromJSON<null>,
-        value_of: this.txFromJSON<i128>,
-        withdraw: this.txFromJSON<null>,
-        set_token: this.txFromJSON<null>,
-        balance_of: this.txFromJSON<i128>,
-        deallocate: this.txFromJSON<null>,
-        active_pool: this.txFromJSON<Option<string>>,
-        has_consent: this.txFromJSON<boolean>,
-        pool_status: this.txFromJSON<PoolStatus>,
-        share_price: this.txFromJSON<i128>,
-        approve_exit: this.txFromJSON<null>,
-        pending_exit: this.txFromJSON<Option<ExitProposal>>,
-        pool_allowed: this.txFromJSON<boolean>,
-        propose_exit: this.txFromJSON<null>,
-        configured_pool: this.txFromJSON<Option<string>>,
-        set_pool_allowed: this.txFromJSON<null>,
-        set_auto_compound: this.txFromJSON<null>,
-        set_policy_consent: this.txFromJSON<null>,
-        set_configured_pool: this.txFromJSON<null>,
-        auto_compound_enabled: this.txFromJSON<boolean>
-  }
+    freeze: this.txFromJSON<null>,
+    deposit: this.txFromJSON<null>,
+    unpause: this.txFromJSON<null>,
+    upgrade: this.txFromJSON<null>,
+    allocate: this.txFromJSON<null>,
+    unfreeze: this.txFromJSON<null>,
+    value_of: this.txFromJSON<i128>,
+    withdraw: this.txFromJSON<null>,
+    set_token: this.txFromJSON<null>,
+    balance_of: this.txFromJSON<i128>,
+    deallocate: this.txFromJSON<null>,
+    active_pool: this.txFromJSON<Option<string>>,
+    has_consent: this.txFromJSON<boolean>,
+    pool_status: this.txFromJSON<PoolStatus>,
+    share_price: this.txFromJSON<i128>,
+    approve_exit: this.txFromJSON<null>,
+    pending_exit: this.txFromJSON<Option<ExitProposal>>,
+    pool_allowed: this.txFromJSON<boolean>,
+    propose_exit: this.txFromJSON<null>,
+    configured_pool: this.txFromJSON<Option<string>>,
+    set_pool_allowed: this.txFromJSON<null>,
+    set_auto_compound: this.txFromJSON<null>,
+    set_policy_consent: this.txFromJSON<null>,
+    set_configured_pool: this.txFromJSON<null>,
+    auto_compound_enabled: this.txFromJSON<boolean>,
+  };
 }

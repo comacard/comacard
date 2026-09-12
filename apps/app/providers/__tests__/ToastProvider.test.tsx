@@ -1,10 +1,14 @@
-import { render, screen, act } from "@testing-library/react";
-import { ToastProvider, TOAST_MS } from "../ToastProvider";
+import { act, render, screen } from "@testing-library/react";
 import { useToast } from "../../hooks/useToast";
+import { TOAST_MS, ToastProvider } from "../ToastProvider";
 
 function Probe() {
   const { show } = useToast();
-  return <button onClick={() => show("Deposited. Agent is allocating.")}>fire</button>;
+  return (
+    <button type="button" onClick={() => show("Deposited. Agent is allocating.")}>
+      fire
+    </button>
+  );
 }
 
 beforeEach(() => vi.useFakeTimers());
@@ -13,14 +17,22 @@ afterEach(() => vi.useRealTimers());
 const MSG = "Deposited. Agent is allocating.";
 
 test("show() puts the message on screen", () => {
-  render(<ToastProvider><Probe /></ToastProvider>);
+  render(
+    <ToastProvider>
+      <Probe />
+    </ToastProvider>,
+  );
   expect(screen.queryByText(MSG)).not.toBeInTheDocument();
   act(() => screen.getByRole("button", { name: "fire" }).click());
   expect(screen.getByText(MSG)).toBeInTheDocument();
 });
 
 test("the toast dismisses itself after TOAST_MS", () => {
-  render(<ToastProvider><Probe /></ToastProvider>);
+  render(
+    <ToastProvider>
+      <Probe />
+    </ToastProvider>,
+  );
   act(() => screen.getByRole("button", { name: "fire" }).click());
   act(() => void vi.advanceTimersByTime(TOAST_MS - 1));
   expect(screen.getByText(MSG)).toBeInTheDocument();
@@ -32,7 +44,11 @@ test("the toast dismisses itself after TOAST_MS", () => {
 // Object.is-equal state write. React bails out, the dismiss effect never re-runs, and the
 // second toast inherits the first one's already-half-spent timer.
 test("re-showing the same message restarts the dismiss timer", () => {
-  render(<ToastProvider><Probe /></ToastProvider>);
+  render(
+    <ToastProvider>
+      <Probe />
+    </ToastProvider>,
+  );
   const fire = screen.getByRole("button", { name: "fire" });
   act(() => fire.click());
   act(() => void vi.advanceTimersByTime(TOAST_MS - 100));

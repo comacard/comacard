@@ -107,8 +107,14 @@ export type ProtocolResult = { Protocol: Protocol[] };
 
 export type WalletTransactionsResult = {
   Draw: Pick<Draw, "id" | "amount" | "outstandingAfter" | "dueAt" | "timestamp" | "txHash">[];
-  Repayment: Pick<Repayment, "id" | "amount" | "outstandingAfter" | "settled" | "timestamp" | "txHash">[];
-  CollateralLock: Pick<CollateralLock, "id" | "amount" | "nonce" | "released" | "timestamp" | "txHash">[];
+  Repayment: Pick<
+    Repayment,
+    "id" | "amount" | "outstandingAfter" | "settled" | "timestamp" | "txHash"
+  >[];
+  CollateralLock: Pick<
+    CollateralLock,
+    "id" | "amount" | "nonce" | "released" | "timestamp" | "txHash"
+  >[];
   Default: Pick<DefaultEvent, "id" | "writtenOff" | "collateralSeized" | "timestamp" | "txHash">[];
   Attestation: Pick<Attestation, "id" | "kind" | "amount" | "timestamp" | "txHash">[];
 };

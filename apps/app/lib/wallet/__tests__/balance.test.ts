@@ -6,7 +6,7 @@
  * re-imports the module under a stubbed env. The first case is the offline guarantee: with no Horizon
  * configured, nothing is fetched at all.
  */
-import { afterEach, beforeEach, expect, it, describe, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const HORIZON = "https://horizon-testnet.stellar.org";
 const USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
@@ -83,7 +83,10 @@ describe("reading the trustline", () => {
     const result = await readWalletBalance("USDC", ADDRESS);
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(`${HORIZON}/accounts/${ADDRESS}`);
-    expect(result).toEqual({ ok: true, value: { amount: 2_500_000_000n, trustline: true, unfunded: false } });
+    expect(result).toEqual({
+      ok: true,
+      value: { amount: 2_500_000_000n, trustline: true, unfunded: false },
+    });
   });
 
   it("ignores a same-code balance from a DIFFERENT issuer (a look-alike asset is not the asset)", async () => {

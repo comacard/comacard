@@ -1,8 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { keeper } from "./support/bridge";
 import { connectWallet, depositEurc, shot } from "./support/journey";
 
-test("the demo journey: connect → simulate → deposit → agent works → approve a safe exit", async ({ page }) => {
+test("the demo journey: connect → simulate → deposit → agent works → approve a safe exit", async ({
+  page,
+}) => {
   // 1. Connect. Freighter is stubbed at the lib/wallet.ts seam (NEXT_PUBLIC_E2E).
   await connectWallet(page);
 

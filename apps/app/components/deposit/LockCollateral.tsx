@@ -1,14 +1,22 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
-import { badgeForSymbol, Button, CoinBadge, Keypad, PendingLabel, Skeleton, TransactionStatus } from "../ui";
-import { SubHeader } from "../ui/SubHeader";
-import { assetBySlug, useCollateral, type CollateralAsset } from "../../hooks/useCollateral";
+import { assetBySlug, type CollateralAsset, useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
-import { collateralValue, limitFrom } from "../../lib/comacard/credit";
 import { explorerTx, SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
+import { collateralValue, limitFrom } from "../../lib/comacard/credit";
+import {
+  Button,
+  badgeForSymbol,
+  CoinBadge,
+  Keypad,
+  PendingLabel,
+  Skeleton,
+  TransactionStatus,
+} from "../ui";
+import { SubHeader } from "../ui/SubHeader";
 
 /**
  * Locking one asset as collateral, for real, against the deployed `SourceVault`.
@@ -186,7 +194,9 @@ export function LockCollateral({ sym }: { sym: string }) {
               // Only offered for a token that actually answered `FAUCET_LIMIT`. A mint button on a
               // token without a faucet is a button that reverts in the user's wallet.
               <Button onClick={onMint} disabled={busy || !onSepolia}>
-                {busy ? "Minting…" : `Mint ${FAUCET_WHOLE_TOKENS.toLocaleString("en-US")} ${asset.symbol}`}
+                {busy
+                  ? "Minting…"
+                  : `Mint ${FAUCET_WHOLE_TOKENS.toLocaleString("en-US")} ${asset.symbol}`}
               </Button>
             ) : (
               <p className="text-center text-[12.5px] text-muted">

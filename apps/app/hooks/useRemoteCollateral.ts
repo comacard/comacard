@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { createPublicClient, http, type Address, type Hex } from "viem";
+import { type Address, createPublicClient, type Hex, http } from "viem";
 import {
   REMOTE_HUB,
   remoteHubAbi,
@@ -65,7 +65,9 @@ export type RemoteAsset = {
 /** Public RPCs for the chains a `WormholeVault` is deployed on, keyed by EVM chain id. */
 const RPCS: Record<number, string> = {
   [baseSepolia.id as number]: (baseSepolia.rpcUrls.default.http as readonly string[])[0] as string,
-  [arbitrumSepolia.id as number]: (arbitrumSepolia.rpcUrls.default.http as readonly string[])[0] as string,
+  [arbitrumSepolia.id as number]: (
+    arbitrumSepolia.rpcUrls.default.http as readonly string[]
+  )[0] as string,
 };
 
 const ZERO32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -76,7 +78,13 @@ const LOG_CHUNK = 5_000n;
 const LOG_SCAN_CHUNKS = 20;
 
 const erc20BalanceAbi = [
-  { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;
 
 export function useRemoteCollateral(): {
@@ -144,8 +152,18 @@ export function useRemoteCollateral(): {
       const assets = await Promise.all(
         ids.map(async (id) => {
           const [config, credited] = await Promise.all([
-            cc.readContract({ address: hub, abi: remoteHubAbi, functionName: "remoteAsset", args: [id] }),
-            cc.readContract({ address: hub, abi: remoteHubAbi, functionName: "collateralOf", args: [who, id] }),
+            cc.readContract({
+              address: hub,
+              abi: remoteHubAbi,
+              functionName: "remoteAsset",
+              args: [id],
+            }),
+            cc.readContract({
+              address: hub,
+              abi: remoteHubAbi,
+              functionName: "collateralOf",
+              args: [who, id],
+            }),
           ]);
           const [price, decimals] = config;
           const from = origin.get(id.toLowerCase());
@@ -162,14 +180,29 @@ export function useRemoteCollateral(): {
           const rpc = deployment ? RPCS[deployment.evmChainId] : undefined;
           if (deployment && rpc) {
             const source = createPublicClient({ transport: http(rpc) });
-            const asToken = (`0x${token.slice(26)}`) as Address;
+            const asToken = `0x${token.slice(26)}` as Address;
             [locked, available] = await Promise.all([
               native
-                ? source.readContract({ address: deployment.vault, abi: wormholeVaultAbi, functionName: "nativeBalanceOf", args: [who] })
-                : source.readContract({ address: deployment.vault, abi: wormholeVaultAbi, functionName: "tokenBalanceOf", args: [who, asToken] }),
+                ? source.readContract({
+                    address: deployment.vault,
+                    abi: wormholeVaultAbi,
+                    functionName: "nativeBalanceOf",
+                    args: [who],
+                  })
+                : source.readContract({
+                    address: deployment.vault,
+                    abi: wormholeVaultAbi,
+                    functionName: "tokenBalanceOf",
+                    args: [who, asToken],
+                  }),
               native
                 ? source.getBalance({ address: who })
-                : source.readContract({ address: asToken, abi: erc20BalanceAbi, functionName: "balanceOf", args: [who] }),
+                : source.readContract({
+                    address: asToken,
+                    abi: erc20BalanceAbi,
+                    functionName: "balanceOf",
+                    args: [who],
+                  }),
             ]).catch(() => [0n, 0n] as [bigint, bigint]);
           }
 

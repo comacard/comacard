@@ -1,10 +1,17 @@
 import { render, screen } from "@testing-library/react";
-import { BucketRow } from "../BucketRow";
 import type { BucketView } from "../../../hooks/useBuckets";
+import { BucketRow } from "../BucketRow";
 
 const bucket: BucketView = {
-  currency: "USD", name: "USD bucket", venue: "DeFindex", tags: ["DeFindex", "Vault"], apy: 8.59,
-  shares: 1n, value: 10_243_000_000n, valueUsd: 1024.3, frozen: false,
+  currency: "USD",
+  name: "USD bucket",
+  venue: "DeFindex",
+  tags: ["DeFindex", "Vault"],
+  apy: 8.59,
+  shares: 1n,
+  value: 10_243_000_000n,
+  valueUsd: 1024.3,
+  frozen: false,
 };
 
 test("renders the product bucket label, one venue tag, formatted value and APY, no fee or risk label", () => {

@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { usePanel } from "../usePanel";
 
 const h = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), search: "" }));

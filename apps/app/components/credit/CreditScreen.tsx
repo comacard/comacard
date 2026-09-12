@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
-import { Bars } from "../earn/Bars";
-import { Button, Card, CountUp, Segmented, Skeleton } from "../ui";
 import { binEvents, useCreditHistory } from "../../hooks/useCreditHistory";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { useNav } from "../../hooks/useNav";
+import { Bars } from "../earn/Bars";
+import { Button, Card, CountUp, Segmented, Skeleton } from "../ui";
 
 /**
  * What the card has earned, which is a record rather than a yield.
@@ -62,7 +62,8 @@ export function CreditScreen() {
 
   const owes = (drawn ?? 0n) > 0n;
   const { ms, bars } = WINDOW[range];
-  const series = now === null ? new Array(bars).fill(0) : binEvents(events, "borrow", ms, bars, now);
+  const series =
+    now === null ? new Array(bars).fill(0) : binEvents(events, "borrow", ms, bars, now);
   const hasHistory = events.length > 0;
 
   if (loading) {
@@ -76,7 +77,11 @@ export function CreditScreen() {
           <Skeleton className="h-4 w-20" />
           <div className="mt-4 flex h-[118px] items-end gap-1.5">
             {[50, 70, 55, 76, 88, 62, 90, 80, 40].map((height) => (
-              <Skeleton key={height} className="flex-1 rounded-t-md" style={{ height: `${height}%` }} />
+              <Skeleton
+                key={height}
+                className="flex-1 rounded-t-md"
+                style={{ height: `${height}%` }}
+              />
             ))}
           </div>
         </Card>

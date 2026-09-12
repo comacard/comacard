@@ -1,19 +1,40 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 export function BottomSheet({
-  open, onClose, children, label,
-}: { open: boolean; onClose: () => void; children: ReactNode; label?: string }) {
+  open,
+  onClose,
+  children,
+  label,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
+  label?: string;
+}) {
   const [mounted, setMounted] = useState(false);
   // Mount flag gates createPortal to client-only; SSR has no document.body.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
+  // Escape closes, the same as Dialog and Drawer. Without it the only way out
+  // of this sheet is a mouse on the scrim.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!mounted) return null;
 
   return createPortal(
     <>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: presentational scrim; the keyboard path out is Escape, handled above */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: same */}
       <div
         data-testid="scrim"
         onClick={onClose}

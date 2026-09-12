@@ -19,9 +19,8 @@
 
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-
-import { afterAll, describe, expect, it, vi } from "vitest";
 import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { itemFromEntry } from "../../activity/map";
 import { UNIT } from "../../vault/units";
@@ -58,11 +57,17 @@ interface Booted {
 async function boot(): Promise<Booted | null> {
   let app: { fetch: (request: Request) => Response | Promise<Response> };
   try {
-    const [{ createApp }, { ActivityLog }, { InMemorySnapshotStore }] = await Promise.all([
-      import("../../../../backend/src/http/app"),
-      import("../../../../backend/src/api/activity"),
-      import("../../../../backend/src/earnings/snapshotter"),
-    ]);
+    // Specifier built at runtime on purpose. The backend workspace is not part
+    // of this repo, and this suite is written to skip when it cannot be loaded —
+    // but a literal import path makes `tsc` resolve it eagerly and fail the
+    // typecheck for a file that already handles being unable to load.
+    const backend = "../../../../backend/src";
+    const [{ createApp }, { ActivityLog }, { InMemorySnapshotStore }] = (await Promise.all([
+      import(`${backend}/http/app`),
+      import(`${backend}/api/activity`),
+      import(`${backend}/earnings/snapshotter`),
+      // biome-ignore lint/suspicious/noExplicitAny: modules from outside this repo
+    ])) as any[];
 
     const vault = new MockVaultClient();
     // One funded bucket, so `/holdings` returns a row to decode (empty buckets are omitted by design).
@@ -74,11 +79,16 @@ async function boot(): Promise<Booted | null> {
     // recorded, and a user action derived from an on-chain event. Both actors, and a `froze` kind —
     // the one the UI turns into a flag.
     const log = new ActivityLog();
-    log.append({ currency: "EUR", kind: "froze", detail: "Paused EURC pool for safety", ts: 1_000 });
+    log.append({
+      currency: "EUR",
+      kind: "froze",
+      detail: "Paused EURC pool for safety",
+      ts: 1_000,
+    });
 
     app = createApp({
       vault,
-      fx: async (currency) => ({ ok: true, value: STUB_RATES[currency] ?? 1 }),
+      fx: async (currency: string) => ({ ok: true, value: STUB_RATES[currency] ?? 1 }),
       // The deposit above, as the chain reports it — so `/earnings` reconstructs a real cost basis and
       // `earned = value − contributions` comes out at **0**. Handing this route an empty event list (as
       // `server.ts` used to) is what made it report a user's entire principal as profit.
@@ -99,7 +109,14 @@ async function boot(): Promise<Booted | null> {
       activity: {
         log,
         userEvents: [
-          { kind: "deposit", depositor: DEPOSITOR, currency: "USD", amount: USD_DEPOSIT, seq: 2, ts: 2_000 },
+          {
+            kind: "deposit",
+            depositor: DEPOSITOR,
+            currency: "USD",
+            amount: USD_DEPOSIT,
+            seq: 2,
+            ts: 2_000,
+          },
         ],
       },
     });
@@ -113,7 +130,9 @@ async function boot(): Promise<Booted | null> {
   const server: Server = createServer((req, res) => {
     void (async () => {
       const { port } = server.address() as AddressInfo;
-      const request = new Request(`http://127.0.0.1:${port}${req.url ?? "/"}`, { method: req.method });
+      const request = new Request(`http://127.0.0.1:${port}${req.url ?? "/"}`, {
+        method: req.method,
+      });
       const response = await app.fetch(request);
       res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
       res.end(Buffer.from(await response.arrayBuffer()));

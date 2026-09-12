@@ -1,6 +1,5 @@
 import { MockVaultClient } from "@sorosense/vault-client";
-import { seedVault, SEED_POOLS } from "../seed";
-import { SEED_SAFE_EXIT } from "../seed";
+import { SEED_POOLS, SEED_SAFE_EXIT, seedVault } from "../seed";
 
 test("seed funds two buckets, freezes EUR, and is idempotent", async () => {
   const c = new MockVaultClient();

@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
-import { formatCurrency, UNIT } from "../../lib/vault/units";
 import type { BucketView } from "../../hooks/useBuckets";
+import { formatCurrency, UNIT } from "../../lib/vault/units";
 import { BucketToggle } from "../bucket/BucketToggle";
 import { CountUp } from "../ui";
 
-const dec = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dec = (n: number) =>
+  n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function TotalHero({ buckets, totalUsd }: { buckets: BucketView[]; totalUsd: number }) {
   const views = [
@@ -39,8 +40,17 @@ export function TotalHero({ buckets, totalUsd }: { buckets: BucketView[]; totalU
   return (
     <div className="py-[30px] text-center">
       <div className="text-[15px] font-medium text-muted">{v.label}</div>
-      <CountUp animateOnMount value={v.valueNum} format={v.fmt} className="mt-2 block text-[54px] font-semibold leading-none tracking-[-.02em] [font-variant-numeric:tabular-nums]" />
-      <BucketToggle views={views} index={index} onCycle={() => setI((n) => (n + 1) % views.length)} />
+      <CountUp
+        animateOnMount
+        value={v.valueNum}
+        format={v.fmt}
+        className="mt-2 block text-[54px] font-semibold leading-none tracking-[-.02em] [font-variant-numeric:tabular-nums]"
+      />
+      <BucketToggle
+        views={views}
+        index={index}
+        onCycle={() => setI((n) => (n + 1) % views.length)}
+      />
     </div>
   );
 }

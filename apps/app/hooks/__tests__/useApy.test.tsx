@@ -21,9 +21,10 @@
  * Scope: this file owns the **rate**. How `useBuckets` sources a whole row in real mode (KTD4) is pinned
  * next door, in `useBuckets.api.test.tsx`.
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import { MockVaultClient } from "@sorosense/vault-client";
+
 import type { Currency } from "@sorosense/vault-client";
+import { MockVaultClient } from "@sorosense/vault-client";
+import { render, screen, waitFor } from "@testing-library/react";
 import { VaultProvider } from "../../providers/VaultProvider";
 import { useApy } from "../useApy";
 
@@ -54,9 +55,30 @@ const USD_ROW = {
 
 /** `GET /rates` — one card per currency, user-independent. USD 7.75, EUR 4.25; the fixture says 8.59/5.10. */
 const RATES = [
-  { currency: "USD", name: "DeFindex USDC vault", venue: "DeFindex", kind: "vault", tags: ["DeFindex", "Vault"], apy: 7.75 },
-  { currency: "EUR", name: "Blend EURC", venue: "Blend", kind: "lending", tags: ["Blend", "Fixed pool"], apy: 4.25 },
-  { currency: "MXN", name: "Etherfuse CETES", venue: "Etherfuse", kind: "rwa", tags: ["Etherfuse", "CETES"], apy: 5.57 },
+  {
+    currency: "USD",
+    name: "DeFindex USDC vault",
+    venue: "DeFindex",
+    kind: "vault",
+    tags: ["DeFindex", "Vault"],
+    apy: 7.75,
+  },
+  {
+    currency: "EUR",
+    name: "Blend EURC",
+    venue: "Blend",
+    kind: "lending",
+    tags: ["Blend", "Fixed pool"],
+    apy: 4.25,
+  },
+  {
+    currency: "MXN",
+    name: "Etherfuse CETES",
+    venue: "Etherfuse",
+    kind: "rwa",
+    tags: ["Etherfuse", "CETES"],
+    apy: 5.57,
+  },
 ];
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -82,7 +104,10 @@ function routed(holdings: unknown, rates: unknown = RATES, status = 200) {
     const url = String(input);
     const body = url.includes("/rates") ? rates : holdings;
     return Promise.resolve(
-      new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }),
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
     );
   };
 }
@@ -109,8 +134,10 @@ test("a funded bucket takes its APY from GET /holdings — not /rates, not the f
   // 8.20 is the pool the money is IN. 7.75 is the pool it would pick if it were unfunded; quoting that
   // for a funded bucket would misreport the rate the user is actually earning.
   await waitFor(() => expect(screen.getByTestId("apy").textContent).toBe("8.20"));
-  expect(requestedPaths()).toContain(`/holdings`);
-  expect(fetchMock.mock.calls.some(([u]) => String(u) === `${BASE}/holdings?depositor=GUSER`)).toBe(true);
+  expect(requestedPaths()).toContain("/holdings");
+  expect(fetchMock.mock.calls.some(([u]) => String(u) === `${BASE}/holdings?depositor=GUSER`)).toBe(
+    true,
+  );
 });
 
 test("an unfunded bucket has no /holdings row, so its APY comes from GET /rates — never the fixture", async () => {
@@ -139,13 +166,19 @@ test("a /holdings read that 502s still quotes /rates — the fixture is not reac
     const url = String(input);
     return url.includes("/rates")
       ? Promise.resolve(
-          new Response(JSON.stringify(RATES), { status: 200, headers: { "content-type": "application/json" } }),
-        )
-      : Promise.resolve(
-          new Response(JSON.stringify({ error: { code: "unavailable", message: "vault read failed" } }), {
-            status: 502,
+          new Response(JSON.stringify(RATES), {
+            status: 200,
             headers: { "content-type": "application/json" },
           }),
+        )
+      : Promise.resolve(
+          new Response(
+            JSON.stringify({ error: { code: "unavailable", message: "vault read failed" } }),
+            {
+              status: 502,
+              headers: { "content-type": "application/json" },
+            },
+          ),
         );
   });
   renderProbe("USD");

@@ -1,12 +1,12 @@
 "use client";
-import { useRef, useState, type ReactNode, type TouchEvent } from "react";
 import { usePathname } from "next/navigation";
+import { type ReactNode, type TouchEvent, useRef, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
+import { AccountMenu } from "../../components/desktop/AccountMenu";
 import { BottomNav, TopBlur } from "../../components/ui";
 import { TopBar } from "../../components/ui/TopBar";
-import { AccountMenu } from "../../components/desktop/AccountMenu";
-import { useNav } from "../../hooks/useNav";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
+import { useNav } from "../../hooks/useNav";
 
 const SHELL_ROUTES = ["/home", "/earn", "/account"] as const;
 type ShellRoute = (typeof SHELL_ROUTES)[number];
@@ -69,9 +69,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="mx-auto w-full max-w-[1200px] px-5 pb-[120px] pt-14 lg:px-9 lg:pb-11 lg:pt-[22px] xl:max-w-[1440px] 2xl:max-w-[1560px]">
           {/* Desktop-only top bar */}
           <div className="hidden lg:block">
-            <TopBar account={isDesktop ? <AccountMenu /> : undefined} onAvatarClick={() => nav.forward("/account")} />
+            <TopBar
+              account={isDesktop ? <AccountMenu /> : undefined}
+              onAvatarClick={() => nav.forward("/account")}
+            />
           </div>
-          <div key={pathname} className={isDesktop ? undefined : `page-enter ${enterDirection === "prev" ? "page-enter-prev" : ""}`}>
+          <div
+            key={pathname}
+            className={
+              isDesktop
+                ? undefined
+                : `page-enter ${enterDirection === "prev" ? "page-enter-prev" : ""}`
+            }
+          >
             {children}
           </div>
         </div>

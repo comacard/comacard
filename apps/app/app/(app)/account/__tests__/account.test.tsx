@@ -1,6 +1,6 @@
+import { MockVaultClient } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient} from "@sorosense/vault-client";
 import { VaultProvider } from "../../../../providers/VaultProvider";
 import AccountPage from "../page";
 
@@ -33,17 +33,26 @@ vi.mock("../../../../hooks/useWalletAssets", () => ({
   useWalletAssets: () => ({ assets: [], totalUsd: null, loading: false }),
 }));
 
-
 const ADDRESS = "GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUVWK3X9";
 const signTransaction = vi.fn(async (xdr: string) => xdr);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useWallet.mockReturnValue({ address: ADDRESS, walletName: "Freighter", isConnected: true, disconnect, signTransaction });
+  useWallet.mockReturnValue({
+    address: ADDRESS,
+    walletName: "Freighter",
+    isConnected: true,
+    disconnect,
+    signTransaction,
+  });
 });
 
 function renderAccount(client = new MockVaultClient()) {
-  render(<VaultProvider client={client}><AccountPage /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <AccountPage />
+    </VaultProvider>,
+  );
 }
 
 test("shows the identicon and a truncated address, and names no wallet product", async () => {
@@ -77,11 +86,6 @@ test("Activity routes to the central activity page", async () => {
   await user.click(screen.getByRole("button", { name: /Activity/ }));
   expect(push).toHaveBeenCalledWith("/transactions");
 });
-
-
-
-
-
 
 test("Log out confirms before disconnecting", async () => {
   const user = userEvent.setup();

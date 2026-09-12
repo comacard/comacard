@@ -9,9 +9,10 @@
  * has never carried. With the API on, the sheet must name the pool the **keeper actually proposed**, not
  * the one the browser's mock proposed to itself.
  */
-import type { ReactNode } from "react";
-import { renderHook, waitFor } from "@testing-library/react";
+
 import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
+import { renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { VaultProvider } from "../../providers/VaultProvider";
 import { usePendingExit } from "../usePendingExit";
 
@@ -69,14 +70,19 @@ function wrap(client: MockVaultClient) {
 function json(body: unknown, status = 200) {
   return () =>
     Promise.resolve(
-      new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }),
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
     );
 }
 
 test("the exit target is named and rated by GET /pools/:id, not by POOL_META", async () => {
   const client = new MockVaultClient();
   await seedFrozenOnChain(client, "defindex-usdc");
-  fetchMock.mockImplementation(json({ id: "defindex-usdc", name: "DeFindex USDC vault", venue: "DeFindex", apy: 8.59 }));
+  fetchMock.mockImplementation(
+    json({ id: "defindex-usdc", name: "DeFindex USDC vault", venue: "DeFindex", apy: 8.59 }),
+  );
 
   const { result } = renderHook(() => usePendingExit(), { wrapper: wrap(client) });
 
@@ -93,7 +99,9 @@ test("a pool the catalog does not carry 404s and leaves the target unnamed — n
   const client = new MockVaultClient();
   await seedFrozenOnChain(client, "some-unvetted-pool");
   // The route answers a shaped 404 for a pool it cannot resolve (it never returns a 200 with `null`).
-  fetchMock.mockImplementation(json({ error: { code: "not_found", message: "unknown pool: some-unvetted-pool" } }, 404));
+  fetchMock.mockImplementation(
+    json({ error: { code: "not_found", message: "unknown pool: some-unvetted-pool" } }, 404),
+  );
 
   const { result } = renderHook(() => usePendingExit(), { wrapper: wrap(client) });
 

@@ -1,15 +1,15 @@
-import { render, screen, waitFor } from "@testing-library/react";
 import {
+  type BindingsVaultClient,
   MockVaultClient,
   RealVaultClient,
   SHARE_PRICE_SCALE,
-  type BindingsVaultClient,
 } from "@sorosense/vault-client";
-import { VaultProvider } from "../../providers/VaultProvider";
-import { seedVault } from "../../lib/vault/seed";
-import { useEarnings } from "../useEarnings";
+import { render, screen, waitFor } from "@testing-library/react";
 import { resetContributions } from "../../lib/vault/contributions";
+import { seedVault } from "../../lib/vault/seed";
 import { UNIT } from "../../lib/vault/units";
+import { VaultProvider } from "../../providers/VaultProvider";
+import { useEarnings } from "../useEarnings";
 
 const useWallet = vi.fn();
 vi.mock("../useWallet", () => ({ useWallet: () => useWallet() }));
@@ -23,9 +23,15 @@ function Probe() {
       <span data-testid="balanceUsd">{view.balanceUsd.toFixed(4)}</span>
       <span data-testid="earnedUsd">{view.earnedUsd.toFixed(4)}</span>
       <span data-testid="apy">{view.apy.toFixed(4)}</span>
-      <span data-testid="bucketSum">{view.buckets.reduce((s, b) => s + b.usdValue, 0).toFixed(4)}</span>
-      <span data-testid="chartLast">{(view.chart[view.chart.length - 1]?.earnedUsd ?? 0).toFixed(4)}</span>
-      <span data-testid="monthlySum">{view.monthly.reduce((s, m) => s + m.earnedUsd, 0).toFixed(4)}</span>
+      <span data-testid="bucketSum">
+        {view.buckets.reduce((s, b) => s + b.usdValue, 0).toFixed(4)}
+      </span>
+      <span data-testid="chartLast">
+        {(view.chart[view.chart.length - 1]?.earnedUsd ?? 0).toFixed(4)}
+      </span>
+      <span data-testid="monthlySum">
+        {view.monthly.reduce((s, m) => s + m.earnedUsd, 0).toFixed(4)}
+      </span>
       <span data-testid="monthlyLen">{view.monthly.length}</span>
     </div>
   );
@@ -35,13 +41,19 @@ async function renderFunded() {
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
   const client = new MockVaultClient();
   await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByTestId("hasDeposit")).toBeInTheDocument());
 }
 
 test("R4 — per-bucket usdValue sums to balanceUsd", async () => {
   await renderFunded();
-  expect(screen.getByTestId("bucketSum").textContent).toBe(screen.getByTestId("balanceUsd").textContent);
+  expect(screen.getByTestId("bucketSum").textContent).toBe(
+    screen.getByTestId("balanceUsd").textContent,
+  );
 });
 
 test("R5 — apy is value-weighted, not a plain mean", async () => {
@@ -64,7 +76,11 @@ test("the chart's last point, the monthly sum, and earnedUsd are the same number
 
 test("hasDeposit is false when nothing is deposited", async () => {
   useWallet.mockReturnValue({ address: null, isConnected: false });
-  render(<VaultProvider client={new MockVaultClient()}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={new MockVaultClient()}>
+      <Probe />
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByTestId("hasDeposit").textContent).toBe("false"));
   expect(screen.getByTestId("earnedUsd").textContent).toBe("0.0000");
   expect(screen.getByTestId("apy").textContent).toBe("0.0000");
@@ -91,8 +107,10 @@ function realClient(usdShares: bigint, usdValue: bigint): RealVaultClient {
   const read = <T,>(result: T) => Promise.resolve({ result });
   const isUsd = (c: { tag: string }) => c.tag === "Usd";
   const bindings = {
-    balance_of: ({ currency }: { currency: { tag: string } }) => read(isUsd(currency) ? usdShares : 0n),
-    value_of: ({ currency }: { currency: { tag: string } }) => read(isUsd(currency) ? usdValue : 0n),
+    balance_of: ({ currency }: { currency: { tag: string } }) =>
+      read(isUsd(currency) ? usdShares : 0n),
+    value_of: ({ currency }: { currency: { tag: string } }) =>
+      read(isUsd(currency) ? usdValue : 0n),
     share_price: () => read(SHARE_PRICE_SCALE),
     // No keeper allocation yet — the state the live demo actually starts in (A5).
     active_pool: () => read(undefined),
@@ -114,7 +132,11 @@ test("offline fallback — an on-chain balance with an empty ledger reports earn
   resetContributions(); // nothing recorded this session — a reload, or a deposit made before it
   const client = realClient(100n * UNIT, 100n * UNIT);
 
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByTestId("hasDeposit").textContent).toBe("true"));
   // The balance is real and shown; this bucket is unallocated so its yield has not accrued (earned 0),
@@ -130,7 +152,11 @@ test("real mode — a bucket with no active pool still renders (no keeper alloca
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
   const client = realClient(50n * UNIT, 50n * UNIT);
 
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByTestId("hasDeposit").textContent).toBe("true"));
   expect(screen.getByTestId("apy").textContent).not.toBe("0.0000"); // the advertised catalog rate

@@ -67,9 +67,7 @@ test("holds the payment until the cycle has been open a minute, and says why", a
   creditLine.mockReturnValue(line({}, 10)); // opened ten seconds ago
   render(<PayScreen />);
 
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: /^Wait \d+s$/ })).toBeDisabled(),
-  );
+  await waitFor(() => expect(screen.getByRole("button", { name: /^Wait \d+s$/ })).toBeDisabled());
   expect(screen.getByText(/stay open for a minute/i)).toBeInTheDocument();
   expect(repay).not.toHaveBeenCalled();
 });

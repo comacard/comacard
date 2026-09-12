@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { USER_CLOSED_MODAL, WalletError } from "../../lib/wallet-error";
 import Landing from "../page";
-import { WalletError, USER_CLOSED_MODAL } from "../../lib/wallet-error";
 
 const push = vi.fn();
 const replace = vi.fn();
@@ -9,7 +9,9 @@ const connect = vi.fn();
 // hydrated: true, address: null — a disconnected-but-hydrated session, so the STE-43 forward guard
 // in Landing doesn't short-circuit these onConnect-flow tests (see app/__tests__/page.test.tsx for
 // the hydration/forward behavior itself).
-vi.mock("../../hooks/useWallet", () => ({ useWallet: () => ({ connect, address: null, hydrated: true }) }));
+vi.mock("../../hooks/useWallet", () => ({
+  useWallet: () => ({ connect, address: null, hydrated: true }),
+}));
 
 beforeEach(() => {
   push.mockReset();

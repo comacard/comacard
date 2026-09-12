@@ -1,6 +1,6 @@
 "use client";
-import { useCallback } from "react";
 import type { Currency } from "@sorosense/vault-client";
+import { useCallback } from "react";
 import type { Holding, Rate } from "../lib/api/types";
 import { getBucketMeta } from "../lib/vault/data";
 import { useHoldings } from "./useHoldings";

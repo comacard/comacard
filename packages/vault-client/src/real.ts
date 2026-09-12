@@ -17,16 +17,16 @@
  * `backend` — both hard rules of the DRY seam.
  */
 
-// Consumes the generated bindings' *built* output (`bindings/dist`), not its source: the generated
-// `.ts` targets its own (non-strict, DOM-lib) tsconfig, so pulling it into this strict program would
-// drag in its errors. `bindings` is (re)built by this package's `pretypecheck`/`pretest` hook.
-import { Client as BindingsClient } from '../bindings/dist/index.js';
 import type {
+  Client as BindingsClientType,
   Currency as BindingsCurrency,
   ExitProposal as BindingsExitProposal,
   PoolStatus as BindingsPoolStatus,
-  Client as BindingsClientType,
-} from '../bindings/dist/index.js';
+} from "../bindings/dist/index.js";
+// Consumes the generated bindings' *built* output (`bindings/dist`), not its source: the generated
+// `.ts` targets its own (non-strict, DOM-lib) tsconfig, so pulling it into this strict program would
+// drag in its errors. `bindings` is (re)built by this package's `pretypecheck`/`pretest` hook.
+import { Client as BindingsClient } from "../bindings/dist/index.js";
 import type {
   Address,
   Amount,
@@ -41,7 +41,7 @@ import type {
   SignerRole,
   TxResult,
   VaultClient,
-} from './interface';
+} from "./interface";
 
 /**
  * The subset of the generated client this adapter drives. Narrowing to a {@link Pick} keeps tests
@@ -50,28 +50,28 @@ import type {
  */
 export type BindingsVaultClient = Pick<
   BindingsClientType,
-  | 'balance_of'
-  | 'share_price'
-  | 'value_of'
-  | 'pool_status'
-  | 'has_consent'
-  | 'auto_compound_enabled'
-  | 'active_pool'
-  | 'pending_exit'
-  | 'deposit'
-  | 'withdraw'
-  | 'set_policy_consent'
-  | 'set_auto_compound'
-  | 'approve_exit'
-  | 'allocate'
-  | 'deallocate'
-  | 'freeze'
-  | 'unfreeze'
-  | 'propose_exit'
+  | "balance_of"
+  | "share_price"
+  | "value_of"
+  | "pool_status"
+  | "has_consent"
+  | "auto_compound_enabled"
+  | "active_pool"
+  | "pending_exit"
+  | "deposit"
+  | "withdraw"
+  | "set_policy_consent"
+  | "set_auto_compound"
+  | "approve_exit"
+  | "allocate"
+  | "deallocate"
+  | "freeze"
+  | "unfreeze"
+  | "propose_exit"
 >;
 
 /** The assembled write transaction the generated client hands back (all writes decode to `null`). */
-type WriteTx = Awaited<ReturnType<BindingsVaultClient['deposit']>>;
+type WriteTx = Awaited<ReturnType<BindingsVaultClient["deposit"]>>;
 
 /** Options for {@link RealVaultClient}. `client` is injectable so unit tests stay offline. */
 export interface RealVaultClientOptions {
@@ -113,28 +113,28 @@ export interface RealVaultClientOptions {
 // ── Encoding helpers (seam ⇄ contract) ──────────────────────────────────────
 const toBindingsCurrency = (c: Currency): BindingsCurrency => {
   switch (c) {
-    case 'USD':
-      return { tag: 'Usd', values: undefined };
-    case 'EUR':
-      return { tag: 'Eur', values: undefined };
-    case 'MXN':
-      return { tag: 'Mxn', values: undefined };
+    case "USD":
+      return { tag: "Usd", values: undefined };
+    case "EUR":
+      return { tag: "Eur", values: undefined };
+    case "MXN":
+      return { tag: "Mxn", values: undefined };
   }
 };
 
 const fromBindingsCurrency = (c: BindingsCurrency): Currency => {
   switch (c.tag) {
-    case 'Usd':
-      return 'USD';
-    case 'Eur':
-      return 'EUR';
-    case 'Mxn':
-      return 'MXN';
+    case "Usd":
+      return "USD";
+    case "Eur":
+      return "EUR";
+    case "Mxn":
+      return "MXN";
   }
 };
 
 const fromBindingsPoolStatus = (s: BindingsPoolStatus): PoolStatus =>
-  s.tag === 'Frozen' ? 'frozen' : 'active';
+  s.tag === "Frozen" ? "frozen" : "active";
 
 /**
  * Decode a contract exit proposal, running both pool addresses back through `decodePool` so the
@@ -231,9 +231,9 @@ export class RealVaultClient implements VaultClient {
       }
       const tx = await assemble();
       const sent = await tx.signAndSend({ signTransaction: toSignTransaction(signer) });
-      const hash = sent.sendTransactionResponse?.hash ?? '';
+      const hash = sent.sendTransactionResponse?.hash ?? "";
       // Success is the finalized on-chain status; a string compare avoids importing the rpc enum.
-      const success = String(sent.getTransactionResponse?.status) === 'SUCCESS';
+      const success = String(sent.getTransactionResponse?.status) === "SUCCESS";
       return { hash, success };
     };
     return { xdr, requiredSigner, signAndSubmit };
@@ -241,31 +241,31 @@ export class RealVaultClient implements VaultClient {
 
   // ── Depositor-signed writes ──────────────────────────────────────────────
   deposit(depositor: Address, currency: Currency, amount: Amount): PreparedTx {
-    return this.prepareWrite('depositor', 'deposit', () =>
+    return this.prepareWrite("depositor", "deposit", () =>
       this.client.deposit({ depositor, currency: toBindingsCurrency(currency), amount }),
     );
   }
 
   withdraw(depositor: Address, currency: Currency, shares: Shares): PreparedTx {
-    return this.prepareWrite('depositor', 'withdraw', () =>
+    return this.prepareWrite("depositor", "withdraw", () =>
       this.client.withdraw({ depositor, currency: toBindingsCurrency(currency), shares }),
     );
   }
 
   setPolicyConsent(depositor: Address): PreparedTx {
-    return this.prepareWrite('depositor', 'set_policy_consent', () =>
+    return this.prepareWrite("depositor", "set_policy_consent", () =>
       this.client.set_policy_consent({ depositor }),
     );
   }
 
   setAutoCompound(depositor: Address, enabled: boolean): PreparedTx {
-    return this.prepareWrite('depositor', 'set_auto_compound', () =>
+    return this.prepareWrite("depositor", "set_auto_compound", () =>
       this.client.set_auto_compound({ depositor, enabled }),
     );
   }
 
   approveExit(depositor: Address, exitId: string): PreparedTx {
-    return this.prepareWrite('depositor', 'approve_exit', () =>
+    return this.prepareWrite("depositor", "approve_exit", () =>
       this.client.approve_exit({ depositor, exit_id: BigInt(exitId) }),
     );
   }
@@ -273,32 +273,32 @@ export class RealVaultClient implements VaultClient {
   // ── Keeper / agent writes ────────────────────────────────────────────────
   allocate(pool: PoolId, currency: Currency, amount: Amount): PreparedTx {
     const address = this.poolAddress(pool);
-    return this.prepareWrite('keeper', 'allocate', () =>
+    return this.prepareWrite("keeper", "allocate", () =>
       this.client.allocate({ pool: address, currency: toBindingsCurrency(currency), amount }),
     );
   }
 
   deallocate(pool: PoolId, currency: Currency, amount: Amount): PreparedTx {
     const address = this.poolAddress(pool);
-    return this.prepareWrite('keeper', 'deallocate', () =>
+    return this.prepareWrite("keeper", "deallocate", () =>
       this.client.deallocate({ pool: address, currency: toBindingsCurrency(currency), amount }),
     );
   }
 
   freeze(pool: PoolId): PreparedTx {
     const address = this.poolAddress(pool);
-    return this.prepareWrite('keeper', 'freeze', () => this.client.freeze({ pool: address }));
+    return this.prepareWrite("keeper", "freeze", () => this.client.freeze({ pool: address }));
   }
 
   unfreeze(pool: PoolId): PreparedTx {
     const address = this.poolAddress(pool);
-    return this.prepareWrite('keeper', 'unfreeze', () => this.client.unfreeze({ pool: address }));
+    return this.prepareWrite("keeper", "unfreeze", () => this.client.unfreeze({ pool: address }));
   }
 
   proposeExit(currency: Currency, fromPool: PoolId, toPool: PoolId): PreparedTx {
     const fromAddress = this.poolAddress(fromPool);
     const toAddress = this.poolAddress(toPool);
-    return this.prepareWrite('keeper', 'propose_exit', () =>
+    return this.prepareWrite("keeper", "propose_exit", () =>
       this.client.propose_exit({
         currency: toBindingsCurrency(currency),
         from_pool: fromAddress,

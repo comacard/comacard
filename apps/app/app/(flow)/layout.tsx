@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { type ReactNode, useEffect } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 
@@ -13,7 +13,10 @@ import { useIsDesktop } from "../../hooks/useIsDesktop";
  * byte-identical — desktop UI never navigates here (it uses `open(panel)`), only manual URLs do.
  */
 const PANEL_ROUTES: { match: (path: string) => boolean; to: string }[] = [
-  { match: (p) => p === "/add-funds" || p === "/deposit" || p.startsWith("/deposit/"), to: "/home?panel=deposit" },
+  {
+    match: (p) => p === "/add-funds" || p === "/deposit" || p.startsWith("/deposit/"),
+    to: "/home?panel=deposit",
+  },
   { match: (p) => p === "/withdraw", to: "/home?panel=withdraw" },
   { match: (p) => p === "/transactions", to: "/home?panel=activity" },
 ];
@@ -31,7 +34,9 @@ export default function FlowLayout({ children }: { children: ReactNode }) {
 
   return (
     <AuthGate>
-      <div className="relative min-h-dvh bg-bg px-5 pb-10 pt-[52px]">{isDesktop ? null : children}</div>
+      <div className="relative min-h-dvh bg-bg px-5 pb-10 pt-[52px]">
+        {isDesktop ? null : children}
+      </div>
     </AuthGate>
   );
 }

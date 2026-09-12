@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -53,6 +53,8 @@ export function Dialog({
   if (!mounted) return null;
 
   return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: presentational scrim; the keyboard path out is Escape, handled above
+    // biome-ignore lint/a11y/useKeyWithClickEvents: same
     <div
       data-testid="dialog-wrap"
       onClick={(e) => {
@@ -62,7 +64,10 @@ export function Dialog({
         open ? "opacity-100" : "pointer-events-none opacity-0"
       }`}
     >
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[rgba(17,19,22,.32)] backdrop-blur-[2px]" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[rgba(17,19,22,.32)] backdrop-blur-[2px]"
+      />
       <div
         ref={panelRef}
         tabIndex={-1}

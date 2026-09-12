@@ -9,6 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "build": "tsc -p bindings",
     "build:bindings": "tsc -p bindings",
     "pretypecheck": "tsc -p bindings",
     "typecheck": "tsc --noEmit",

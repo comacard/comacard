@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { Currency } from "@sorosense/vault-client";
-import { Button } from "../ui";
+import { useEffect, useState } from "react";
+import { useToast } from "../../hooks/useToast";
+import { useWallet } from "../../hooks/useWallet";
+import { type ApiResult, apiPost } from "../../lib/api/client";
 import { apiEnabled } from "../../lib/api/config";
-import { apiPost, type ApiResult } from "../../lib/api/client";
-import { isFaucetNeedsChangeTrust, type FaucetSuccess } from "../../lib/api/types";
-import { balanceEnabled } from "../../lib/wallet/balance";
+import { type FaucetSuccess, isFaucetNeedsChangeTrust } from "../../lib/api/types";
 import { stablecoinByCurrency } from "../../lib/vault/data";
 import { fromAmount } from "../../lib/vault/units";
-import { useWallet } from "../../hooks/useWallet";
-import { useToast } from "../../hooks/useToast";
+import { balanceEnabled } from "../../lib/wallet/balance";
+import { Button } from "../ui";
 
 const FAUCET_COOLDOWN_MS = 60 * 60 * 1000;
-const cooldownKey = (address: string, currency: Currency) => `ss-faucet-until-${address}-${currency}`;
+const cooldownKey = (address: string, currency: Currency) =>
+  `ss-faucet-until-${address}-${currency}`;
 const legacyCooldownKey = (address: string) => `ss-faucet-until-${address}`;
 
 function formatCountdown(ms: number): string {
@@ -122,13 +123,25 @@ export function FaucetButton({
   const remaining = cooldownUntil - nowTs;
   const onCooldown = remaining > 0;
   const label = busy
-    ? compact ? "Minting..." : "Sending test funds..."
+    ? compact
+      ? "Minting..."
+      : "Sending test funds..."
     : onCooldown
-      ? compact ? formatCountdown(remaining) : `Next claim in ${formatCountdown(remaining)}`
-      : compact ? "Mint" : `Get test ${coin.sym}`;
+      ? compact
+        ? formatCountdown(remaining)
+        : `Next claim in ${formatCountdown(remaining)}`
+      : compact
+        ? "Mint"
+        : `Get test ${coin.sym}`;
 
   return (
-    <div className={compact ? `m-0 w-auto shrink-0 ${className}` : `mx-auto mb-4 mt-2 w-full max-w-[240px] ${className}`}>
+    <div
+      className={
+        compact
+          ? `m-0 w-auto shrink-0 ${className}`
+          : `mx-auto mb-4 mt-2 w-full max-w-[240px] ${className}`
+      }
+    >
       <Button
         variant={compact ? "ink" : "glass"}
         onClick={onClick}

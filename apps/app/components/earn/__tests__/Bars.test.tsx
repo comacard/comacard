@@ -5,7 +5,7 @@ test("renders one bar per value, tallest at the maximum", () => {
   render(<Bars values={[0, 50, 100]} />);
   const bars = screen.getAllByTestId("bar");
   expect(bars).toHaveLength(3);
-  expect(bars[0]!.style.height).toBe("8px");   // floor, so an empty bar is still visible
+  expect(bars[0]!.style.height).toBe("8px"); // floor, so an empty bar is still visible
   expect(bars[2]!.style.height).toBe("112px"); // 8 + 104
 });
 

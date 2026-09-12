@@ -23,8 +23,8 @@ import type {
   SignerRole,
   TxResult,
   VaultClient,
-} from './interface';
-import { SHARE_PRICE_SCALE } from './interface';
+} from "./interface";
+import { SHARE_PRICE_SCALE } from "./interface";
 
 const bucketKey = (user: Address, currency: Currency): string => `${user}:${currency}`;
 
@@ -81,14 +81,15 @@ export class MockVaultClient implements VaultClient {
 
   // ── Depositor-signed writes ──────────────────────────────────────────────
   deposit(depositor: Address, currency: Currency, amount: Amount): PreparedTx {
-    return this.prepare('depositor', () => {
-      if (amount <= 0n) throw new Error('deposit amount must be positive');
+    return this.prepare("depositor", () => {
+      if (amount <= 0n) throw new Error("deposit amount must be positive");
       const key = bucketKey(depositor, currency);
       // Mint against accrued NAV (1:1 for the first deposit; fewer shares after yield accrues).
       const minted = this.mintShares(currency, amount);
       // Above the base price a dust deposit rounds to zero shares; reject it rather
       // than take the funds for nothing — mirrors the contract's MintsNoShares (KTD10).
-      if (minted <= 0n) throw new Error('deposit mints no shares (below one share at current price)');
+      if (minted <= 0n)
+        throw new Error("deposit mints no shares (below one share at current price)");
       this.shares.set(key, (this.shares.get(key) ?? 0n) + minted);
       this.totalShares.set(currency, (this.totalShares.get(currency) ?? 0n) + minted);
       this.totalAssets.set(currency, (this.totalAssets.get(currency) ?? 0n) + amount);
@@ -96,11 +97,11 @@ export class MockVaultClient implements VaultClient {
   }
 
   withdraw(depositor: Address, currency: Currency, shares: Shares): PreparedTx {
-    return this.prepare('depositor', () => {
+    return this.prepare("depositor", () => {
       const key = bucketKey(depositor, currency);
       const owned = this.shares.get(key) ?? 0n;
-      if (shares <= 0n) throw new Error('withdraw shares must be positive');
-      if (shares > owned) throw new Error('withdraw exceeds owned shares');
+      if (shares <= 0n) throw new Error("withdraw shares must be positive");
+      if (shares > owned) throw new Error("withdraw exceeds owned shares");
       // Redeem against NAV so share price stays consistent after the burn.
       const assets = this.redeemAssets(currency, shares);
       this.shares.set(key, owned - shares);
@@ -111,21 +112,21 @@ export class MockVaultClient implements VaultClient {
 
   setPolicyConsent(depositor: Address): PreparedTx {
     // Idempotent: re-signing is a no-op. No tier argument by design (KTD3).
-    return this.prepare('depositor', () => {
+    return this.prepare("depositor", () => {
       this.consent.add(depositor);
     });
   }
 
   setAutoCompound(depositor: Address, enabled: boolean): PreparedTx {
     // Economic preference, separate from consent (STE-38). Default is enabled, so we only track OFF.
-    return this.prepare('depositor', () => {
+    return this.prepare("depositor", () => {
       if (enabled) this.autoCompoundOff.delete(depositor);
       else this.autoCompoundOff.add(depositor);
     });
   }
 
-  approveExit(depositor: Address, exitId: string): PreparedTx {
-    return this.prepare('depositor', () => {
+  approveExit(_depositor: Address, exitId: string): PreparedTx {
+    return this.prepare("depositor", () => {
       const proposal = [...this.pending.values()].find((p) => p.id === exitId);
       if (!proposal) throw new Error(`no pending exit ${exitId}`);
       // Move the bucket's active pool from the frozen pool to the safe target, then clear the proposal.
@@ -136,37 +137,37 @@ export class MockVaultClient implements VaultClient {
 
   // ── Keeper / agent writes ────────────────────────────────────────────────
   allocate(pool: PoolId, currency: Currency, amount: Amount): PreparedTx {
-    return this.prepare('keeper', () => {
+    return this.prepare("keeper", () => {
       if (this.frozen.has(pool)) throw new Error(`pool ${pool} is frozen`);
-      if (amount <= 0n) throw new Error('allocate amount must be positive');
+      if (amount <= 0n) throw new Error("allocate amount must be positive");
       this.active.set(currency, pool);
       this.holdings.set(currency, (this.holdings.get(currency) ?? 0n) + amount);
     });
   }
 
-  deallocate(pool: PoolId, currency: Currency, amount: Amount): PreparedTx {
-    return this.prepare('keeper', () => {
+  deallocate(_pool: PoolId, currency: Currency, amount: Amount): PreparedTx {
+    return this.prepare("keeper", () => {
       const held = this.holdings.get(currency) ?? 0n;
-      if (amount > held) throw new Error('deallocate exceeds holdings');
+      if (amount > held) throw new Error("deallocate exceeds holdings");
       this.holdings.set(currency, held - amount);
     });
   }
 
   freeze(pool: PoolId): PreparedTx {
     // Protective only — never moves funds (KTD4). Idempotent.
-    return this.prepare('keeper', () => {
+    return this.prepare("keeper", () => {
       this.frozen.add(pool);
     });
   }
 
   unfreeze(pool: PoolId): PreparedTx {
-    return this.prepare('keeper', () => {
+    return this.prepare("keeper", () => {
       this.frozen.delete(pool);
     });
   }
 
   proposeExit(currency: Currency, fromPool: PoolId, toPool: PoolId): PreparedTx {
-    return this.prepare('keeper', () => {
+    return this.prepare("keeper", () => {
       const proposal: ExitProposal = { id: `exit-${++this.seq}`, currency, fromPool, toPool };
       this.pending.set(currency, proposal);
     });
@@ -190,7 +191,7 @@ export class MockVaultClient implements VaultClient {
   }
 
   async poolStatus(pool: PoolId): Promise<PoolStatus> {
-    return this.frozen.has(pool) ? 'frozen' : 'active';
+    return this.frozen.has(pool) ? "frozen" : "active";
   }
 
   async hasConsent(depositor: Address): Promise<boolean> {
@@ -217,7 +218,7 @@ export class MockVaultClient implements VaultClient {
    * this hook is how a test advances the clock's effect. Not a vault operation; test-only.
    */
   simulateYield(currency: Currency, amount: Amount): void {
-    if (amount < 0n) throw new Error('simulateYield amount must be non-negative');
+    if (amount < 0n) throw new Error("simulateYield amount must be non-negative");
     this.totalAssets.set(currency, (this.totalAssets.get(currency) ?? 0n) + amount);
   }
 

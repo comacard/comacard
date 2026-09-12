@@ -1,8 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../providers/VaultProvider";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { VaultProvider } from "../../../providers/VaultProvider";
 import { DesktopOverview } from "../DesktopOverview";
 
 /**
@@ -19,7 +19,9 @@ import { DesktopOverview } from "../DesktopOverview";
  */
 const render = (ui: React.ReactNode) =>
   rtlRender(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <VaultProvider client={new MockVaultClient()}>{ui}</VaultProvider>
     </QueryClientProvider>,
   );
@@ -44,19 +46,45 @@ vi.mock("../../../hooks/useCollateral", () => ({
   useCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false }),
 }));
 vi.mock("../../../hooks/useRemoteCollateral", () => ({
-  useRemoteCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false, configured: true }),
+  useRemoteCollateral: () => ({
+    assets: [],
+    totalValue: 0n,
+    loading: false,
+    error: false,
+    configured: true,
+  }),
 }));
 vi.mock("../../../hooks/useCreditHistory", () => ({
-  useCreditHistory: () => ({ events: [], borrowed: 0n, repaid: 0n, cyclesClosed: 0, loading: false, error: false }),
+  useCreditHistory: () => ({
+    events: [],
+    borrowed: 0n,
+    repaid: 0n,
+    cyclesClosed: 0,
+    loading: false,
+    error: false,
+  }),
 }));
 vi.mock("../../../hooks/useWalletAssets", () => ({
-  useWalletAssets: () => ({ loading: false, assets: [], totalUsd: null, prices: null, priceError: false }),
+  useWalletAssets: () => ({
+    loading: false,
+    assets: [],
+    totalUsd: null,
+    prices: null,
+    priceError: false,
+  }),
 }));
 vi.mock("../../../hooks/useTransactions", () => ({
   useTransactions: () => ({ loading: false, error: false, items: [] }),
 }));
 vi.mock("../../../hooks/useKycStart", () => ({
-  useKycStart: () => ({ verify: vi.fn(), url: null, close: vi.fn(), starting: false, error: null, clearError: vi.fn() }),
+  useKycStart: () => ({
+    verify: vi.fn(),
+    url: null,
+    close: vi.fn(),
+    starting: false,
+    error: null,
+    clearError: vi.fn(),
+  }),
 }));
 vi.mock("wagmi", () => ({
   useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }),
@@ -112,10 +140,15 @@ test("an open balance leads with Repay without hiding Deposit", async () => {
 test("an unverified holder is offered verification instead of the actions", async () => {
   cardAccount.mockReturnValue({
     ...VERIFIED,
-    account: { ...VERIFIED.account, kyc: { verified: false, status: "Not Started", sessionId: null } },
+    account: {
+      ...VERIFIED.account,
+      kyc: { verified: false, status: "Not Started", sessionId: null },
+    },
   });
   render(<DesktopOverview />);
 
-  await waitFor(() => expect(screen.getByRole("button", { name: /verify identity/i })).toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /verify identity/i })).toBeInTheDocument(),
+  );
   expect(screen.queryByRole("button", { name: "Spend" })).toBeNull();
 });

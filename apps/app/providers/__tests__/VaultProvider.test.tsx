@@ -1,9 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { renderHook, act } from "@testing-library/react";
 import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../VaultProvider";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { useVault } from "../../hooks/useVault";
+import { VaultProvider } from "../VaultProvider";
 
 const useWallet = vi.fn();
 vi.mock("../../hooks/useWallet", () => ({ useWallet: () => useWallet() }));
@@ -16,7 +15,11 @@ function Probe() {
 test("provides an injected client and seeds it when connected", async () => {
   useWallet.mockReturnValue({ address: "GUSER" });
   const client = new MockVaultClient();
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
   expect(screen.getByText("client:yes")).toBeInTheDocument();
   await waitFor(async () => expect(await client.balanceOf("GUSER", "USD")).toBeGreaterThan(0n));
 });
@@ -66,8 +69,12 @@ afterEach(() => {
 test("env set: the client is real, nothing is seeded, and no request leaves on mount", async () => {
   const fetchSpy = vi.fn();
   vi.stubGlobal("fetch", fetchSpy);
-  const { VaultProvider: LiveProvider, useVault: useLiveVault, MockVaultClient: Mock, RealVaultClient: Real } =
-    await importLive();
+  const {
+    VaultProvider: LiveProvider,
+    useVault: useLiveVault,
+    MockVaultClient: Mock,
+    RealVaultClient: Real,
+  } = await importLive();
   useWallet.mockReturnValue({ address: "GUSER", signTransaction: async (x: string) => x });
 
   const seen: unknown[] = [];
@@ -75,7 +82,11 @@ test("env set: the client is real, nothing is seeded, and no request leaves on m
     seen.push(useLiveVault().client);
     return null;
   }
-  render(<LiveProvider><Peek /></LiveProvider>);
+  render(
+    <LiveProvider>
+      <Peek />
+    </LiveProvider>,
+  );
 
   expect(seen.at(-1)).toBeInstanceOf(Real);
   expect(seen.at(-1)).not.toBeInstanceOf(Mock);
@@ -94,11 +105,19 @@ test("env set: switching the connected address rebuilds the real client (KTD3)",
     seen.push(useLiveVault().client);
     return null;
   }
-  const { rerender } = render(<LiveProvider><Peek /></LiveProvider>);
+  const { rerender } = render(
+    <LiveProvider>
+      <Peek />
+    </LiveProvider>,
+  );
   const first = seen.at(-1);
 
   useWallet.mockReturnValue({ address: "GTWO", signTransaction: async (x: string) => x });
-  rerender(<LiveProvider><Peek /></LiveProvider>);
+  rerender(
+    <LiveProvider>
+      <Peek />
+    </LiveProvider>,
+  );
 
   // The real client assembles writes against the connected account as source — a stale one would sign
   // for the previous address.
@@ -108,7 +127,11 @@ test("env set: switching the connected address rebuilds the real client (KTD3)",
 test("env unset (the default): the client is the mock and it gets seeded", async () => {
   useWallet.mockReturnValue({ address: "GUSER" });
   const client = new MockVaultClient();
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
 
   expect(screen.getByText("client:yes")).toBeInTheDocument();
   await waitFor(async () => expect(await client.balanceOf("GUSER", "USD")).toBeGreaterThan(0n));

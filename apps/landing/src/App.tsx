@@ -127,7 +127,7 @@ function scrollToSection(id: string) {
 }
 
 /** One-shot in-view flag; drives the shared `.anim-stagger` entrance. */
-function useInView<T extends HTMLElement>(): [RefObject<T>, boolean] {
+function useInView<T extends HTMLElement>(): [RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
   const [inView, setInView] = useState(false);
 

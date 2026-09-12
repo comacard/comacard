@@ -31,7 +31,9 @@ test("readOnly is a state display — disabled, announced as such, and onChange 
 });
 
 test("aria-checked tracks `checked` in both modes", () => {
-  const { rerender } = render(<Switch checked={false} label="Auto reinvest rewards" onChange={vi.fn()} />);
+  const { rerender } = render(
+    <Switch checked={false} label="Auto reinvest rewards" onChange={vi.fn()} />,
+  );
   expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
 
   rerender(<Switch checked label="Auto reinvest rewards" onChange={vi.fn()} />);

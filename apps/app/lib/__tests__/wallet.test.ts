@@ -78,7 +78,7 @@ test("connect() returns the selected wallet's address and product name", async (
   // The kit mock must now also expose `selectedModule`.
   await expect(connect()).resolves.toEqual({ address: "GABC123", name: "Freighter" });
   expect(init).toHaveBeenCalledWith(
-    expect.objectContaining({ selectedWalletId: "freighter", network: "TESTNET" })
+    expect.objectContaining({ selectedWalletId: "freighter", network: "TESTNET" }),
   );
   expect(authModal).toHaveBeenCalled();
 });
@@ -110,7 +110,7 @@ test("disconnect() resets the lazy-init guard so the next connect() re-initializ
 test("getKit() throws outside the browser", async () => {
   const originalWindow = globalThis.window;
   // @ts-expect-error simulating server environment
-  delete globalThis.window;
+  globalThis.window = undefined;
   try {
     const { getKit } = await import("../wallet-real");
     expect(() => getKit()).toThrow(/client-only/i);

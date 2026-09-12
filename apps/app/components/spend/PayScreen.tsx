@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { useSwitchChain } from "wagmi";
-import { Button, PendingLabel, TransactionStatus } from "../ui";
-import { SubHeader } from "../ui/SubHeader";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { CREDITCOIN_CHAIN_ID, explorerTx } from "../../lib/comacard/contracts";
+import { Button, PendingLabel, TransactionStatus } from "../ui";
+import { SubHeader } from "../ui/SubHeader";
 
 /**
  * Repaying the card balance.

@@ -1,9 +1,9 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { query, WALLET_TRANSACTIONS, type WalletTransactionsResult } from "../lib/comacard/graphql";
-import { CREDITCOIN_CHAIN_ID, explorerTx, SEPOLIA_CHAIN_ID } from "../lib/comacard/contracts";
 import { relativeTime } from "../lib/activity/map";
+import { CREDITCOIN_CHAIN_ID, explorerTx, SEPOLIA_CHAIN_ID } from "../lib/comacard/contracts";
+import { query, WALLET_TRANSACTIONS, type WalletTransactionsResult } from "../lib/comacard/graphql";
 import type { ActivityItem } from "../lib/vault/data";
 import { useWallet } from "./useWallet";
 

@@ -137,7 +137,9 @@ describe("apiGet", () => {
     [504, "timeout"],
   ])("preserves the shaped error code on a %i", async (status, code) => {
     const { apiGet } = await loadClient(BASE);
-    fetchMock.mockResolvedValue(jsonResponse({ error: { code, message: "FX read failed" } }, status));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: { code, message: "FX read failed" } }, status),
+    );
 
     const result = await apiGet("/holdings", { depositor: "GABC" });
 

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { apiEnabled } from "../lib/api/config";
 import { apiGet } from "../lib/api/client";
+import { apiEnabled } from "../lib/api/config";
 import type { FundingOptions } from "../lib/api/types";
 import { STABLECOINS } from "../lib/vault/data";
 

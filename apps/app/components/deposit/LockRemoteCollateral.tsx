@@ -1,13 +1,17 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatUnits, parseUnits, type Address } from "viem";
+import { useState } from "react";
+import { type Address, formatUnits, parseUnits } from "viem";
 import { useConfig, useSwitchChain, useWriteContract } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
+import { useCreditLine } from "../../hooks/useCreditLine";
+import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteCollateral";
+import { erc20Abi, wormholeCoreAbi, wormholeVaultAbi } from "../../lib/comacard/contracts";
+import { collateralValue, limitFrom } from "../../lib/comacard/credit";
 import {
   AssetIcon,
-  badgeForSymbol,
   Button,
+  badgeForSymbol,
   CoinBadge,
   Keypad,
   PendingLabel,
@@ -15,10 +19,6 @@ import {
   TransactionStatus,
 } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
-import { useCreditLine } from "../../hooks/useCreditLine";
-import { useRemoteCollateral, type RemoteAsset } from "../../hooks/useRemoteCollateral";
-import { collateralValue, limitFrom } from "../../lib/comacard/credit";
-import { erc20Abi, wormholeCoreAbi, wormholeVaultAbi } from "../../lib/comacard/contracts";
 
 /**
  * Locking collateral on a chain Attestcoin cannot reach.
@@ -41,7 +41,9 @@ import { erc20Abi, wormholeCoreAbi, wormholeVaultAbi } from "../../lib/comacard/
  */
 
 const fmt = (value: bigint, decimals: number, maxDigits = 6): string =>
-  Number(formatUnits(value, decimals)).toLocaleString("en-US", { maximumFractionDigits: maxDigits });
+  Number(formatUnits(value, decimals)).toLocaleString("en-US", {
+    maximumFractionDigits: maxDigits,
+  });
 
 function parseAmount(text: string, decimals: number): bigint {
   try {
@@ -130,7 +132,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
           chainId,
         });
       } else {
-        const token = (`0x${asset.token.slice(26)}`) as Address;
+        const token = `0x${asset.token.slice(26)}` as Address;
         const allowance = await readContract(config, {
           address: token,
           abi: erc20Abi,

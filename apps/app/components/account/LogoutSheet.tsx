@@ -18,7 +18,11 @@ export function LogoutSheet({
         Your funds stay in the vault. Reconnect your wallet any time to see them again.
       </p>
       <Button onClick={onConfirm}>Yes, log out</Button>
-      <button onClick={onClose} className="mt-3 h-12 w-full text-[15px] font-semibold text-muted">
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-3 h-12 w-full text-[15px] font-semibold text-muted"
+      >
         Cancel
       </button>
     </BottomSheet>

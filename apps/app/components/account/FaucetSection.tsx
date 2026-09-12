@@ -1,16 +1,16 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { TextMorph } from "torph/react";
 import { formatUnits } from "viem";
-import { badgeForSymbol, CoinBadge, Spinner, SuccessCheck } from "../ui";
-import type { TokenSym } from "../ui/CoinBadge";
-import { useQueryClient } from "@tanstack/react-query";
 import { useConfig, useSwitchChain } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
+import { badgeForSymbol, CoinBadge, Spinner, SuccessCheck } from "../ui";
+import type { TokenSym } from "../ui/CoinBadge";
 
 /**
  * Where testnet funds come from, and the two kinds are not the same kind of thing.
@@ -184,7 +184,9 @@ export function FaucetSection({ compact = false }: { compact?: boolean }) {
         {EXTERNAL.map((row) => (
           <div key={row.token} className={rowClass}>
             <CoinBadge token={row.token} size={compact ? 28 : 40} />
-            <div className={`min-w-0 flex-1 ${compact ? "text-sm font-semibold" : "font-semibold"}`}>
+            <div
+              className={`min-w-0 flex-1 ${compact ? "text-sm font-semibold" : "font-semibold"}`}
+            >
               {row.name}
             </div>
             <a href={row.href} target="_blank" rel="noreferrer" className={pill}>

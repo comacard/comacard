@@ -2,21 +2,21 @@
 import { useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
-import { Drawer } from "../ui/Drawer";
+import { type CollateralAsset, useCollateral } from "../../hooks/useCollateral";
+import { useCreditLine } from "../../hooks/useCreditLine";
+import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
+import { explorerTx, SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
+import { collateralValue, limitFrom } from "../../lib/comacard/credit";
 import {
   AssetIcon,
-  badgeForSymbol,
   Button,
+  badgeForSymbol,
   CoinBadge,
-  Skeleton,
   PendingLabel,
+  Skeleton,
   TransactionStatus,
 } from "../ui";
-import { useCollateral, type CollateralAsset } from "../../hooks/useCollateral";
-import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
-import { useCreditLine } from "../../hooks/useCreditLine";
-import { collateralValue, limitFrom } from "../../lib/comacard/credit";
-import { explorerTx, SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
+import { Drawer } from "../ui/Drawer";
 
 /**
  * The desktop half of the deposit flow, as two in-drawer steps: pick an asset, then an amount.

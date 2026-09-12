@@ -38,7 +38,10 @@ export function Identicon({ address, size = 90 }: { address: string; size?: numb
       className="mx-auto mb-3.5 block overflow-hidden rounded-full bg-[#e9e9e6]"
     >
       {cells.map((on, i) =>
-        on ? <rect key={i} x={i % SIZE} y={Math.floor(i / SIZE)} width="1" height="1" fill="#1a1a1a" /> : null,
+        on ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length literal array, the index is the identity
+          <rect key={i} x={i % SIZE} y={Math.floor(i / SIZE)} width="1" height="1" fill="#1a1a1a" />
+        ) : null,
       )}
     </svg>
   );

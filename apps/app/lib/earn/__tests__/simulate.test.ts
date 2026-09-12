@@ -29,16 +29,24 @@ test("the module is pure: it reaches for no fixture at all (one swappable APY so
 });
 
 test("exposes no poolId — the user picks a currency, the agent picks the pool", () => {
-  expect(simulate({ currency: "EUR", amount: 1000, periodDays: 30, apy: EUR_APY })).not.toHaveProperty("poolId");
+  expect(
+    simulate({ currency: "EUR", amount: 1000, periodDays: 30, apy: EUR_APY }),
+  ).not.toHaveProperty("poolId");
 });
 
 test("a zero-day horizon earns nothing", () => {
-  expect(simulate({ currency: "MXN", amount: 5000, periodDays: 0, apy: 5.57 }).projectedEarnings).toBe(0);
+  expect(
+    simulate({ currency: "MXN", amount: 5000, periodDays: 0, apy: 5.57 }).projectedEarnings,
+  ).toBe(0);
 });
 
 test("negative input throws, like the backend", () => {
-  expect(() => simulate({ currency: "USD", amount: -1, periodDays: 30, apy: USD_APY })).toThrow(/non-negative/);
-  expect(() => simulate({ currency: "USD", amount: 1, periodDays: -30, apy: USD_APY })).toThrow(/non-negative/);
+  expect(() => simulate({ currency: "USD", amount: -1, periodDays: 30, apy: USD_APY })).toThrow(
+    /non-negative/,
+  );
+  expect(() => simulate({ currency: "USD", amount: 1, periodDays: -30, apy: USD_APY })).toThrow(
+    /non-negative/,
+  );
 });
 
 test("the curve rises monotonically and ends at the projected earnings", () => {

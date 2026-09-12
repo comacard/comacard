@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
-import { act, renderHook, waitFor } from "@testing-library/react";
 import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { SEED_POOLS, seedVault } from "../../lib/vault/seed";
 import { VaultProvider } from "../../providers/VaultProvider";
-import { seedVault, SEED_POOLS } from "../../lib/vault/seed";
 import { usePendingExit } from "../usePendingExit";
 import { useVault } from "../useVault";
 
@@ -32,10 +32,9 @@ test("returns null once the frozen bucket is unfrozen (settled, not initial stat
   const wrapper = ({ children }: { children: ReactNode }) => (
     <VaultProvider client={client}>{children}</VaultProvider>
   );
-  const { result } = renderHook(
-    () => ({ view: usePendingExit(), bump: useVault().bump }),
-    { wrapper },
-  );
+  const { result } = renderHook(() => ({ view: usePendingExit(), bump: useVault().bump }), {
+    wrapper,
+  });
 
   // Prove the effect actually ran and observed the frozen bucket first.
   await waitFor(() => expect(result.current.view?.currency).toBe("EUR"));

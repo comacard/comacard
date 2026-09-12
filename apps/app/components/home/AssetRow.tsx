@@ -1,6 +1,6 @@
-import { CoinBadge } from "../ui";
 import type { WalletAsset } from "../../hooks/useWalletAssets";
 import { toNumber } from "../../hooks/useWalletAssets";
+import { CoinBadge } from "../ui";
 
 /**
  * One wallet balance, in the same shape as the bucket rows it replaced: logo, name, a chip naming

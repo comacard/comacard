@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -55,6 +55,8 @@ export function Drawer({
 
   return createPortal(
     <>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: presentational scrim; the keyboard path out is Escape, handled above */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: same */}
       <div
         data-testid="drawer-scrim"
         onClick={onClose}

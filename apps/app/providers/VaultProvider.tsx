@@ -1,10 +1,10 @@
 "use client";
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { MockVaultClient, type VaultClient } from "@sorosense/vault-client";
+import { createContext, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "../hooks/useWallet";
+import { E2E, installE2EBridge } from "../lib/e2e/bridge";
 import { createVaultClient, isIntegrationEnv } from "../lib/vault/client";
 import { seedVault } from "../lib/vault/seed";
-import { E2E, installE2EBridge } from "../lib/e2e/bridge";
 
 // The context speaks the seam type, not the mock's: consumers only ever call `VaultClient` methods,
 // and the resolved client becomes config-selected (mock by default, real when the contract env is
@@ -31,8 +31,7 @@ export function VaultProvider({ children, client }: { children: ReactNode; clien
   // write would be assembled against the wrong source. The mock keeps its module singleton — one
   // in-memory vault shared across screens, which every test and the e2e bridge depend on.
   const configured = useMemo(
-    () =>
-      isIntegrationEnv() ? createVaultClient({ address, signTransaction }) : getSingleton(),
+    () => (isIntegrationEnv() ? createVaultClient({ address, signTransaction }) : getSingleton()),
     [address, signTransaction],
   );
   // An injected client (tests) always wins; `configured` is stable per address, so this needs no ref.
@@ -55,7 +54,9 @@ export function VaultProvider({ children, client }: { children: ReactNode; clien
     void seedVault(mock, address).then(() => {
       if (!cancelled) setVersion((n) => n + 1);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [address, resolvedClient]);
 
   useEffect(() => {
@@ -64,5 +65,9 @@ export function VaultProvider({ children, client }: { children: ReactNode; clien
     if (resolvedClient instanceof MockVaultClient) installE2EBridge(resolvedClient, bump);
   }, [resolvedClient, bump]);
 
-  return <VaultContext.Provider value={{ client: resolvedClient, version, bump }}>{children}</VaultContext.Provider>;
+  return (
+    <VaultContext.Provider value={{ client: resolvedClient, version, bump }}>
+      {children}
+    </VaultContext.Provider>
+  );
 }
