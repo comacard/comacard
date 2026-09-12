@@ -6,6 +6,7 @@ import { useConfig, useSwitchChain, useWriteContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteCollateral";
+import { useWallet } from "../../hooks/useWallet";
 import {
   crossingTime,
   erc20Abi,
@@ -66,6 +67,12 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   const router = useRouter();
   const config = useConfig();
   const { assets, loading } = useRemoteCollateral();
+  // `WalletProvider` is the single answer to "who is connected" (apps/app/CLAUDE.md). This screen
+  // was asking `config.connectors[0]` instead, which is the first REGISTERED connector rather than
+  // the active one — it answered with no accounts, `who` came out undefined, and every read that
+  // took it threw `Address "undefined" is invalid` before the wallet was ever opened.
+  const { address } = useWallet();
+  const who = address as Address | undefined;
   const { score } = useCreditLine();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
   const { writeContractAsync, data: hash, error, reset } = useWriteContract();
@@ -117,13 +124,12 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   const chainId = asset.evmChainId;
 
   const onLock = async () => {
-    if (busy || entered <= 0n || exceeded) return;
+    if (busy || entered <= 0n || exceeded || !who) return;
     setBusy(true);
     setFailed(null);
     try {
       await switchChainAsync({ chainId });
 
-      const who = (await config.connectors[0]?.getAccounts().then((a) => a[0])) as Address;
       // The figure the lock is supposed to move, read before and after. `nativeBalanceOf` rather
       // than `balanceOf`: the vault holds native and token balances in separate maps.
       const heldByVault = async (): Promise<bigint> =>

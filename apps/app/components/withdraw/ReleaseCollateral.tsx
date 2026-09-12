@@ -8,6 +8,7 @@ import { useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { useRemoteWithdrawals } from "../../hooks/useRemoteWithdrawals";
+import { useWallet } from "../../hooks/useWallet";
 import {
   CREDITCOIN_CHAIN_ID,
   NATIVE_SYMBOL,
@@ -93,6 +94,10 @@ export function ReleaseCollateral({ id }: { id: string }) {
   // between asking and claiming does not erase every trace of it but a limit that dropped.
   const { items: withdrawals, refresh: refreshWithdrawals } = useRemoteWithdrawals();
   const { totalValue } = useCollateral();
+  // Same as the lock screen: the provider, never `config.connectors[0]`, which is the first
+  // registered connector rather than the connected one.
+  const { address } = useWallet();
+  const who = address as Address | undefined;
   const { drawn, score } = useCreditLine();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
   const { writeContractAsync, data: hash, error, reset } = useWriteContract();
@@ -193,12 +198,11 @@ export function ReleaseCollateral({ id }: { id: string }) {
   const onClaim = async () => {
     const chainId = asset.evmChainId;
     const vault = asset.vault;
-    if (busy || !chainId || !vault || asset.releasable <= 0n) return;
+    if (busy || !chainId || !vault || !who || asset.releasable <= 0n) return;
     setBusy(true);
     setFailed(null);
     try {
       await switchChainAsync({ chainId });
-      const who = (await config.connectors[0]?.getAccounts().then((a) => a[0])) as Address;
       const token = `0x${asset.token.slice(26)}` as Address;
 
       const sent = asset.native

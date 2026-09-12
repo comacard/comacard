@@ -47,6 +47,9 @@ vi.mock("../../../hooks/useCollateral", () => ({
 }));
 const creditLine = vi.fn();
 vi.mock("../../../hooks/useCreditLine", () => ({ useCreditLine: () => creditLine() }));
+vi.mock("../../../hooks/useWallet", () => ({
+  useWallet: () => ({ address: "0x56A2950ddE6B1040d1DCC4b4C4Fc314Bd56eFB0E", isConnected: true }),
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), back: vi.fn() }) }));
 vi.mock("wagmi", () => ({
   useConfig: () => ({ connectors: [] }),
