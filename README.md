@@ -40,8 +40,10 @@ come off these contracts, not out of a mock.
 | Avalanche Fuji | [`0x7D68B54a…8a1b`](https://testnet.snowtrace.io/address/0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b) |
 
 Each accepts its chain's native coin, and the two with a canonical USDC accept
-that too. All five have taken a real deposit. Adding another is a deploy and two
-calls.
+that too. All five have taken a real deposit, and all five give it back without
+an operator: a `ReleaseRelay` beside each vault holds the role a person used to,
+and acts only on a message Creditcoin signed. Adding another chain is a deploy
+and two calls.
 
 **Services** — on Railway
 
@@ -85,10 +87,10 @@ service keeps its SQLite state on a volume at `/data`. Both build from the
 
 **Indexer** — both chains in one GraphQL API, hosted on Envio Cloud
 
-    https://indexer.dev.hyperindex.xyz/5d01570/v1/graphql
+    https://indexer.dev.hyperindex.xyz/24e4861/v1/graphql
 
 Browse it with a schema sidebar and autocomplete, no credentials needed:
-[Apollo Sandbox](https://studio.apollographql.com/sandbox/explorer?endpoint=https%3A%2F%2Findexer.dev.hyperindex.xyz%2F5d01570%2Fv1%2Fgraphql)
+[Apollo Sandbox](https://studio.apollographql.com/sandbox/explorer?endpoint=https%3A%2F%2Findexer.dev.hyperindex.xyz%2F24e4861%2Fv1%2Fgraphql)
 
 Sepolia syncs through HyperSync; Creditcoin CC3 is not on the supported list so
 it reads over plain RPC, which the same indexer handles without noticing.
