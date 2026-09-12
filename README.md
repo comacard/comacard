@@ -27,6 +27,18 @@ come off these contracts, not out of a mock.
 | --- | --- |
 | ASCCreditLine | [`0x18052272…E906`](https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906) |
 | CtcStakingAdapter | [`0xA94218Db…7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
+| WormholeCollateralHub | [`0x9D77f5E1…437f`](https://creditcoin-testnet.blockscout.com/address/0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f) |
+
+**Base Sepolia and Arbitrum Sepolia** — collateral from chains Attestcoin
+cannot reach, carried by Wormhole
+
+| | |
+| --- | --- |
+| WormholeVault (Base) | [`0x7439dff6…6Daf`](https://sepolia.basescan.org/address/0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf) |
+| WormholeVault (Arbitrum) | [`0x029ae4ff…7F30`](https://sepolia.arbiscan.io/address/0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30) |
+
+Each accepts the chain's native ETH and its canonical USDC. Adding another chain
+is a deploy and two calls.
 
 **Services** — on Railway
 
@@ -100,8 +112,13 @@ Ethereum Mainnet ──┐
   (Aave, Lido,     ├──▶ inclusion proof ──▶ ASCCreditLine ──▶ draw / repay
    ERC20 events)   │   (Merkle +            derives limit
                    │    continuity)         tracks draws
-Sepolia ───────────┘
-  SourceVault
+Sepolia ───────────┘                            ▲
+  SourceVault                                   │
+  collateral locked                             │
+                                                │
+Base Sepolia ──────┐                            │
+Arbitrum Sepolia ──┴──▶ Wormhole guardians ──▶ WormholeCollateralHub
+  WormholeVault         (signed message)        credits the collateral
   collateral locked
 ```
 
@@ -109,6 +126,13 @@ Attestcoin proves **transactions and their event logs** — never balances. Ever
 input to a credit decision is therefore an observed event, which is why the
 score is built from behaviour rather than net worth. That constraint is what
 makes this a credit product rather than a wallet.
+
+Attestcoin reaches Ethereum and Sepolia, and nothing else. A card that only
+takes deposits from one chain is not much of a card, so every other chain
+arrives through the one Wormhole component Creditcoin actually has: the Core
+Contract. No token bridge, no relayer, no wrapped asset — the deposit stays in a
+vault on its own chain and only the message crosses, which is the same promise
+the Attestcoin path makes.
 
 ### What is real, and what is not
 
@@ -118,6 +142,7 @@ makes this a credit product rather than a wallet.
 | Attestcoin verification | Real — full Merkle + continuity proofs |
 | Collateral vault | Real contract on Sepolia, testnet value |
 | Credit line and draws | Real transactions on Creditcoin CC3 testnet |
+| Cross-chain deposits | Real Wormhole guardian signatures, finalized consistency |
 
 Token values are testnet values; the cryptography and the state transitions are
 not simulated.
@@ -132,7 +157,8 @@ apps/
   web/        Cardholder dashboard
   landing/    Marketing site
   indexer/    Oracle query worker: source events → proofs → Creditcoin
-contracts/    Foundry — SourceVault (Sepolia), ASCCreditLine (Creditcoin)
+contracts/    Foundry — SourceVault (Sepolia), ASCCreditLine (Creditcoin),
+              WormholeVault (everywhere else)
 packages/
   attestcoin/ Attestcoin chain constants and proof types
   core/       Domain model — money, attested events, scoring
@@ -163,7 +189,12 @@ forge build && forge test
 Facts verified against `@gluwa/asc-contracts@0.2.1` and the Attestcoin docs:
 
 - **Source chains are limited.** CC3 testnet attests Ethereum Sepolia
-  (`chainKey 1`) and Ethereum Mainnet (`chainKey 3`). Nothing else.
+  (`chainKey 1`) and Ethereum Mainnet (`chainKey 3`). Nothing else — which is
+  why anywhere else arrives by Wormhole.
+- **Creditcoin has Wormhole Core and nothing more.** No token bridge, no
+  automatic relayer, so fetching a signed message and delivering it is our own
+  job. The vaults publish at finalized consistency, so an L2 deposit waits on
+  Ethereum finality: roughly fifteen minutes before the guardians sign.
 - **No state reads.** `EvmV1Decoder` exposes transaction fields, receipt fields
   and logs. There is no storage or account proof, so balances and silently
   accruing yield (Lido rebases, Aave `liquidityIndex`) cannot be attested.

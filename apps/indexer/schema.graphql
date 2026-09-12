@@ -154,3 +154,70 @@ type TokenPosition {
   pendingRelease: BigInt!
   lastActiveAt: BigInt!
 }
+
+"""
+An asset the credit line accepts from a chain Attestcoin cannot reach.
+
+Keyed by chain and address together — USDC on Base and USDC on Arbitrum are
+different tokens in different vaults, and a depeg on one says nothing about the
+other. The id is the contract's own assetId, keccak256(chainId ++ token).
+"""
+type RemoteAsset {
+  id: ID! # assetId
+  """
+  Wormhole chain id: 10004 Base Sepolia, 10003 Arbitrum Sepolia.
+  """
+  wormholeChainId: Int!
+  """
+  Token address on its own chain, or the zero address for the native coin.
+  """
+  token: String!
+  decimals: Int!
+  """
+  Credit-asset wei per one whole unit, 18dp. Operator-fed on testnet.
+  """
+  price: BigInt!
+  listedAt: BigInt!
+  pricedAt: BigInt!
+  deposits: [RemoteDeposit!]! @derivedFrom(field: "asset")
+}
+
+"""
+One deposit on a remote chain, from the moment it is locked to the moment it is
+credited on Creditcoin.
+
+`creditedAt` is null while the guardians are still signing. That gap is not a
+bug and an app should say so: the vaults publish at finalized consistency, so an
+L2 deposit waits on Ethereum finality, roughly fifteen minutes.
+"""
+type RemoteDeposit {
+  id: ID! # chainId-sequence
+  account: String!
+  asset: RemoteAsset!
+  amount: BigInt!
+  """
+  Wormhole message sequence. What the relayer needs to fetch the VAA.
+  """
+  sequence: BigInt!
+  lockedAt: BigInt!
+  lockBlock: BigInt!
+  lockTxHash: String!
+  creditedAt: BigInt
+  creditTxHash: String
+  vaaHash: String
+}
+
+"""
+What one account holds on one remote asset. `locked` is what the vault on that
+chain is holding; `credited` is what Creditcoin has actually counted toward a
+limit. They differ while a message is in flight.
+"""
+type RemotePosition {
+  id: ID! # account-assetId
+  account: String!
+  asset: RemoteAsset!
+  locked: BigInt!
+  credited: BigInt!
+  releasable: BigInt!
+  lastActiveAt: BigInt!
+}

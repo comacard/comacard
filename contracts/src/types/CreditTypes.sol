@@ -64,4 +64,10 @@ library CreditErrors {
     error TokenNotListed(address token);
     error TokenAlreadyListed(address token);
     error DecimalsOutOfRange(uint8 decimals);
+    error UnknownPeer(uint16 chainId, bytes32 emitter);
+    error VaaAlreadyConsumed(bytes32 hash);
+    error AssetNotListed(bytes32 assetId);
+    error AssetAlreadyListed(bytes32 assetId);
+    error DecimalsMismatch(uint8 expected, uint8 actual);
+    error VaaInvalid(string reason);
 }

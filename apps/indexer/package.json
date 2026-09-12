@@ -13,7 +13,8 @@
     "test:live": "envio codegen && INDEXER_LIVE_TEST=1 bun test"
   },
   "dependencies": {
-    "envio": "3.10.0"
+    "envio": "3.10.0",
+    "viem": "^2.56.3"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

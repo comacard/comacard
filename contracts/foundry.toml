@@ -19,6 +19,13 @@ via_ir = true
 # env vars to point at a private node.
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 creditcoin = "https://rpc.cc3-testnet.creditcoin.network"
+# Every chain a WormholeVault can run on. Testnets only — Comacard does not
+# touch mainnet money.
+base_sepolia = "https://sepolia.base.org"
+arbitrum_sepolia = "https://sepolia-rollup.arbitrum.io/rpc"
+optimism_sepolia = "https://sepolia.optimism.io"
+bsc_testnet = "https://bsc-testnet-rpc.publicnode.com"
+avalanche_fuji = "https://api.avax-test.network/ext/bc/C/rpc"
 
 [fmt]
 line_length = 100

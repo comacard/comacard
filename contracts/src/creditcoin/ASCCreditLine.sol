@@ -9,6 +9,7 @@ import {
 import {ASCBase} from "@gluwa/asc-contracts/contracts/readability/ASCBase.sol";
 
 import {Governed} from "../governance/Governed.sol";
+import {IRemoteCollateral} from "../interfaces/IRemoteCollateral.sol";
 import {ICreditLine} from "../interfaces/ICreditLine.sol";
 import {IYieldAdapter} from "../interfaces/IYieldAdapter.sol";
 import {CreditScoring} from "../libraries/CreditScoring.sol";
@@ -91,6 +92,16 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     /// @notice Token collateral already debited ahead of its source-chain release.
     mapping(address => mapping(address => uint256)) public tokenPendingRelease;
 
+    /// @notice Where collateral deposited on chains Attestcoin cannot reach is
+    ///         accounted for. Zero until one is deployed.
+    /// @dev Attestcoin proves transactions from Ethereum and Sepolia only. Every
+    ///      other chain needs a different carrier, and the only one Creditcoin
+    ///      has is Wormhole. That lives in its own contract rather than here for
+    ///      a blunt reason: this one is already within a kilobyte of the 24KB
+    ///      deploy limit, and a credit line that cannot be upgraded is worse than
+    ///      one that delegates.
+    address public remoteCollateralHub;
+
     /// @notice Listing more than this would make every limit check loop too far.
     uint256 internal constant MAX_TOKENS = 16;
 
@@ -123,6 +134,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     ///      what a borrower may draw.
     event ScoreChanged(address indexed account, uint256 score, uint256 limit, uint256 available);
     event LiquidityDeployed(uint256 amount);
+    event RemoteCollateralHubChanged(address indexed from, address indexed to);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -253,6 +265,22 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
             TokenConfig storage cfg = tokenConfig[token];
             value += (held * cfg.price) / (10 ** cfg.decimals);
         }
+        address hub = remoteCollateralHub;
+        if (hub != address(0)) value += IRemoteCollateral(hub).valueOf(who);
+    }
+
+    /// @notice Point the line at the hub that accounts for cross-chain deposits.
+    function setRemoteCollateralHub(address hub) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        emit RemoteCollateralHubChanged(remoteCollateralHub, hub);
+        remoteCollateralHub = hub;
+    }
+
+    /// @notice Re-emit an account's derived state.
+    /// @dev Permissionless: it publishes what anyone can already compute from
+    ///      public getters. The hub calls it after crediting a deposit so that
+    ///      ScoreChanged stays the one thing indexers have to follow.
+    function refreshScore(address account) external {
+        _publishScore(account);
     }
 
     /// @notice Price one whole unit of the collateral asset in the credit asset.
