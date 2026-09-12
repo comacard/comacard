@@ -61,10 +61,12 @@ export function useCreditHistory(): {
         wallet: (address as string).toLowerCase(),
         limit: 100,
       });
-      // The client returns a tagged result rather than throwing. An unreachable indexer is an empty
-      // record here, which is also what a wallet that has never borrowed looks like — and that is
-      // the honest rendering either way, since neither has a history to draw.
-      if (!result.ok) return [];
+      // The client returns a tagged result rather than throwing, and this used to turn a failed read
+      // into an empty array. It is not: "no history" and "could not read the history" are different
+      // answers, and collapsing them made `borrowed` come back as 0 from a dead indexer. The screen
+      // then printed "Spent from your card 0 tCTC" beside a 1 tCTC balance read live off the chain,
+      // and those two cannot both be true. Throwing puts it in `error`, where a caller can tell.
+      if (!result.ok) throw new Error("credit history unavailable");
       const data = result.value;
 
       const borrows: CreditEvent[] = (data.Draw ?? []).map((row: Row) => ({
@@ -89,6 +91,8 @@ export function useCreditHistory(): {
   });
 
   const events = result.data ?? [];
+  // Zeroes only when a read actually came back. Every consumer of these three prints them as a
+  // figure, and a figure derived from nothing is a claim about the account.
   let borrowed = 0n;
   let repaid = 0n;
   let cyclesClosed = 0;

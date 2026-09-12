@@ -68,13 +68,13 @@ function overviewStats({
   limit,
   drawn,
   borrowed,
-  historyLoading,
+  historyUnread,
 }: {
   account: ComacardAccount | null;
   limit: bigint | undefined;
   drawn: bigint | undefined;
   borrowed: bigint;
-  historyLoading: boolean;
+  historyUnread: boolean;
 }): Stat[] {
   const unissued = account !== null && !account.kyc.verified;
   const spendable = account?.card.spendableCtc;
@@ -94,7 +94,7 @@ function overviewStats({
     },
     // What has ever come out of the card, counted from Draw events and never from the wallet: tCTC
     // that arrived from a faucet was never spent here.
-    { label: "Spent from your card", value: historyLoading ? null : ctc(borrowed) },
+    { label: "Spent from your card", value: historyUnread ? null : ctc(borrowed) },
   ];
 }
 
@@ -150,7 +150,7 @@ export function DesktopOverview() {
   const { assets: collateral } = useCollateral();
   const { assets: remoteCollateral } = useRemoteCollateral();
   const { limit, drawn, available } = useCreditLine();
-  const { borrowed, loading: historyLoading } = useCreditHistory();
+  const { borrowed, loading: historyLoading, error: historyError } = useCreditHistory();
   const { assets } = useWalletAssets();
   const { loading: txLoading, items: transactions } = useTransactions();
   const { verify, url: kycUrl, close: closeKyc, starting } = useKycStart();
@@ -167,7 +167,14 @@ export function DesktopOverview() {
   const preview = transactions.slice(0, 8);
   const hasMore = transactions.length > 8;
 
-  const stats = overviewStats({ account, limit, drawn, borrowed, historyLoading });
+  const stats = overviewStats({
+    account,
+    limit,
+    drawn,
+    borrowed,
+    // A dead indexer reports no spending, which is not the same as no spending having happened.
+    historyUnread: historyLoading || historyError,
+  });
 
   return (
     <>

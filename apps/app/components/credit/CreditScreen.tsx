@@ -46,7 +46,7 @@ export function CreditScreen() {
   const nav = useNav();
   const isDesktop = useIsDesktop();
   const { limit, drawn } = useCreditLine();
-  const { events, borrowed, repaid, cyclesClosed, loading } = useCreditHistory();
+  const { events, borrowed, repaid, cyclesClosed, loading, error } = useCreditHistory();
   const [range, setRange] = useState<Range>("Month");
 
   // Read after mount, never during render: a clock read while rendering bakes the server's time
@@ -148,12 +148,25 @@ export function CreditScreen() {
         <Card className="p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-[13px] font-semibold text-muted">Spend</h2>
-            <span className="text-[12.5px] text-muted tabular-nums">
-              {cyclesClosed} {cyclesClosed === 1 ? "cycle" : "cycles"} closed
-            </span>
+            {error ? null : (
+              <span className="text-[12.5px] text-muted tabular-nums">
+                {cyclesClosed} {cyclesClosed === 1 ? "cycle" : "cycles"} closed
+              </span>
+            )}
           </div>
 
-          {hasHistory ? (
+          {error ? (
+            /* The record lives in the indexer, and an indexer that did not answer has not told us
+               there is no record. "Nothing spent yet" would be this screen asserting the one thing
+               it cannot currently see. */
+            <div className="py-7 text-center">
+              <p className="text-[13.5px] font-semibold text-ink">Record unavailable</p>
+              <p className="mt-1 text-[12.5px] text-muted">
+                The indexer did not answer. The limit and balance above are read from the chain and
+                are current.
+              </p>
+            </div>
+          ) : hasHistory ? (
             <>
               <Bars values={series} className="mt-4" />
               <div className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px] text-muted tabular-nums">

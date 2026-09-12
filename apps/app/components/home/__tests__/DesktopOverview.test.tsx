@@ -54,16 +54,8 @@ vi.mock("../../../hooks/useRemoteCollateral", () => ({
     configured: true,
   }),
 }));
-vi.mock("../../../hooks/useCreditHistory", () => ({
-  useCreditHistory: () => ({
-    events: [],
-    borrowed: 0n,
-    repaid: 0n,
-    cyclesClosed: 0,
-    loading: false,
-    error: false,
-  }),
-}));
+const creditHistory = vi.fn();
+vi.mock("../../../hooks/useCreditHistory", () => ({ useCreditHistory: () => creditHistory() }));
 vi.mock("../../../hooks/useWalletAssets", () => ({
   useWalletAssets: () => ({
     loading: false,
@@ -107,6 +99,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   cardAccount.mockReturnValue(VERIFIED);
   creditLine.mockReturnValue({ drawn: 0n, available: 33n });
+  creditHistory.mockReturnValue({
+    events: [],
+    borrowed: 0n,
+    repaid: 0n,
+    cyclesClosed: 0,
+    loading: false,
+    error: false,
+  });
 });
 
 test("names the page and leads with the four figures, not with a card", () => {
@@ -188,4 +188,22 @@ test("an unverified holder is offered verification instead of the actions", asyn
     expect(screen.getByRole("button", { name: /verify identity/i })).toBeInTheDocument(),
   );
   expect(screen.queryByRole("button", { name: "Spend" })).toBeNull();
+});
+
+test("a dead indexer reports no spending as unknown, not as none", () => {
+  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n });
+  creditHistory.mockReturnValue({
+    events: [],
+    borrowed: 0n,
+    repaid: 0n,
+    cyclesClosed: 0,
+    loading: false,
+    error: true,
+  });
+  render(<DesktopOverview />);
+
+  // "Spent from your card 0 tCTC" beside a 1 tCTC balance read live off the chain is a pair of
+  // statements that cannot both hold. The balance is the one that came from a live read.
+  expect(screen.getByText("1 tCTC")).toBeInTheDocument();
+  expect(screen.queryByText("0 tCTC")).toBeNull();
 });

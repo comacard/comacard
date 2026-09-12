@@ -20,18 +20,20 @@ import { useCreditHistory } from "../../hooks/useCreditHistory";
  * **Zero is shown, not hidden.** Hiding it left "50.0000 tCTC" under the collateral row as the only
  * tCTC figure on the screen, and that number is what the collateral is worth, not what was spent.
  * A stated zero is what tells the two apart, so the row that looked like noise was the one doing
- * the work.
+ * the work. That holds for a zero the indexer returned, not for one produced by failing to reach
+ * it — the row disappears then, because it has nothing to report.
  */
 
 const ctc = (value: bigint): string =>
   Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: 4 });
 
 export function SpentTotal({ className = "" }: { className?: string }) {
-  const { borrowed, loading } = useCreditHistory();
+  const { borrowed, loading, error } = useCreditHistory();
 
-  // Only the first read is withheld. An unresolved query is not the same as a zero, and rendering
-  // "0 tCTC" before the answer arrives would state something not yet known.
-  if (loading) return null;
+  // Withheld while unread, and withheld when the read failed. An unresolved query is not a zero,
+  // and neither is an indexer that never answered: "0 tCTC" in either case states something not
+  // known. The stated zero this component exists for is the one that came back from a live read.
+  if (loading || error) return null;
 
   return (
     <div

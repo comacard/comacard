@@ -64,6 +64,23 @@ test("does not net repayments off: this is what was taken, not what is owed", ()
   expect(screen.getByText("1 tCTC")).toBeInTheDocument();
 });
 
+test("withholds the row when the indexer could not be read", () => {
+  history.mockReturnValue({
+    borrowed: 0n,
+    repaid: 0n,
+    cyclesClosed: 0,
+    events: [],
+    loading: false,
+    error: true,
+  });
+  const { container } = render(<SpentTotal />);
+
+  // The zero this row exists to state is one the indexer returned. A zero produced by failing to
+  // reach it is a different thing entirely: it showed "Spent from your card 0 tCTC" next to a
+  // 1 tCTC balance read live off the chain, and both cannot be true.
+  expect(container).toBeEmptyDOMElement();
+});
+
 test("withholds the row until the first read lands", () => {
   history.mockReturnValue({
     borrowed: 0n,
