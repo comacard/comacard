@@ -83,6 +83,16 @@ contract SourceVault is ISourceVault, Governed, ReentrancyGuardUpgradeable {
     /// @notice Clear collateral for withdrawal once the Creditcoin debt is settled.
     /// @dev Replaced by a proof once Attestcoin writability ships, which removes
     ///      the operator from the withdrawal path entirely.
+    /// @dev Sets the allowance, it does not add to it. The operator must pass
+    ///      the borrower's whole `pendingRelease` from the credit line, never
+    ///      the increment of one hold — two holds approved separately would
+    ///      leave the second overwriting the first, and the borrower short by
+    ///      the difference with the collateral already debited on Creditcoin.
+    ///
+    ///      Set rather than add is deliberate here, because a human reconciling
+    ///      against a figure wants the call to be idempotent. `ReleaseRelay`
+    ///      faces the same vault API on the Wormhole side and has the opposite
+    ///      need, so it reads the outstanding allowance and adds to it itself.
     function approveRelease(address account, uint256 amount) external onlyRole(OPERATOR_ROLE) {
         if (amount > balanceOf[account]) revert CreditErrors.InsufficientCollateral();
         releasable[account] = amount;

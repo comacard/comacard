@@ -106,4 +106,35 @@ contract SourceVaultTest is Test {
         }
         assertLe(address(vault).balance, locked);
     }
+
+    /// Pins the semantics rather than the behaviour, because the two vaults
+    /// share this API and need opposite things from it.
+    ///
+    /// A second approval replaces the first; it does not add. An operator who
+    /// approves two holds separately leaves the borrower able to take only the
+    /// later one, with both already debited on Creditcoin. That is survivable
+    /// while a person is reconciling against `pendingRelease` and passing the
+    /// total — and it is exactly the bug that appeared on the Wormhole side the
+    /// moment a contract started calling the same function per event.
+    function test_approveReleaseReplacesRatherThanAccumulates() public {
+        vm.deal(alice, 5 ether);
+        vm.prank(alice);
+        vault.lock{value: 3 ether}();
+
+        vm.startPrank(operator);
+        vault.approveRelease(alice, 1 ether);
+        assertEq(vault.releasable(alice), 1 ether);
+
+        vault.approveRelease(alice, 0.5 ether);
+        // Not 1.5. The operator has to pass the cumulative figure.
+        assertEq(vault.releasable(alice), 0.5 ether);
+
+        vault.approveRelease(alice, 1.5 ether);
+        assertEq(vault.releasable(alice), 1.5 ether);
+        vm.stopPrank();
+
+        vm.prank(alice);
+        vault.unlock(1.5 ether);
+        assertEq(vault.balanceOf(alice), 1.5 ether);
+    }
 }
