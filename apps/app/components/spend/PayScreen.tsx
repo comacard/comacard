@@ -27,6 +27,20 @@ import { SubHeader } from "../ui/SubHeader";
 
 const MIN_CYCLE_SECONDS = 60;
 
+/**
+ * The one repayment revert a person can do something about.
+ *
+ * `RepaymentExceedsDebt(sent, outstanding)` carries both figures, so the screen can say which is
+ * which instead of "transaction failed". It should be unreachable now that `repay` re-reads the
+ * debt before sending, but the contract is the authority and a race is still a race.
+ */
+function explainRepay(message: string): string {
+  if (/RepaymentExceedsDebt/.test(message)) {
+    return "Your balance moved while this was being sent. Nothing was paid — open the screen again and it will settle the new figure.";
+  }
+  return message.split("\n")[0] ?? message;
+}
+
 const fmt = (value: bigint, digits = 4): string =>
   Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: digits });
 
@@ -35,6 +49,9 @@ export function PayScreen() {
   const { drawn, drawnAt, repay, txStatus, hash, error, reset, onCreditcoin } = useCreditLine();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
   const [busy, setBusy] = useState(false);
+  // The chain switch and the fresh debt read both sit outside `useWriteContract`, so their failures
+  // reached `txStatus` as nothing at all.
+  const [failed, setFailed] = useState<string | null>(null);
 
   // Read after mount and ticked, never during render: a clock read while rendering bakes the
   // server's time into the HTML and makes the render impure.
@@ -61,11 +78,14 @@ export function PayScreen() {
   const onPay = async () => {
     if (busy || owed <= 0n || tooSoon) return;
     setBusy(true);
+    setFailed(null);
     try {
       if (!onCreditcoin) await switchChainAsync({ chainId: CREDITCOIN_CHAIN_ID });
-      await repay(owed);
-    } catch {
-      // Surfaced through `txStatus`; caught only to stop an unhandled rejection.
+      // No argument: `repay` re-reads the debt one call before sending. The figure on this screen is
+      // a polled copy, and `repay()` refuses an overpayment rather than refunding it.
+      await repay();
+    } catch (cause) {
+      setFailed(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setBusy(false);
     }
@@ -102,6 +122,9 @@ export function PayScreen() {
         <div className="mt-2 whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] tabular-nums">
           {fmt(owed)} tCTC
         </div>
+        {failed ? (
+          <TransactionStatus status="failed" detail={explainRepay(failed)} className="mt-4" />
+        ) : null}
         {owed > 0n ? (
           <p className="mt-4 max-w-[260px] text-center text-[12.5px] leading-snug text-muted">
             Paying the full balance is what closes the cycle and raises your score. Part of it

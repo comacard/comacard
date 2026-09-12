@@ -218,16 +218,46 @@ export function useCreditLine() {
 
   /** Repay principal. Only a repayment that clears the balance to zero closes a cycle and scores,
    *  so a screen should push "repay everything" rather than a slider. */
+  /**
+   * Settle the balance. Reads the debt fresh and sends exactly that, ignoring what the caller passed.
+   *
+   * `repay()` refuses an overpayment rather than refunding it:
+   *
+   * ```solidity
+   * if (msg.value > outstanding) revert RepaymentExceedsDebt(msg.value, outstanding);
+   * ```
+   *
+   * @FjrREPO lost a transaction to this sending 480 against a debt of 479.026845637583892617. The
+   * figure this screen had was `accountOf`'s, cached by react-query on a poll — right almost always
+   * and wrong exactly when it matters, since a stale-high copy reverts and a stale-low one pays
+   * without closing the cycle, which is the only thing that scores.
+   *
+   * So the value is re-read here, one call before the send. Nothing but this account's own draws can
+   * move it in between, and the caller cannot be holding it open.
+   */
   const repay = useCallback(
-    (value: bigint) =>
-      writeContractAsync({
-        address: addressOf("creditLine"),
+    // No parameter at all, rather than one that is accepted and ignored: a signature that still took
+    // an amount would invite a caller to believe theirs was used.
+    async () => {
+      if (!address) throw new Error("no wallet connected");
+      const line = addressOf("creditLine");
+      const fresh = await readContract(config, {
+        address: line,
+        abi: creditLineAbi,
+        functionName: "accountOf",
+        args: [address],
+        chainId: CREDITCOIN_CHAIN_ID,
+      });
+      if (fresh.drawn === 0n) throw new Error("nothing is owed");
+      return writeContractAsync({
+        address: line,
         abi: creditLineAbi,
         functionName: "repay",
-        value,
+        value: fresh.drawn,
         chainId: CREDITCOIN_CHAIN_ID,
-      }),
-    [writeContractAsync],
+      });
+    },
+    [address, config, writeContractAsync],
   );
 
   // The four stages a person can tell apart, derived once here so no screen has to reassemble them
