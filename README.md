@@ -29,16 +29,19 @@ come off these contracts, not out of a mock.
 | CtcStakingAdapter | [`0xA94218Db…7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
 | WormholeCollateralHub | [`0x9D77f5E1…437f`](https://creditcoin-testnet.blockscout.com/address/0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f) |
 
-**Base Sepolia and Arbitrum Sepolia** — collateral from chains Attestcoin
-cannot reach, carried by Wormhole
+**Five more chains** — collateral Attestcoin cannot reach, carried by Wormhole
 
 | | |
 | --- | --- |
-| WormholeVault (Base) | [`0x7439dff6…6Daf`](https://sepolia.basescan.org/address/0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf) |
-| WormholeVault (Arbitrum) | [`0x029ae4ff…7F30`](https://sepolia.arbiscan.io/address/0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30) |
+| Base Sepolia | [`0x7439dff6…6Daf`](https://sepolia.basescan.org/address/0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf) |
+| Arbitrum Sepolia | [`0x029ae4ff…7F30`](https://sepolia.arbiscan.io/address/0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30) |
+| Optimism Sepolia | [`0xCaBFa324…3e0B`](https://sepolia-optimism.etherscan.io/address/0xCaBFa324576c655D0276647A7f0aF5e779123e0B) |
+| BSC Testnet | [`0x9d8B6852…32d6`](https://testnet.bscscan.com/address/0x9d8B6852705dD7585B3907244d603547a4eA32d6) |
+| Avalanche Fuji | [`0x7D68B54a…8a1b`](https://testnet.snowtrace.io/address/0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b) |
 
-Each accepts the chain's native ETH and its canonical USDC. Adding another chain
-is a deploy and two calls.
+Each accepts its chain's native coin, and the two with a canonical USDC accept
+that too. All five have taken a real deposit. Adding another is a deploy and two
+calls.
 
 **Services** — on Railway
 
@@ -117,8 +120,9 @@ Sepolia ───────────┘                            ▲
   SourceVault                                   │
   collateral locked                             │
                                                 │
-Base Sepolia ──────┐                            │
-Arbitrum Sepolia ──┴──▶ Wormhole guardians ──▶ WormholeCollateralHub
+Base · Arbitrum ───┐                            │
+Optimism · BSC     ├──▶ Wormhole guardians ──▶ WormholeCollateralHub
+Avalanche ─────────┘
   WormholeVault         (signed message)        credits the collateral
   collateral locked
 ```
@@ -194,8 +198,9 @@ Facts verified against `@gluwa/asc-contracts@0.2.1` and the Attestcoin docs:
   why anywhere else arrives by Wormhole.
 - **Creditcoin has Wormhole Core and nothing more.** No token bridge, no
   automatic relayer, so fetching a signed message and delivering it is our own
-  job. The vaults publish at finalized consistency, so an L2 deposit waits on
-  Ethereum finality: roughly fifteen minutes before the guardians sign.
+  job. The vaults publish at finalized consistency, and that is not the same
+  wait everywhere: the L1s sign in under a minute, the L2s take fifteen to
+  twenty because they finalize against Ethereum.
 - **No state reads.** `EvmV1Decoder` exposes transaction fields, receipt fields
   and logs. There is no storage or account proof, so balances and silently
   accruing yield (Lido rebases, Aave `liquidityIndex`) cannot be attested.

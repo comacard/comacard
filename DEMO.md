@@ -11,7 +11,12 @@ kill a recording:
 | Path | Wait | Why |
 | --- | --- | --- |
 | Attestcoin (Sepolia) | 7–9 min | Creditcoin has to attest the block first |
-| Wormhole (Base, Arbitrum) | ~15 min | The vault publishes at finalized, and an L2 finalizes against Ethereum |
+| Wormhole, L1 (BSC, Fuji) | under a minute | The chain finalizes on its own |
+| Wormhole, L2 (Base, Arbitrum, Optimism) | 15–20 min | The vault publishes at finalized, and an L2 finalizes against Ethereum |
+
+Measured, not estimated: 1173s from Base and 1290s from Arbitrum. If you need a
+cross-chain deposit to land live on camera, **use BSC or Fuji** — they are the
+only two fast enough to watch.
 
 So: **lock every piece of collateral before you start recording.** Prove it on
 camera, or prove it beforehand and show the result. Either reads fine; waiting
@@ -203,10 +208,10 @@ competence; being caught reads as the opposite.
   nothing else — no token bridge, no automatic relayer — so somebody has to hand
   the signed message over. The submit call is permissionless, so a borrower can
   do it themselves, but today it is our worker that does.
-- **Two chains are live, not every chain.** Base Sepolia and Arbitrum Sepolia
-  have vaults deployed. The contract is chain-agnostic and adding another is a
-  deploy and two calls, but say "two" rather than "any" unless you have deployed
-  the third.
+- **Five chains are live, not every chain.** Base, Arbitrum and Optimism
+  Sepolia, BSC Testnet and Avalanche Fuji, each with a real deposit through it.
+  The contract is chain-agnostic and adding another is a deploy and two calls,
+  but say "five" rather than "any".
 
 ## If something breaks on camera
 

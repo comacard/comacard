@@ -1,6 +1,6 @@
 # Comacard indexer.
 #
-# Four chains now. Two very different sync paths. Sepolia is on Envio's HyperSync so
+# Seven chains now. Two very different sync paths. Sepolia is on Envio's HyperSync so
 # it syncs in seconds. Creditcoin CC3 is not, so it reads over plain RPC — which
 # is fine here: the chain produces a block every 15 seconds and these contracts
 # were deployed days ago, so there is almost nothing to catch up on.
@@ -101,3 +101,24 @@ chains:
       - name: WormholeVault
         address:
           - 0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30
+
+  - id: 11155420
+    start_block: 48704811
+    contracts:
+      - name: WormholeVault
+        address:
+          - 0xCaBFa324576c655D0276647A7f0aF5e779123e0B
+
+  - id: 97
+    start_block: 130590252
+    contracts:
+      - name: WormholeVault
+        address:
+          - 0x9d8B6852705dD7585B3907244d603547a4eA32d6
+
+  - id: 43113
+    start_block: 58332202
+    contracts:
+      - name: WormholeVault
+        address:
+          - 0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b

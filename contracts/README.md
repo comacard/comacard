@@ -23,6 +23,9 @@ signed message.
 | `WormholeCollateralHub` | Creditcoin CC3 (`102031`) | [`0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f`](https://creditcoin-testnet.blockscout.com/address/0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f) |
 | `WormholeVault` | Base Sepolia (`84532`) | [`0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf`](https://sepolia.basescan.org/address/0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf) |
 | `WormholeVault` | Arbitrum Sepolia (`421614`) | [`0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30`](https://sepolia.arbiscan.io/address/0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30) |
+| `WormholeVault` | Optimism Sepolia (`11155420`) | [`0xCaBFa324576c655D0276647A7f0aF5e779123e0B`](https://sepolia-optimism.etherscan.io/address/0xCaBFa324576c655D0276647A7f0aF5e779123e0B) |
+| `WormholeVault` | BSC Testnet (`97`) | [`0x9d8B6852705dD7585B3907244d603547a4eA32d6`](https://testnet.bscscan.com/address/0x9d8B6852705dD7585B3907244d603547a4eA32d6) |
+| `WormholeVault` | Avalanche Fuji (`43113`) | [`0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b`](https://testnet.snowtrace.io/address/0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b) |
 
 The Creditcoin and Sepolia contracts are UUPS proxies. The vaults are not: one
 is deployed per chain, its job is small, and a proxy on every chain is machinery
@@ -56,12 +59,23 @@ on its own chain and publishes a message saying so. `WormholeCollateralHub`
 reads that message and credits the collateral. The asset itself never crosses,
 which is the same promise the Attestcoin path makes.
 
-| Chain | Wormhole id | Accepted |
-| --- | --- | --- |
-| Base Sepolia | `10004` | ETH (18), [USDC](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) (6) |
-| Arbitrum Sepolia | `10003` | ETH (18), [USDC](https://sepolia.arbiscan.io/address/0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d) (6) |
+| Chain | Wormhole id | Accepted | Priced at |
+| --- | --- | --- | --- |
+| Base Sepolia | `10004` | ETH, [USDC](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) | 1,000 / 1 CTC |
+| Arbitrum Sepolia | `10003` | ETH, [USDC](https://sepolia.arbiscan.io/address/0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d) | 1,000 / 1 CTC |
+| Optimism Sepolia | `10005` | ETH | 1,000 CTC |
+| BSC Testnet | `4` | BNB | 600 CTC |
+| Avalanche Fuji | `6` | AVAX | 25 CTC |
 
 Adding a chain is a deploy and two calls: `setVaultPeer` and `listAsset`.
+
+All five have been exercised with a real deposit. One account's collateral
+currently sums to **57.5 CTC across five chains** — 0.01 ETH on Base, 0.005 on
+Arbitrum, 0.05 BNB on BSC, 0.5 AVAX on Fuji — each valued at its own decimals
+and its own price, on top of what Attestcoin proves from Sepolia.
+
+Finality is not the same everywhere, and it shows. The two L1s signed in under a
+minute; the L2s take fifteen to twenty, because they finalize against Ethereum.
 
 Three checks decide whether a message is ours, and they are what the test suite
 is about:

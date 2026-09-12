@@ -47,6 +47,24 @@ test.each([
     "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
     "0x318a24739129add73aec5a931ba23ca42acf2412bea7b918146866c544c70d80",
   ],
+  [
+    "Optimism Sepolia native",
+    10_005,
+    ZERO,
+    "0xca7ea440ca3a18040ca2ac7d4768afe40b36baf680afa7aac84426e936b00a62",
+  ],
+  [
+    "BSC Testnet native",
+    4,
+    ZERO,
+    "0x32cdb210881fded98093ddd313dbce19f612b2852920c975483e496c37327ba1",
+  ],
+  [
+    "Avalanche Fuji native",
+    6,
+    ZERO,
+    "0x779148837d697f373039dc6055ba9b62794c1f14a8fb48756922bcb991d891f0",
+  ],
 ])("%s matches the id the contract emitted", (_name, chainId, token, expected) => {
   expect(assetId(chainId as number, token as string)).toBe(expected as string);
 });
