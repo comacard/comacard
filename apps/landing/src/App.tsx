@@ -179,6 +179,7 @@ function Reveal({
 function RevealLayer({ image }: { image: string }) {
   const layerRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
   useEffect(() => {
     const el = layerRef.current;
     if (!el) return;
@@ -602,6 +603,7 @@ function SpendSection() {
       </div>
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it */}
       <img
         src="/buy-anything-with-comacard.avif"
         alt="A phone held up to a contactless card reader"
@@ -706,6 +708,7 @@ function FeaturesSection() {
 
             <div className="relative mt-6 aspect-[384/350] rounded-2xl bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it */}
               <img
                 src={pillar.src}
                 alt=""
@@ -826,6 +829,7 @@ function Nav({
       <header className="fixed inset-x-0 top-0 z-[60] flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5 md:px-10">
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it */}
           <img
             src={LOGO_SRC}
             alt=""

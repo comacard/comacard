@@ -49,12 +49,14 @@ export function useAutoCompound(onError?: (message: string) => void): {
     onErrorRef.current = onError;
   });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
   useEffect(() => {
     let cancelled = false;
     const mine = ++gen.current;
     const fresh = () => !cancelled && gen.current === mine;
 
-    (async () => {
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
+    void (async () => {
       if (!address) {
         // No wallet: nothing to read, and nothing known. ON is the seam's default for an unset
         // preference, so it is also the honest placeholder — the surfaces gate on `address` anyway.

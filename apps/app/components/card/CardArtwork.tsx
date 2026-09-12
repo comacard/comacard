@@ -108,7 +108,7 @@ export function CardArtwork({
             Expires
           </span>
           <span className="text-[11px] font-medium tabular-nums text-white/90">
-            {expiry && expiry.trim() ? expiry : "••/••"}
+            {expiry?.trim() ? expiry : "••/••"}
           </span>
         </span>
       </span>

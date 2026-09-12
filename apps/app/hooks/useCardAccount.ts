@@ -37,6 +37,7 @@ export function useCardAccount() {
   // rule asks for and what keeps "no wallet" from flashing through "loading".
   const canFetch = Boolean(hydrated && address && comacardApiEnabled());
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
   useEffect(() => {
     if (!canFetch || !address) return;
     let alive = true;

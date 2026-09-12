@@ -81,6 +81,7 @@ export function useHoldings(): { loading: boolean; holdings: Holding[] | null } 
     return () => clearInterval(id);
   }, [address]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
   useEffect(() => {
     let cancelled = false;
     // Client-only (KTD7): the request lives in the effect, never at module scope.

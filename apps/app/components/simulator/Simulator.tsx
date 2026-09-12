@@ -154,15 +154,15 @@ export function Simulator({
             />
           ))}
         </div>
-        {hv !== undefined && (
+        {hv !== undefined && hover !== null && (
           <div
             className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[125%] whitespace-nowrap rounded-[10px] border border-line bg-white px-2.5 py-1.5 text-[12.5px] font-semibold [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_8px_18px_-10px_rgba(17,19,22,.18)]"
             style={{
-              left: `${((hover! + 0.5) / curve.length) * 100}%`,
+              left: `${((hover + 0.5) / curve.length) * 100}%`,
               top: `${CHART_H * (1 - hv / max)}px`,
             }}
           >
-            {progressLabel(period, hover!, curve.length)} ·{" "}
+            {progressLabel(period, hover, curve.length)} ·{" "}
             <span className="text-pos">+{money(hv, currency)}</span>
           </div>
         )}

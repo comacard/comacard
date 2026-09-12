@@ -241,6 +241,7 @@ function WalletIcon({ kind }: { kind: "metamask" | "walletconnect" | "ledger" | 
   return (
     <span className={`${styles.walletFloat} ${styles[`wallet${kind}`]}`}>
       {/* eslint-disable-next-line @next/next/no-img-element -- static wallet marks must render immediately when the step appears */}
+      {/* biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it */}
       <img src={src} alt="" className={styles.walletIconImage} />
     </span>
   );

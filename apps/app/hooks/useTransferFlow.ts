@@ -7,7 +7,7 @@ import { toWalletError, USER_CLOSED_MODAL } from "../lib/wallet-error";
 export type TransferPhase = "idle" | "sending" | "success" | "error";
 
 /** What a submit hands back: the chain's verdict, or nothing when it had no write to make. */
-export type TransferSubmit = () => Promise<TxResult | void>;
+export type TransferSubmit = () => Promise<TxResult | undefined>;
 
 /**
  * Drives the deposit/withdraw status flow: idle → sending → success | error. `run(submit)` sets

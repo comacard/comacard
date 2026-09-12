@@ -45,7 +45,7 @@ export function Keypad({
 }) {
   const press = (k: string) => {
     if (k === ".") {
-      if (!value.includes(".")) onChange(value + ".");
+      if (!value.includes(".")) onChange(`${value}.`);
       return;
     }
     onChange(value === "0" ? k : value + k);

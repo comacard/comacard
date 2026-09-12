@@ -10,7 +10,7 @@ export function toAmount(decimal: string): Amount {
   const cleaned = decimal.replace(/,/g, "").trim();
   if (!cleaned || cleaned === ".") return 0n;
   const [whole = "0", frac = ""] = cleaned.split(".");
-  const fracPadded = (frac + "0000000").slice(0, 7);
+  const fracPadded = `${frac}0000000`.slice(0, 7);
   return BigInt(whole) * UNIT + BigInt(fracPadded || "0");
 }
 

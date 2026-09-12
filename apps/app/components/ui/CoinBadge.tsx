@@ -58,6 +58,7 @@ export function CoinBadge({
   const key: TokenSym = token ?? (currency ? CURRENCY_TOKEN[currency] : "USDC");
   return (
     // eslint-disable-next-line @next/next/no-img-element -- tiny static icon; next/image is overkill and mishandles local SVG
+    // biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it
     <img
       src={FILE[key]}
       alt={key}

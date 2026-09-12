@@ -97,7 +97,7 @@ async function getMobileWalletConnect() {
     featuredWalletIds: [FREIGHTER_WC_ID],
   });
   provider.on("display_uri", (uri: string) => {
-    modal.open({ uri });
+    void modal.open({ uri });
   });
   provider.on("session_delete", () => {
     mobileWc = null;
@@ -123,14 +123,14 @@ async function connectMobileWalletConnect(): Promise<{ address: string; name: st
         },
       },
     });
-    wc.modal.close();
+    void wc.modal.close();
     if (!session) throw new Error("Connection cancelled.");
     const address = session.namespaces.stellar?.accounts[0]?.split(":")[2];
     if (!address) throw new Error("Freighter did not return an account.");
     wc.address = address;
     return { address, name: "Freighter" };
   } catch (e) {
-    wc.modal.close();
+    void wc.modal.close();
     throw e;
   }
 }

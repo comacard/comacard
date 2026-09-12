@@ -154,6 +154,7 @@ export function ClosingFooter({ logoSrc, faqId }: { logoSrc: string; faqId?: str
           <div className="mb-[50px] grid grid-cols-1 gap-10 min-[480px]:grid-cols-2 md:grid-cols-[2fr_1fr_1fr_2fr]">
             <div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it */}
               <img src={logoSrc} alt="Comacard" className="mb-[15px] h-6 w-6" />
               <p className="max-w-[220px] text-[0.85rem] leading-[1.6] text-[#888]">
                 Lock what you hold. Spend what it earns you. Keep the coins either way.

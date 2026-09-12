@@ -86,9 +86,11 @@ export function useBuckets(): {
     buckets: [],
   });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
+    void (async () => {
       if (!address) {
         if (!cancelled) setState({ loading: false, error: null, buckets: [] });
         return;

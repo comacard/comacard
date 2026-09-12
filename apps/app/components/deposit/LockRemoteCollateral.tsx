@@ -77,7 +77,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
     );
   }
 
-  if (!asset || !asset.vault || asset.evmChainId === null) {
+  if (!asset?.vault || asset.evmChainId === null) {
     return (
       <div className="flex min-h-[calc(100dvh-92px)] flex-col">
         <SubHeader title="Lock collateral" />

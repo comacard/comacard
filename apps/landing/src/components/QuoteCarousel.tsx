@@ -211,6 +211,7 @@ export function QuoteCarousel({ id }: { id?: string }) {
 
                     <div className="flex items-center gap-4">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {/* biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it */}
                       <img
                         src={entry.avatar}
                         alt=""
