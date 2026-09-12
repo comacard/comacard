@@ -9,10 +9,9 @@ import {
 import {ASCBase} from "@gluwa/asc-contracts/contracts/readability/ASCBase.sol";
 
 import {Governed} from "../governance/Governed.sol";
-import {IWormhole} from "../interfaces/IWormhole.sol";
+import {IRemoteCollateral} from "../interfaces/IRemoteCollateral.sol";
 import {ICreditLine} from "../interfaces/ICreditLine.sol";
 import {IYieldAdapter} from "../interfaces/IYieldAdapter.sol";
-import {CollateralMessage} from "../libraries/CollateralMessage.sol";
 import {CreditScoring} from "../libraries/CreditScoring.sol";
 import {HistoryProof} from "../libraries/HistoryProof.sol";
 import {VaultEvents} from "../libraries/VaultEvents.sol";
@@ -93,35 +92,15 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     /// @notice Token collateral already debited ahead of its source-chain release.
     mapping(address => mapping(address => uint256)) public tokenPendingRelease;
 
-    // ---- Collateral from any Wormhole chain. Appended, as above. ----
-
-    /// @notice Creditcoin's own Wormhole Core Contract, which verifies guardian
-    ///         signatures. Set on upgrade rather than in the constructor because
-    ///         this contract lives behind a proxy.
-    IWormhole public wormhole;
-
-    /// @notice The one vault per chain whose messages are honoured, by Wormhole
-    ///         chain id. Without this, anyone could deploy their own vault,
-    ///         lock nothing, and publish a perfectly valid VAA claiming they had.
-    mapping(uint16 => bytes32) public vaultPeer;
-
-    /// @notice Messages already applied, by VAA hash.
-    /// @dev Wormhole verifies a message is authentic, never that it is fresh.
-    ///      The same VAA can be submitted forever; this is what stops it.
-    mapping(bytes32 => bool) public consumedVaa;
-
-    /// @notice Every listed remote asset id, so value can be summed across them.
-    bytes32[] internal _remoteAssets;
-
-    /// @notice How the protocol values a remote asset, keyed by
-    ///         `CollateralMessage.assetId(chainId, token)`.
-    /// @dev Keyed by chain *and* address: USDC on Base and USDC on Arbitrum are
-    ///      different tokens held in different vaults, and a depeg on one says
-    ///      nothing about the other.
-    mapping(bytes32 => TokenConfig) public remoteAsset;
-
-    /// @notice Remote collateral credited per account, per asset id.
-    mapping(address => mapping(bytes32 => uint256)) public remoteCollateral;
+    /// @notice Where collateral deposited on chains Attestcoin cannot reach is
+    ///         accounted for. Zero until one is deployed.
+    /// @dev Attestcoin proves transactions from Ethereum and Sepolia only. Every
+    ///      other chain needs a different carrier, and the only one Creditcoin
+    ///      has is Wormhole. That lives in its own contract rather than here for
+    ///      a blunt reason: this one is already within a kilobyte of the 24KB
+    ///      deploy limit, and a credit line that cannot be upgraded is worse than
+    ///      one that delegates.
+    address public remoteCollateralHub;
 
     /// @notice Listing more than this would make every limit check loop too far.
     uint256 internal constant MAX_TOKENS = 16;
@@ -155,19 +134,7 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     ///      what a borrower may draw.
     event ScoreChanged(address indexed account, uint256 score, uint256 limit, uint256 available);
     event LiquidityDeployed(uint256 amount);
-    event WormholeChanged(address indexed from, address indexed to);
-    event VaultPeerChanged(uint16 indexed chainId, bytes32 from, bytes32 to);
-    event RemoteAssetListed(
-        bytes32 indexed assetId,
-        uint16 indexed chainId,
-        bytes32 token,
-        uint8 decimals,
-        uint256 price
-    );
-    event RemoteAssetPriceChanged(bytes32 indexed assetId, uint256 from, uint256 to);
-    event RemoteCollateralCredited(
-        address indexed account, bytes32 indexed assetId, uint256 amount, bytes32 indexed vaaHash
-    );
+    event RemoteCollateralHubChanged(address indexed from, address indexed to);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -298,13 +265,22 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
             TokenConfig storage cfg = tokenConfig[token];
             value += (held * cfg.price) / (10 ** cfg.decimals);
         }
-        for (uint256 i = 0; i < _remoteAssets.length; ++i) {
-            bytes32 assetId = _remoteAssets[i];
-            uint256 held = remoteCollateral[who][assetId];
-            if (held == 0) continue;
-            TokenConfig storage cfg = remoteAsset[assetId];
-            value += (held * cfg.price) / (10 ** cfg.decimals);
-        }
+        address hub = remoteCollateralHub;
+        if (hub != address(0)) value += IRemoteCollateral(hub).valueOf(who);
+    }
+
+    /// @notice Point the line at the hub that accounts for cross-chain deposits.
+    function setRemoteCollateralHub(address hub) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        emit RemoteCollateralHubChanged(remoteCollateralHub, hub);
+        remoteCollateralHub = hub;
+    }
+
+    /// @notice Re-emit an account's derived state.
+    /// @dev Permissionless: it publishes what anyone can already compute from
+    ///      public getters. The hub calls it after crediting a deposit so that
+    ///      ScoreChanged stays the one thing indexers have to follow.
+    function refreshScore(address account) external {
+        _publishScore(account);
     }
 
     /// @notice Price one whole unit of the collateral asset in the credit asset.
@@ -576,102 +552,6 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
         }
         emit TokenReleaseHeld(borrower, token, amount, tokenPendingRelease[borrower][token]);
         _publishScore(borrower);
-    }
-
-    // --------------------------------------------------------------------
-    // Collateral from any Wormhole chain
-    // --------------------------------------------------------------------
-
-    /// @notice Turns on deposits from chains Attestcoin cannot reach.
-    /// @dev Attestcoin proves transactions from Ethereum and Sepolia. Everything
-    ///      else — Base, Arbitrum, Optimism, BSC, Avalanche — needs a different
-    ///      carrier, and Creditcoin has exactly one: Wormhole Core. Called
-    ///      atomically by `upgradeToAndCall`, because a proxy on this code with
-    ///      no core address would accept nothing anyway.
-    function initializeV3(address wormhole_) external reinitializer(3) {
-        if (wormhole_ == address(0)) revert CreditErrors.ZeroAddress();
-        emit WormholeChanged(address(0), wormhole_);
-        wormhole = IWormhole(wormhole_);
-    }
-
-    /// @notice Credit collateral that a WormholeVault on another chain locked.
-    /// @param vaa The signed message, as fetched from any guardian or from
-    ///        Wormholescan. Nothing here trusts the caller, so anyone may relay:
-    ///        the borrower, our worker, or a stranger who wants to pay the gas.
-    ///
-    /// @dev Four things have to hold, and all four are checked here:
-    ///      the guardians signed it, it came from the vault we know on that
-    ///      chain, we have not already applied it, and the asset is one we price.
-    function receiveFromWormhole(bytes calldata vaa) external whenNotPaused nonReentrant {
-        (IWormhole.Vm memory vm_, bool valid, string memory reason) = wormhole.parseAndVerifyVM(vaa);
-        if (!valid) revert CreditErrors.VaaInvalid(reason);
-
-        bytes32 peer = vaultPeer[vm_.emitterChainId];
-        if (peer == bytes32(0) || peer != vm_.emitterAddress) {
-            revert CreditErrors.UnknownPeer(vm_.emitterChainId, vm_.emitterAddress);
-        }
-        if (consumedVaa[vm_.hash]) revert CreditErrors.VaaAlreadyConsumed(vm_.hash);
-        consumedVaa[vm_.hash] = true;
-
-        CollateralMessage.Deposit memory d = CollateralMessage.decode(vm_.payload);
-        bytes32 assetId = CollateralMessage.assetId(vm_.emitterChainId, d.token);
-
-        TokenConfig storage cfg = remoteAsset[assetId];
-        if (!cfg.listed) revert CreditErrors.AssetNotListed(assetId);
-        // The vault reports the decimals it saw. If they disagree with what we
-        // listed, one of the two is wrong about the token and the value would be
-        // off by orders of magnitude — better to refuse than to guess which.
-        if (cfg.decimals != d.decimals) {
-            revert CreditErrors.DecimalsMismatch(cfg.decimals, d.decimals);
-        }
-        if (d.amount == 0) revert CreditErrors.ZeroAmount();
-
-        remoteCollateral[d.account][assetId] += d.amount;
-        emit RemoteCollateralCredited(d.account, assetId, d.amount, vm_.hash);
-        _publishScore(d.account);
-    }
-
-    /// @notice Name the one vault on a chain whose messages count.
-    /// @dev Setting this to zero stops accepting that chain without touching
-    ///      collateral already credited from it.
-    function setVaultPeer(uint16 chainId, bytes32 vault) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        emit VaultPeerChanged(chainId, vaultPeer[chainId], vault);
-        vaultPeer[chainId] = vault;
-    }
-
-    /// @notice Accept an asset from a remote chain and say what it is worth.
-    /// @param token The token's address on its own chain as bytes32, or zero for
-    ///        that chain's native coin. bytes32 because not every chain Wormhole
-    ///        reaches has 20-byte addresses.
-    function listRemoteAsset(uint16 chainId, bytes32 token, uint8 decimals, uint256 price)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-        returns (bytes32 assetId)
-    {
-        if (price == 0) revert CreditErrors.ZeroAmount();
-        if (decimals > 36) revert CreditErrors.DecimalsOutOfRange(decimals);
-        if (_remoteAssets.length >= MAX_TOKENS) revert CreditErrors.DecimalsOutOfRange(decimals);
-
-        assetId = CollateralMessage.assetId(chainId, token);
-        if (remoteAsset[assetId].listed) revert CreditErrors.AssetAlreadyListed(assetId);
-
-        remoteAsset[assetId] = TokenConfig({price: price, decimals: decimals, listed: true});
-        _remoteAssets.push(assetId);
-        emit RemoteAssetListed(assetId, chainId, token, decimals, price);
-    }
-
-    /// @notice Reprice a remote asset.
-    function setRemoteAssetPrice(bytes32 assetId, uint256 price) external onlyRole(ORACLE_ROLE) {
-        TokenConfig storage cfg = remoteAsset[assetId];
-        if (!cfg.listed) revert CreditErrors.AssetNotListed(assetId);
-        if (price == 0) revert CreditErrors.ZeroAmount();
-        emit RemoteAssetPriceChanged(assetId, cfg.price, price);
-        cfg.price = price;
-    }
-
-    /// @notice Every remote asset the line accepts, in listing order.
-    function listedRemoteAssets() external view returns (bytes32[] memory) {
-        return _remoteAssets;
     }
 
     /// @notice Every token the line accepts, in listing order.

@@ -6,6 +6,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {ASCCreditLine} from "../../src/creditcoin/ASCCreditLine.sol";
 import {CtcStakingAdapter} from "../../src/creditcoin/CtcStakingAdapter.sol";
 import {SourceVault} from "../../src/source/SourceVault.sol";
+import {WormholeCollateralHub} from "../../src/wormhole/WormholeCollateralHub.sol";
 import {CreditLineHarness} from "./CreditLineHarness.sol";
 
 /// @notice Every contract runs behind a UUPS proxy in production, so the tests
@@ -51,6 +52,21 @@ library Deployers {
             )
         );
         return CreditLineHarness(payable(address(proxy)));
+    }
+
+    function collateralHub(address wormhole, address line, address governance, address operator)
+        internal
+        returns (WormholeCollateralHub)
+    {
+        WormholeCollateralHub impl = new WormholeCollateralHub();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(
+                WormholeCollateralHub.initialize,
+                (wormhole, line, governance, operator, DEFAULT_ADMIN_DELAY)
+            )
+        );
+        return WormholeCollateralHub(address(proxy));
     }
 
     function stakingAdapter(

@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {CollateralMessage} from "../../src/libraries/CollateralMessage.sol";
 import {TestToken} from "../../src/testnet/TestToken.sol";
 import {CreditErrors} from "../../src/types/CreditTypes.sol";
+import {WormholeCollateralHub} from "../../src/wormhole/WormholeCollateralHub.sol";
 import {WormholeVault} from "../../src/wormhole/WormholeVault.sol";
 import {CreditLineHarness} from "../helpers/CreditLineHarness.sol";
 import {Deployers} from "../helpers/Deployers.sol";
@@ -25,6 +26,7 @@ contract WormholeCollateralTest is Test {
     uint256 internal constant ONE = 1e18;
 
     CreditLineHarness internal line;
+    WormholeCollateralHub internal hub;
     MockWormhole internal core;
     WormholeVault internal vault;
     MockWormhole internal remoteCore;
@@ -47,16 +49,17 @@ contract WormholeCollateralTest is Test {
         vault = new WormholeVault(address(remoteCore), governance, operator);
         usdc = new TestToken("USD Coin", "USDC", 6);
 
+        hub = Deployers.collateralHub(address(core), address(line), governance, operator);
+
         vm.startPrank(governance);
-        line.initializeV3(address(core));
+        line.setRemoteCollateralHub(address(hub));
 
         peer = bytes32(uint256(uint160(address(vault))));
-        line.setVaultPeer(BASE_SEPOLIA, peer);
+        hub.setVaultPeer(BASE_SEPOLIA, peer);
 
         // 1 ETH on Base is worth 1000 CTC; 1 USDC is worth 1 CTC.
-        nativeAsset = line.listRemoteAsset(BASE_SEPOLIA, bytes32(0), 18, 1000 * ONE);
-        usdcAsset =
-            line.listRemoteAsset(BASE_SEPOLIA, bytes32(uint256(uint160(address(usdc)))), 6, ONE);
+        nativeAsset = hub.listAsset(BASE_SEPOLIA, bytes32(0), 18, 1000 * ONE);
+        usdcAsset = hub.listAsset(BASE_SEPOLIA, bytes32(uint256(uint160(address(usdc)))), 6, ONE);
 
         vault.setSupportedToken(address(usdc), true);
         vm.stopPrank();
@@ -187,7 +190,7 @@ contract WormholeCollateralTest is Test {
     function test_remoteNativeDepositRaisesTheLimit() public {
         assertEq(line.collateralValueOf(alice), 0);
 
-        line.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), ONE, 18)));
+        hub.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), ONE, 18)));
 
         // 1 ETH on Base, priced at 1000 CTC.
         assertEq(line.collateralValueOf(alice), 1000 * ONE);
@@ -198,7 +201,7 @@ contract WormholeCollateralTest is Test {
     /// 500 USDC is 500e6 base units and must not be valued as 500e6 wei.
     function test_sixDecimalRemoteAssetIsValuedByItsOwnDecimals() public {
         bytes32 token = bytes32(uint256(uint160(address(usdc))));
-        line.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(token, 500e6, 6)));
+        hub.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(token, 500e6, 6)));
 
         assertEq(line.collateralValueOf(alice), 500 * ONE);
     }
@@ -207,13 +210,13 @@ contract WormholeCollateralTest is Test {
         // Same address, other chain: not listed, so it buys no credit.
         bytes32 token = bytes32(uint256(uint160(address(usdc))));
         vm.prank(governance);
-        line.setVaultPeer(ARBITRUM_SEPOLIA, peer);
+        hub.setVaultPeer(ARBITRUM_SEPOLIA, peer);
 
         bytes32 expected = CollateralMessage.assetId(ARBITRUM_SEPOLIA, token);
         bytes memory vaa = _vaa(ARBITRUM_SEPOLIA, peer, 0, _aliceDeposit(token, 500e6, 6));
 
         vm.expectRevert(abi.encodeWithSelector(CreditErrors.AssetNotListed.selector, expected));
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
     }
 
     /// The whole point of the peer registry. Anyone can deploy a vault, lock
@@ -225,7 +228,7 @@ contract WormholeCollateralTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(CreditErrors.UnknownPeer.selector, BASE_SEPOLIA, impostor)
         );
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
     }
 
     function test_messageFromAnUnregisteredChainIsRejected() public {
@@ -234,13 +237,13 @@ contract WormholeCollateralTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(CreditErrors.UnknownPeer.selector, ARBITRUM_SEPOLIA, peer)
         );
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
     }
 
     /// Wormhole says a message is authentic. It never says it is fresh.
     function test_theSameVaaCannotBeAppliedTwice() public {
         bytes memory vaa = _vaa(BASE_SEPOLIA, peer, 7, _aliceDeposit(bytes32(0), ONE, 18));
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
 
         uint256 value = line.collateralValueOf(alice);
 
@@ -250,7 +253,7 @@ contract WormholeCollateralTest is Test {
                 keccak256(abi.encodePacked(BASE_SEPOLIA, peer, uint64(7)))
             )
         );
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
 
         assertEq(line.collateralValueOf(alice), value);
     }
@@ -262,7 +265,7 @@ contract WormholeCollateralTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(CreditErrors.VaaInvalid.selector, "VM signature invalid")
         );
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
     }
 
     /// A vault reporting decimals we did not list means one of the two is wrong
@@ -272,7 +275,7 @@ contract WormholeCollateralTest is Test {
         bytes memory vaa = _vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(token, 500e6, 18));
 
         vm.expectRevert(abi.encodeWithSelector(CreditErrors.DecimalsMismatch.selector, 6, 18));
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
     }
 
     function test_payloadFromAFutureVersionIsRefusedNotMisread() public {
@@ -283,12 +286,12 @@ contract WormholeCollateralTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(CollateralMessage.UnsupportedVersion.selector, uint8(2))
         );
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
     }
 
     function test_remoteCollateralStacksWithAttestcoinCollateral() public {
         line.seed(alice, 2 ether, 0, 0, 0); // proved on Sepolia, priced at parity
-        line.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), ONE, 18)));
+        hub.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), ONE, 18)));
 
         assertEq(line.collateralValueOf(alice), 2 ether + 1000 * ONE);
     }
@@ -296,26 +299,26 @@ contract WormholeCollateralTest is Test {
     function test_onlyAdminRegistersPeersAndAssets() public {
         vm.startPrank(alice);
         vm.expectRevert();
-        line.setVaultPeer(BASE_SEPOLIA, peer);
+        hub.setVaultPeer(BASE_SEPOLIA, peer);
         vm.expectRevert();
-        line.listRemoteAsset(ARBITRUM_SEPOLIA, bytes32(0), 18, ONE);
+        hub.listAsset(ARBITRUM_SEPOLIA, bytes32(0), 18, ONE);
         vm.stopPrank();
     }
 
     function test_onlyOracleRepricesARemoteAsset() public {
         vm.prank(alice);
         vm.expectRevert();
-        line.setRemoteAssetPrice(nativeAsset, 500 * ONE);
+        hub.setAssetPrice(nativeAsset, 500 * ONE);
 
         vm.prank(operator);
-        line.setRemoteAssetPrice(nativeAsset, 500 * ONE);
+        hub.setAssetPrice(nativeAsset, 500 * ONE);
 
-        line.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), ONE, 18)));
+        hub.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), ONE, 18)));
         assertEq(line.collateralValueOf(alice), 500 * ONE);
     }
 
     function test_listedRemoteAssetsAreEnumerable() public view {
-        bytes32[] memory assets = line.listedRemoteAssets();
+        bytes32[] memory assets = hub.listedAssets();
         assertEq(assets.length, 2);
         assertEq(assets[0], nativeAsset);
         assertEq(assets[1], usdcAsset);
@@ -323,20 +326,20 @@ contract WormholeCollateralTest is Test {
 
     function test_pausedLineAcceptsNoDeposits() public {
         bytes memory vaa = _vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), ONE, 18));
-        bytes32 guardianRole = line.GUARDIAN_ROLE();
+        bytes32 guardianRole = hub.GUARDIAN_ROLE();
 
         vm.startPrank(governance);
-        line.grantRole(guardianRole, governance);
-        line.pause();
+        hub.grantRole(guardianRole, governance);
+        hub.pause();
         vm.stopPrank();
 
         vm.expectRevert();
-        line.receiveFromWormhole(vaa);
+        hub.receiveFromWormhole(vaa);
     }
 
     function testFuzz_valueIsLinearInAmount(uint128 amount) public {
         vm.assume(amount > 0);
-        line.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), amount, 18)));
+        hub.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), amount, 18)));
         assertEq(line.collateralValueOf(alice), (uint256(amount) * 1000 * ONE) / ONE);
     }
 }
