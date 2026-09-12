@@ -3,11 +3,15 @@
 The onchain half of Comacard: a revolving credit line whose limit comes from a
 borrower's proven track record rather than from the balance in their wallet.
 
-Collateral is locked on Ethereum and never moves. Attestcoin proves those
-locks — and the borrower's history on mainnet — across to Creditcoin, where the
-credit line reads them, sizes a limit, and lends against it. Repay on time and
-the limit grows; let a debt lapse and anyone can close it as a default, which
-costs the borrower that limit.
+Collateral is locked wherever the borrower already holds it and never moves.
+Attestcoin proves those locks — and the borrower's history on mainnet — across
+to Creditcoin, where the credit line reads them, sizes a limit, and lends
+against it. Repay on time and the limit grows; let a debt lapse and anyone can
+close it as a default, which costs the borrower that limit.
+
+Attestcoin reaches Ethereum and Sepolia. Every other chain arrives by Wormhole
+instead, through a vault deployed there and a hub on Creditcoin that reads the
+signed message.
 
 ## Deployed
 
@@ -16,8 +20,13 @@ costs the borrower that limit.
 | `SourceVault` | Ethereum Sepolia | [`0x911290c37E9558C704870f4C44CBdEA1B2B33303`](https://sepolia.etherscan.io/address/0x911290c37E9558C704870f4C44CBdEA1B2B33303) |
 | `ASCCreditLine` | Creditcoin CC3 (`102031`) | [`0x18052272cC69113DE2b45d2BDB4E1fB287F4E906`](https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906) |
 | `CtcStakingAdapter` | Creditcoin CC3 (`102031`) | [`0xA94218Dbdb142A10e32eF7b494105D27F47f7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
+| `WormholeCollateralHub` | Creditcoin CC3 (`102031`) | [`0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f`](https://creditcoin-testnet.blockscout.com/address/0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f) |
+| `WormholeVault` | Base Sepolia (`84532`) | [`0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf`](https://sepolia.basescan.org/address/0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf) |
+| `WormholeVault` | Arbitrum Sepolia (`421614`) | [`0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30`](https://sepolia.arbiscan.io/address/0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30) |
 
-All three are UUPS proxies. Sepolia is verified on Etherscan; the implementation
+The Creditcoin and Sepolia contracts are UUPS proxies. The vaults are not: one
+is deployed per chain, its job is small, and a proxy on every chain is machinery
+to maintain in exchange for flexibility a vault this simple does not need. Sepolia is verified on Etherscan; the implementation
 behind the vault is [`0x6981E1453c80D0E774145f20876D9F57ADfD2bbC`](https://sepolia.etherscan.io/address/0x6981E1453c80D0E774145f20876D9F57ADfD2bbC).
 
 Exercised end to end on-chain: the pool was funded, liquidity deployed into the
@@ -37,6 +46,43 @@ multi-asset path can be exercised without real funds.
 | tUSDC | 6 | 1 CTC | [`0x2eECfA1eb55154483726314235f74ac324e2660F`](https://sepolia.etherscan.io/address/0x2eECfA1eb55154483726314235f74ac324e2660F) |
 | tUSDT | 6 | 1 CTC | [`0xc370A0BC9db78d031c076b2fBEcCCb5f3291AB00`](https://sepolia.etherscan.io/address/0xc370A0BC9db78d031c076b2fBEcCCb5f3291AB00) |
 | tWETH | 18 | 1,000 CTC | [`0xC27FCc0A2547298d0ec86f7f70748Cc3CFC18da1`](https://sepolia.etherscan.io/address/0xC27FCc0A2547298d0ec86f7f70748Cc3CFC18da1) |
+
+### Collateral from other chains
+
+Attestcoin proves transactions from Ethereum and Sepolia. For everywhere else
+there is one carrier available on Creditcoin — the Wormhole Core Contract, with
+no token bridge and no relayer attached — so a `WormholeVault` holds the deposit
+on its own chain and publishes a message saying so. `WormholeCollateralHub`
+reads that message and credits the collateral. The asset itself never crosses,
+which is the same promise the Attestcoin path makes.
+
+| Chain | Wormhole id | Accepted |
+| --- | --- | --- |
+| Base Sepolia | `10004` | ETH (18), [USDC](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) (6) |
+| Arbitrum Sepolia | `10003` | ETH (18), [USDC](https://sepolia.arbiscan.io/address/0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d) (6) |
+
+Adding a chain is a deploy and two calls: `setVaultPeer` and `listAsset`.
+
+Three checks decide whether a message is ours, and they are what the test suite
+is about:
+
+- **the peer registry**, because anyone can deploy their own vault, lock
+  nothing, and publish a message the guardians will sign quite happily
+- **the VAA hash**, because Wormhole says a message is authentic and never says
+  it is fresh
+- **the decimals** the vault read off the token against the decimals we listed,
+  since disagreeing on those misprices a stablecoin by twelve orders of magnitude
+
+Assets are keyed by chain *and* address: USDC on Base and USDC on Arbitrum are
+different tokens in different vaults, and a depeg on one says nothing about the
+other.
+
+The vaults publish at **finalized** consistency, so the guardians sign roughly
+fifteen minutes after the deposit — an L2 finalizes against Ethereum. That wait
+is the price of not crediting collateral a reorg could take back. Delivery is
+permissionless: `bun run relay 10004 <sequence>` from `apps/worker` fetches the
+signed message and submits it, but so can the borrower, because the hub trusts
+the signatures rather than the sender.
 
 ### Tokens on Creditcoin testnet
 
@@ -76,6 +122,8 @@ src/
   source/       SourceVault.sol       source chain (Ethereum Sepolia)
   creditcoin/   ASCCreditLine.sol     the ASC, extends Gluwa's ASCBase
                 CtcStakingAdapter.sol native CTC staking, operator-mediated
+  wormhole/     WormholeVault.sol     collateral custody on any other chain
+                WormholeCollateralHub.sol  reads the signed deposits
 script/                               UUPS proxy deployments, per chain
 test/unit/                            one suite per unit
 test/helpers/                         proxy deployers, tx fixtures, harnesses
