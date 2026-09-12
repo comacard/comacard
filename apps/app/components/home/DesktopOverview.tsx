@@ -63,9 +63,14 @@ export function DesktopOverview() {
 
   return (
     <>
-      <div className="stagger grid gap-4 lg:grid-cols-[minmax(320px,0.85fr)_minmax(0,1.15fr)]">
-        {/* The card and what it can do. */}
-        <Card className="flex min-w-0 flex-col px-7 py-6">
+      <div className="stagger grid items-start gap-4 lg:grid-cols-[minmax(320px,0.85fr)_minmax(0,1.15fr)] lg:gap-5">
+        {/* The card and what it can do.
+            It sticks below the bar because it is the shorter of the two columns by a long way —
+            a verified account with no balance owed leaves it about a third the height of the
+            right-hand stack, and left to scroll it spends most of the page as blank space beside
+            the rows that explain it. `items-start` on the grid is what lets it: a stretched grid
+            item is as tall as the row and has nothing to stick within. */}
+        <Card className="flex min-w-0 flex-col px-7 py-6 lg:sticky lg:top-[84px]">
           {loading ? (
             <div className="py-[30px] text-center">
               <Skeleton className="mx-auto h-4 w-28" />
@@ -113,7 +118,7 @@ export function DesktopOverview() {
         </Card>
 
         {/* What backs the card, and what it has done. */}
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4 lg:gap-5">
           <IncomingDeposits deposits={account?.pendingDeposits ?? []} />
           {owes ? null : <SpentTotal />}
           <CollateralList assets={collateral} remote={remoteCollateral} className="mt-0" />

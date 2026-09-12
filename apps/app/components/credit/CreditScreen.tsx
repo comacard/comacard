@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { binEvents, useCreditHistory } from "../../hooks/useCreditHistory";
 import { useCreditLine } from "../../hooks/useCreditLine";
+import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { useNav } from "../../hooks/useNav";
 import { Bars } from "../earn/Bars";
 import { Button, Card, CountUp, Segmented, Skeleton } from "../ui";
@@ -43,6 +44,7 @@ const ctc = (value: bigint, digits = 4): string =>
 
 export function CreditScreen() {
   const nav = useNav();
+  const isDesktop = useIsDesktop();
   const { limit, drawn } = useCreditLine();
   const { events, borrowed, repaid, cyclesClosed, loading } = useCreditHistory();
   const [range, setRange] = useState<Range>("Month");
@@ -89,8 +91,11 @@ export function CreditScreen() {
     );
   }
 
-  return (
-    <div className="stagger">
+  // The limit and the two controls that move it. One block, placed differently by width: stacked on
+  // a phone, and on desktop lifted into a card beside the record so a 1440px screen is not a narrow
+  // column with a chart floating a screen-height below the number it explains.
+  const head = (
+    <>
       <div className="py-[30px] text-center">
         <div className="text-[15px] font-medium text-muted">Your limit</div>
         <CountUp
@@ -105,12 +110,22 @@ export function CreditScreen() {
       {/* The two halves of one cycle, which is what this screen is a record of. Repay is dimmed
           rather than hidden when nothing is owed: a control that vanishes teaches nobody that it
           is the second half. */}
-      <div className="mb-5 flex gap-3">
+      <div className="flex gap-3">
         <Button onClick={() => nav.forward("/spend")}>Spend</Button>
         <Button variant="glass" disabled={!owes} onClick={() => nav.forward("/pay")}>
           Repay
         </Button>
       </div>
+    </>
+  );
+
+  return (
+    <div className="stagger lg:grid lg:grid-cols-[minmax(320px,0.85fr)_minmax(0,1.15fr)] lg:items-start lg:gap-4">
+      {isDesktop ? (
+        <Card className="flex min-w-0 flex-col px-7 py-6">{head}</Card>
+      ) : (
+        <div className="mb-5">{head}</div>
+      )}
 
       <Card className="p-5">
         <div className="flex items-center justify-between gap-3">

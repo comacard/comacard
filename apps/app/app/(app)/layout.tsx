@@ -3,8 +3,7 @@ import { usePathname } from "next/navigation";
 import { type ReactNode, type TouchEvent, useRef, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AccountMenu } from "../../components/desktop/AccountMenu";
-import { BottomNav, TopBlur } from "../../components/ui";
-import { TopBar } from "../../components/ui/TopBar";
+import { BottomNav, DesktopNav, TopBlur } from "../../components/ui";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { useNav } from "../../hooks/useNav";
 
@@ -63,17 +62,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <TopBlur />
         </div>
 
+        {/* Desktop-only navigation bar. Full-bleed so its hairline crosses the whole viewport, and
+            outside the content column so it can stick to the top of the page rather than to the
+            column. AccountMenu is mounted only once the client confirms a desktop viewport, so its
+            hooks never run on a phone. */}
+        <DesktopNav account={isDesktop ? <AccountMenu /> : undefined} />
+
         {/* Centered content column. Mobile keeps the exact px-5 pb-[120px] pt-14;
             desktop widens the column, swaps padding, and drops the bottom-nav gutter.
             Centering is mx-auto (never transform — U14). Widths from the mockup .appwin. */}
-        <div className="mx-auto w-full max-w-[1200px] px-5 pb-[120px] pt-14 lg:px-9 lg:pb-11 lg:pt-[22px] xl:max-w-[1440px] 2xl:max-w-[1560px]">
-          {/* Desktop-only top bar */}
-          <div className="hidden lg:block">
-            <TopBar
-              account={isDesktop ? <AccountMenu /> : undefined}
-              onAvatarClick={() => nav.forward("/account")}
-            />
-          </div>
+        <div className="mx-auto w-full max-w-[1200px] px-5 pb-[120px] pt-14 lg:px-9 lg:pb-14 lg:pt-7 xl:max-w-[1440px] 2xl:max-w-[1560px]">
           <div
             key={pathname}
             className={

@@ -37,7 +37,7 @@ test("redirects to / when not connected", () => {
   expect(push).toHaveBeenCalledWith("/");
 });
 
-test("desktop chrome present: TopBar brand renders alongside the mobile bottom nav", () => {
+test("desktop chrome present: the desktop nav renders alongside the mobile bottom nav", () => {
   useWallet.mockReturnValue({ isConnected: true, hydrated: true });
   render(
     <AppLayout>
@@ -45,7 +45,32 @@ test("desktop chrome present: TopBar brand renders alongside the mobile bottom n
     </AppLayout>,
   );
   expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument(); // mobile BottomNav kept
-  expect(screen.getByText("Comacard")).toBeInTheDocument(); // desktop TopBar added
+  expect(screen.getByText("Comacard")).toBeInTheDocument(); // desktop brand
+
+  // The bar is the point: before it, desktop chrome was a wordmark and an avatar, and Credit had no
+  // way to be reached at all. Both are landmarks in the DOM at once and CSS picks one per viewport.
+  const desktop = screen.getByRole("navigation", { name: "Primary" });
+  expect(desktop).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/home");
+  expect(screen.getByRole("link", { name: "Credit" })).toHaveAttribute("href", "/earn");
+  // Activity is a drawer on desktop by design, so the link addresses the drawer's own URL rather
+  // than /transactions, which the (flow) layout would bounce straight back to /home.
+  expect(screen.getByRole("link", { name: "Activity" })).toHaveAttribute(
+    "href",
+    "/home?panel=activity",
+  );
+});
+
+test("the desktop nav marks the current route, and only it", () => {
+  useWallet.mockReturnValue({ isConnected: true, hydrated: true });
+  pathname = "/earn";
+  render(
+    <AppLayout>
+      <p>credit body</p>
+    </AppLayout>,
+  );
+  expect(screen.getByRole("link", { name: "Credit" })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("link", { name: "Overview" })).not.toHaveAttribute("aria-current");
 });
 
 test("mobile shell swipe moves between the three tab routes", () => {

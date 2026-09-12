@@ -7,6 +7,7 @@ export { Chip } from "./Chip";
 export { badgeForSymbol, CoinBadge, type TokenSym } from "./CoinBadge";
 export { CopyButton } from "./CopyButton";
 export { CountUp } from "./CountUp";
+export { DesktopNav } from "./DesktopNav";
 export { Keypad } from "./Keypad";
 export { PendingLabel } from "./PendingLabel";
 export { Segmented } from "./Segmented";
