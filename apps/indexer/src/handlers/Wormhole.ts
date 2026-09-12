@@ -113,6 +113,24 @@ indexer.onEvent(
       credited: p.credited + event.params.amount,
       lastActiveAt: at,
     });
+
+    // Close out the lock this credit belongs to, so an app can stop showing it
+    // as in flight. The hub's event carries no sequence — only the account, the
+    // asset and the amount — while the deposit is keyed by chain and sequence,
+    // so the row has to be found rather than addressed. Oldest match first,
+    // because deposits are credited in the order the guardians signed them.
+    const open = (await context.RemoteDeposit.getWhere({ account: { _eq: account } })).filter(
+      (d) => d.asset_id === asset && d.amount === event.params.amount && d.creditedAt === undefined,
+    );
+    const oldest = open.sort((a, b) => Number(a.lockedAt - b.lockedAt))[0];
+    if (oldest) {
+      context.RemoteDeposit.set({
+        ...oldest,
+        creditedAt: at,
+        creditTxHash: event.transaction.hash,
+        vaaHash: event.params.vaaHash,
+      });
+    }
   },
 );
 
