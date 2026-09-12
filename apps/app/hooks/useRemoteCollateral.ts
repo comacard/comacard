@@ -58,6 +58,8 @@ export type RemoteAsset = {
   credited: bigint;
   /** Held by the vault on its own chain. Exceeds `credited` while a message is in flight. */
   locked: bigint;
+  /** Approved for withdrawal by the relay and not yet taken. The borrower signs for this. */
+  releasable: bigint;
   /** What the wallet still holds on that chain and could lock. */
   available: bigint;
   /** True while a deposit has been locked but the guardians have not signed it across yet. */
@@ -105,6 +107,8 @@ export function useRemoteCollateral(): {
   error: boolean;
   /** False when NEXT_PUBLIC_REMOTE_COLLATERAL_HUB is unset; every field then reads empty. */
   configured: boolean;
+  /** Re-read after a write. */
+  refresh: () => void;
 } {
   const { address } = useWallet();
   const wallet = address as Address | undefined;
@@ -189,11 +193,15 @@ export function useRemoteCollateral(): {
           // pending state work today: the indexer running now predates cross-chain deposits.
           let locked = 0n;
           let available = 0n;
+          // Approved by the relay and waiting for the borrower's own transaction. The relay grants
+          // permission; it never pushes funds, so a release is not finished when the guardians have
+          // signed it — there is a second signature to collect.
+          let releasable = 0n;
           const rpc = deployment ? RPCS[deployment.evmChainId] : undefined;
           if (deployment && rpc) {
             const source = createPublicClient({ transport: http(rpc) });
             const asToken = `0x${token.slice(26)}` as Address;
-            [locked, available] = await Promise.all([
+            [locked, available, releasable] = await Promise.all([
               native
                 ? source.readContract({
                     address: deployment.vault,
@@ -215,7 +223,20 @@ export function useRemoteCollateral(): {
                     functionName: "balanceOf",
                     args: [who],
                   }),
-            ]).catch(() => [0n, 0n] as [bigint, bigint]);
+              native
+                ? source.readContract({
+                    address: deployment.vault,
+                    abi: wormholeVaultAbi,
+                    functionName: "nativeReleasable",
+                    args: [who],
+                  })
+                : source.readContract({
+                    address: deployment.vault,
+                    abi: wormholeVaultAbi,
+                    functionName: "tokenReleasable",
+                    args: [who, asToken],
+                  }),
+            ]).catch(() => [0n, 0n, 0n] as [bigint, bigint, bigint]);
           }
 
           const asset: RemoteAsset = {
@@ -229,6 +250,7 @@ export function useRemoteCollateral(): {
             credited,
             locked,
             available,
+            releasable,
             pending: locked > credited,
             vault: deployment?.vault ?? null,
             evmChainId: deployment?.evmChainId ?? null,
@@ -248,5 +270,10 @@ export function useRemoteCollateral(): {
     loading: Boolean(wallet) && configured && result.isLoading,
     error: result.isError,
     configured,
+    /** Re-read after a write. A release changes both the hub's credit and the vault's approval, and
+     *  the 30s poll is too slow to be the only thing that notices. */
+    refresh: () => {
+      void result.refetch();
+    },
   };
 }

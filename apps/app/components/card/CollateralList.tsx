@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { formatUnits } from "viem";
 import type { CollateralAsset } from "../../hooks/useCollateral";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
@@ -85,9 +86,10 @@ export function CollateralList({
         {heldRemote.map((asset, i) => {
           const symbol = asset.native ? "ETH" : "USDC";
           return (
-            <div
+            <Link
               key={asset.id}
-              className={`flex items-center gap-3 py-3.5 ${
+              href={`/withdraw/x/${asset.id}`}
+              className={`-mx-4 flex items-center gap-3 px-4 py-3.5 no-underline transition-colors hover:bg-[#f4f4f4] ${
                 i === 0 && held.length === 0 ? "" : "border-t border-line"
               }`}
             >
@@ -106,7 +108,20 @@ export function CollateralList({
                   {remoteValueCtc(asset)} tCTC
                 </div>
               </div>
-            </div>
+              <svg
+                aria-hidden="true"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                className="shrink-0 text-faint"
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </Link>
           );
         })}
       </div>

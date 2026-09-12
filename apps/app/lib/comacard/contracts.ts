@@ -127,6 +127,40 @@ export const wormholeVaultAbi = [
   },
   {
     type: "function",
+    name: "nativeReleasable",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "tokenReleasable",
+    stateMutability: "view",
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "token", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "unlockNative",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "unlockToken",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
     name: "nativeBalanceOf",
     stateMutability: "view",
     inputs: [{ name: "account", type: "address" }],
@@ -415,6 +449,26 @@ export const explorerTx = (chainId: number, hash: string): string =>
  * every time a chain is added.
  */
 export const remoteHubAbi = [
+  {
+    // Payable for Wormhole's message fee, which the hub forwards. Zero on these testnets today,
+    // which is exactly why it is read from the core contract rather than assumed.
+    type: "function",
+    name: "requestRelease",
+    stateMutability: "payable",
+    inputs: [
+      { name: "chainId", type: "uint16" },
+      { name: "token", type: "bytes32" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "uint64" }],
+  },
+  {
+    type: "function",
+    name: "wormhole",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
   {
     type: "function",
     name: "listedAssets",

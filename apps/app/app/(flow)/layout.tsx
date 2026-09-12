@@ -12,6 +12,21 @@ import { useIsDesktop } from "../../hooks/useIsDesktop";
  * before. This lives in the layout so the shared flow components (AddFunds/DepositKeypad/…) stay
  * byte-identical — desktop UI never navigates here (it uses `open(panel)`), only manual URLs do.
  */
+/**
+ * The two exceptions, and they are exceptions because there is nowhere to send them.
+ *
+ * Every other flow route has a desktop equivalent to redirect to — a drawer on the Overview. The
+ * cross-chain asset screens do not: `/deposit/x/[id]` was being matched by the `/deposit/` rule and
+ * bounced to `?panel=deposit`, which is the drawer the link was clicked *in*, so the desktop
+ * cross-chain deposit went in a circle and could not be completed at all. Withdraw would have
+ * inherited the same loop.
+ *
+ * They render on desktop instead. Both are keypad screens that work at any width, and capping the
+ * column is the only desktop-specific thing they need.
+ */
+const RENDERS_ON_DESKTOP = (path: string): boolean =>
+  path.startsWith("/deposit/x/") || path.startsWith("/withdraw/x/");
+
 const PANEL_ROUTES: { match: (path: string) => boolean; to: string }[] = [
   {
     match: (p) => p === "/add-funds" || p === "/deposit" || p.startsWith("/deposit/"),
@@ -26,16 +41,18 @@ export default function FlowLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const keep = RENDERS_ON_DESKTOP(pathname);
+
   useEffect(() => {
-    if (!isDesktop) return;
+    if (!isDesktop || keep) return;
     const target = PANEL_ROUTES.find((r) => r.match(pathname))?.to ?? "/home";
     router.replace(target);
-  }, [isDesktop, pathname, router]);
+  }, [isDesktop, keep, pathname, router]);
 
   return (
     <AuthGate>
-      <div className="relative min-h-dvh bg-bg px-5 pb-10 pt-[52px]">
-        {isDesktop ? null : children}
+      <div className="relative min-h-dvh bg-bg px-5 pb-10 pt-[52px] lg:mx-auto lg:max-w-[440px]">
+        {isDesktop && !keep ? null : children}
       </div>
     </AuthGate>
   );
