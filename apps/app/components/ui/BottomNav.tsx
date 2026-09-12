@@ -6,8 +6,11 @@ import type { ReactNode } from "react";
 const TABS = [
   { href: "/home", label: "Home", icon: <path d="M4 11l8-7 8 7M6 10v9h12v-9" /> },
   {
+    // The route keeps its old name because the swipe order, the desktop bar and every test address
+    // that path; only the screen behind it changed, from an APY promise this protocol never paid to
+    // the record the card actually builds. The label is what a person reads, so it says Credit.
     href: "/earn",
-    label: "Earn",
+    label: "Credit",
     icon: (
       <>
         <rect x="4" y="13" width="4" height="7" rx="1.5" fill="currentColor" stroke="none" />

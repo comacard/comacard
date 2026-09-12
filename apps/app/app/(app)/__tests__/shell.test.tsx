@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import AppLayout from "../layout";
 
@@ -48,13 +48,14 @@ test("desktop chrome present: the desktop nav renders alongside the mobile botto
   expect(screen.getByText("Comacard")).toBeInTheDocument(); // desktop brand
 
   // The bar is the point: before it, desktop chrome was a wordmark and an avatar, and Credit had no
-  // way to be reached at all. Both are landmarks in the DOM at once and CSS picks one per viewport.
-  const desktop = screen.getByRole("navigation", { name: "Primary" });
-  expect(desktop).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/home");
-  expect(screen.getByRole("link", { name: "Credit" })).toHaveAttribute("href", "/earn");
+  // way to be reached at all. Both navs are landmarks in the DOM at once and CSS picks one per
+  // viewport, so every query here is scoped — both of them link "Credit" to /earn now.
+  const desktop = within(screen.getByRole("navigation", { name: "Primary" }));
+  expect(desktop.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/home");
+  expect(desktop.getByRole("link", { name: "Credit" })).toHaveAttribute("href", "/earn");
   // Activity is a drawer on desktop by design, so the link addresses the drawer's own URL rather
-  // than /transactions, which the (flow) layout would bounce straight back to /home.
+  // than /transactions, which the (flow) layout would bounce straight back to /home. It sits beside
+  // the account menu rather than in the nav landmark, so it is queried outside that scope.
   expect(screen.getByRole("link", { name: "Activity" })).toHaveAttribute(
     "href",
     "/home?panel=activity",
@@ -69,8 +70,9 @@ test("the desktop nav marks the current route, and only it", () => {
       <p>credit body</p>
     </AppLayout>,
   );
-  expect(screen.getByRole("link", { name: "Credit" })).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("link", { name: "Overview" })).not.toHaveAttribute("aria-current");
+  const desktop = within(screen.getByRole("navigation", { name: "Primary" }));
+  expect(desktop.getByRole("link", { name: "Credit" })).toHaveAttribute("aria-current", "page");
+  expect(desktop.getByRole("link", { name: "Overview" })).not.toHaveAttribute("aria-current");
 });
 
 test("mobile shell swipe moves between the three tab routes", () => {

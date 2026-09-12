@@ -7,6 +7,6 @@ vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...pr
 
 test("marks the active tab by pathname", () => {
   render(<BottomNav />);
-  expect(screen.getByRole("link", { name: /Earn/ })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("link", { name: /Credit/ })).toHaveAttribute("aria-current", "page");
   expect(screen.getByRole("link", { name: /Home/ })).not.toHaveAttribute("aria-current");
 });
