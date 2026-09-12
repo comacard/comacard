@@ -26,6 +26,11 @@ signed message.
 | `WormholeVault` | Optimism Sepolia (`11155420`) | [`0xCaBFa324576c655D0276647A7f0aF5e779123e0B`](https://sepolia-optimism.etherscan.io/address/0xCaBFa324576c655D0276647A7f0aF5e779123e0B) |
 | `WormholeVault` | BSC Testnet (`97`) | [`0x9d8B6852705dD7585B3907244d603547a4eA32d6`](https://testnet.bscscan.com/address/0x9d8B6852705dD7585B3907244d603547a4eA32d6) |
 | `WormholeVault` | Avalanche Fuji (`43113`) | [`0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b`](https://testnet.snowtrace.io/address/0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b) |
+| `ReleaseRelay` | Base Sepolia | [`0x4f75738d7738a5735B6Bb83f77225D02F7cB49EB`](https://sepolia.basescan.org/address/0x4f75738d7738a5735B6Bb83f77225D02F7cB49EB) |
+| `ReleaseRelay` | Arbitrum Sepolia | [`0xAAf7439Bd2d4353efB121A06A4884577F0E40D5f`](https://sepolia.arbiscan.io/address/0xAAf7439Bd2d4353efB121A06A4884577F0E40D5f) |
+| `ReleaseRelay` | Optimism Sepolia | [`0x9dAf66b75d348D4f90B125a282bBFA608Ecec13C`](https://sepolia-optimism.etherscan.io/address/0x9dAf66b75d348D4f90B125a282bBFA608Ecec13C) |
+| `ReleaseRelay` | BSC Testnet | [`0x6a93d6b1119653AAe3291e24A8FAf615652AdB1B`](https://testnet.bscscan.com/address/0x6a93d6b1119653AAe3291e24A8FAf615652AdB1B) |
+| `ReleaseRelay` | Avalanche Fuji | [`0x9E3369116948DD10F28B158e650efdd3031b37d2`](https://testnet.snowtrace.io/address/0x9E3369116948DD10F28B158e650efdd3031b37d2) |
 
 The Creditcoin and Sepolia contracts are UUPS proxies. The vaults are not: one
 is deployed per chain, its job is small, and a proxy on every chain is machinery
@@ -90,6 +95,30 @@ is about:
 Assets are keyed by chain *and* address: USDC on Base and USDC on Arbitrum are
 different tokens in different vaults, and a depeg on one says nothing about the
 other.
+
+### Getting it back
+
+Collateral that arrived by Wormhole goes home the same way, and no operator
+decides when. The borrower calls `requestRelease` on Creditcoin; the hub debits
+the collateral, asks the credit line whether the debt still stands up without
+it, refuses if it does not, and publishes the answer. A `ReleaseRelay` on the
+far chain holds the vault's operator role and approves nothing of its own
+accord — it relays what the guardians signed and nothing else.
+
+Proved on Fuji end to end: 0.2 AVAX released, signed in about thirty seconds,
+executed, withdrawn. The credit disappeared on Creditcoin the moment the request
+was accepted, 77.5 CTC of collateral value down to 72.5, and the vault went from
+0.5 AVAX to 0.3.
+
+A release is version 2 of the payload a deposit uses. A vault that predates
+releases refuses one as an unsupported version rather than reading it as a
+deposit — which is why the version byte leads, and why both directions are
+tested: the two differ in one byte, and the failure mode would be paying out
+against a deposit message.
+
+**The Attestcoin leg is still operator-approved**, because writability is in
+audit and Creditcoin cannot yet write back to Sepolia. So collateral proved from
+Sepolia is released by a person, and anything that came by Wormhole is not.
 
 The vaults publish at **finalized** consistency, so the guardians sign roughly
 fifteen minutes after the deposit — an L2 finalizes against Ethereum. That wait

@@ -40,8 +40,10 @@ come off these contracts, not out of a mock.
 | Avalanche Fuji | [`0x7D68B54a…8a1b`](https://testnet.snowtrace.io/address/0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b) |
 
 Each accepts its chain's native coin, and the two with a canonical USDC accept
-that too. All five have taken a real deposit. Adding another is a deploy and two
-calls.
+that too. All five have taken a real deposit, and all five give it back without
+an operator: a `ReleaseRelay` beside each vault holds the role a person used to,
+and acts only on a message Creditcoin signed. Adding another chain is a deploy
+and two calls.
 
 **Services** — on Railway
 
