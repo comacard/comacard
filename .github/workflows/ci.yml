@@ -55,8 +55,16 @@ jobs:
       - name: Format check
         run: forge fmt --check
 
+      # Only what actually gets deployed. The size limit is an EIP-170 rule for
+      # contracts on a chain, and CreditLineHarness never goes on one — it
+      # inherits ASCCreditLine to reach internal functions, so it is always
+      # larger than the contract it tests and always over the limit.
       - name: Build
-        run: forge build --sizes
+        run: forge build --sizes --skip 'test/**'
+
+      # Tests still have to compile.
+      - name: Build tests
+        run: forge build
 
       - name: Test
         run: forge test -vvv
