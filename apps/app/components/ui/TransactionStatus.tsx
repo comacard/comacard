@@ -15,7 +15,8 @@ import { SuccessCheck } from "./SuccessCheck";
  */
 export type TxStatus = "signing" | "confirming" | "confirmed" | "failed";
 
-const LABEL: Record<TxStatus, string> = {
+/** Shared with `PendingLabel`, so the button and the pill can never word the same state twice. */
+export const TX_LABEL: Record<TxStatus, string> = {
   signing: "Sign in your wallet",
   confirming: "Processing Transaction",
   confirmed: "Successful",
@@ -81,7 +82,7 @@ export function TransactionStatus({
           numbers={false}
           className={large ? "text-[20px] font-semibold" : "text-[14px] font-semibold"}
         >
-          {LABEL[status]}
+          {TX_LABEL[status]}
         </TextMorph>
       </span>
       {detail && (

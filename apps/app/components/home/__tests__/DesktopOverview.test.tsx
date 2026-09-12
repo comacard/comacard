@@ -1,156 +1,121 @@
-/**
- * The desktop Overview's value-over-time chart (R9).
- *
- * What this file exists to prove: **the fabricated series is gone.** The chart used to be three summed
- * sine waves anchored to the current total, drawn identically whether the user had moved money that week
- * or not. It now plots the backend's own `valueUsd` timeline: a step function on real deposits and
- * withdrawals, flat in between.
- *
- * `rangeSeries` is exported and tested directly because the fabrication was arithmetic, not markup: a
- * render assertion ("a chart appeared") passed just as happily with the wobble in place.
- *
- * The suite runs with `NEXT_PUBLIC_API_URL` absent, so the rendered component here is the **offline**
- * one — the fixture path. That is deliberate: the deletion has to hold in both modes, and the offline
- * timeline is the one Playwright's baseline renders.
- */
-import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MockVaultClient } from "@sorosense/vault-client";
 import { VaultProvider } from "../../../providers/VaultProvider";
-import { ToastProvider } from "../../../providers/ToastProvider";
-import { seedVault } from "../../../lib/vault/seed";
-import type { ChartPoint } from "../../../hooks/useEarnings";
-import { DesktopOverview, rangeSeries } from "../DesktopOverview";
+import { render as rtlRender, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { DesktopOverview } from "../DesktopOverview";
 
+/**
+ * The desktop Overview after it stopped being a SoroSense dashboard.
+ *
+ * It is built from the same components and the same hooks as the mobile Home, so these tests are
+ * about what desktop composes, not about re-proving each piece: the card leads, cross-chain
+ * collateral is listed, and nothing reports a bucket or an APY.
+ */
+
+/**
+ * `CardFolderPanel` fetches the unmasked card through react-query, and the activity drawer still
+ * reaches the vault seam left over from the port, so both providers have to be present.
+ */
+const render = (ui: React.ReactNode) =>
+  rtlRender(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <VaultProvider client={new MockVaultClient()}>{ui}</VaultProvider>
+    </QueryClientProvider>,
+  );
+
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/home",
   useSearchParams: () => new URLSearchParams(""),
 }));
-const useWallet = vi.fn();
-vi.mock("../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }));
+vi.mock("../../../hooks/useWallet", () => ({
+  useWallet: () => ({ address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0", isConnected: true }),
+}));
 
-/**
- * The deposit drawer signs collateral locks, so it reaches for the chain reads, the write client
- * and wagmi's chain switch. Mocked rather than provided: this file tests the Overview's own
- * composition, and a real WagmiProvider here would test wagmi's cache over the network.
- */
+const cardAccount = vi.fn();
+vi.mock("../../../hooks/useCardAccount", () => ({ useCardAccount: () => cardAccount() }));
+
+const creditLine = vi.fn();
+vi.mock("../../../hooks/useCreditLine", () => ({ useCreditLine: () => creditLine() }));
+
 vi.mock("../../../hooks/useCollateral", () => ({
   useCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false }),
 }));
-
 vi.mock("../../../hooks/useRemoteCollateral", () => ({
   useRemoteCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false, configured: true }),
 }));
-vi.mock("../../../hooks/useCreditLine", () => ({
-  useCreditLine: () => ({
-    lock: vi.fn(),
-    lockToken: vi.fn(),
-    score: 0n,
-    txStatus: null,
-    hash: undefined,
-    error: null,
-    reset: vi.fn(),
-    onSepolia: true,
-  }),
+vi.mock("../../../hooks/useCreditHistory", () => ({
+  useCreditHistory: () => ({ events: [], borrowed: 0n, repaid: 0n, cyclesClosed: 0, loading: false, error: false }),
 }));
-vi.mock("wagmi", () => ({ useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }) }));
+vi.mock("../../../hooks/useWalletAssets", () => ({
+  useWalletAssets: () => ({ loading: false, assets: [], totalUsd: null, prices: null, priceError: false }),
+}));
+vi.mock("../../../hooks/useTransactions", () => ({
+  useTransactions: () => ({ loading: false, error: false, items: [] }),
+}));
+vi.mock("../../../hooks/useKycStart", () => ({
+  useKycStart: () => ({ verify: vi.fn(), url: null, close: vi.fn(), starting: false, error: null, clearError: vi.fn() }),
+}));
+vi.mock("wagmi", () => ({
+  useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }),
+  useConfig: () => ({}),
+}));
 
-const HOUR = 3_600_000;
-const DAY = 24 * HOUR;
-const NOW = Date.UTC(2026, 6, 10, 12, 0, 0);
+const VERIFIED = {
+  account: {
+    kyc: { verified: true, status: "Approved", sessionId: "s" },
+    card: { issued: true, spendableCtc: "33.3333" },
+    credit: { score: 0, limitCtc: "33.3333", availableCtc: "33.3333", drawnCtc: "0.0000" },
+    pendingDeposits: [],
+  },
+  error: null,
+  loading: false,
+  refresh: vi.fn(),
+};
 
-const point = (ts: number, valueUsd: number): ChartPoint => ({ ts, valueUsd, earnedUsd: 0 });
-
-test("the series is the backend's value timeline — a step up, with nothing invented between", () => {
-  // The plan's own example: a deposit takes the bucket from $1,000 to $1,500.
-  const chart = [point(NOW - DAY, 1000), point(NOW, 1500)];
-  const series = rangeSeries(chart, "Week", 1500);
-
-  expect(series).toEqual([1000, 1500]);
-  // Monotone, and nothing overshoots the real high-water mark. The old synthetic series failed both: its
-  // wobble rode ±vol around the trend line, so interior points sat above the final value and the series
-  // reversed direction several times — a chart of money that never moved that way.
-  for (let i = 1; i < series.length; i++) expect(series[i]!).toBeGreaterThanOrEqual(series[i - 1]!);
-  for (const v of series.slice(0, -1)) expect(v).toBeLessThanOrEqual(1500);
-  expect(Math.max(...series)).toBe(1500);
+beforeEach(() => {
+  vi.clearAllMocks();
+  cardAccount.mockReturnValue(VERIFIED);
+  creditLine.mockReturnValue({ drawn: 0n, available: 33n });
 });
 
-test("a withdrawal steps the series DOWN — the chart follows the money, not a trend", () => {
-  const chart = [point(NOW - 2 * HOUR, 1500), point(NOW - HOUR, 1500), point(NOW, 900)];
-  expect(rangeSeries(chart, "Day", 900)).toEqual([1500, 1500, 900]);
+test("leads with the card and offers no bucket or yield", () => {
+  render(<DesktopOverview />);
+
+  expect(screen.getByText("Spendable")).toBeInTheDocument();
+  expect(screen.queryByText(/bucket|APY|Growth|Agent/i)).toBeNull();
 });
 
-test("an empty chart renders a flat line at the value we actually hold — never a curve from nothing", () => {
-  // A fresh vault, or a server that booted a moment ago. There is no history to draw.
-  const series = rangeSeries([], "Week", 2500);
-  expect(series).toEqual([2500, 2500]);
-  expect(series).toHaveLength(2); // ValueChart needs two points to draw a line at all
+test("Spend and Deposit are both offered, and Spend goes to the full page", async () => {
+  const user = userEvent.setup();
+  render(<DesktopOverview />);
+
+  expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Spend" }));
+  // No desktop drawer exists for it, and the keypad takes a physical keyboard.
+  expect(push).toHaveBeenCalledWith("/spend");
 });
 
-test("points outside the selected range are excluded", () => {
-  const chart = [point(NOW - 20 * DAY, 500), point(NOW - 2 * HOUR, 1000), point(NOW, 1200)];
-  // The 20-day-old point is outside Day and Week, inside Month (30d) and Year (all).
-  expect(rangeSeries(chart, "Day", 1200)).toEqual([1000, 1200]);
-  expect(rangeSeries(chart, "Week", 1200)).toEqual([1000, 1200]);
-  expect(rangeSeries(chart, "Month", 1200)).toEqual([500, 1000, 1200]);
-  expect(rangeSeries(chart, "Year", 1200)).toEqual([500, 1000, 1200]);
+test("an open balance leads with Repay without hiding Deposit", async () => {
+  const user = userEvent.setup();
+  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n });
+  render(<DesktopOverview />);
+
+  expect(screen.getByText("Current balance")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Repay" }));
+  expect(push).toHaveBeenCalledWith("/pay");
 });
 
-test("a range holding no movement still renders — flat at the last known value, not at zero", () => {
-  // The only deposit was 20 days ago; the snapshotter has kept stamping the same value since. Over the
-  // last Day nothing happened, so the Day chart is a level line at what the bucket holds — not an empty
-  // chart, and emphatically not a line falling to $0.
-  const chart = [point(NOW - 20 * DAY, 500), point(NOW - 19 * DAY, 1200), point(NOW, 1200)];
-  const series = rangeSeries(chart, "Day", 1200);
-  expect(series).toEqual([1200, 1200]);
-});
+test("an unverified holder is offered verification instead of the actions", async () => {
+  cardAccount.mockReturnValue({
+    ...VERIFIED,
+    account: { ...VERIFIED.account, kyc: { verified: false, status: "Not Started", sessionId: null } },
+  });
+  render(<DesktopOverview />);
 
-test("every value in the series is finite — a NaN would blank the SVG path", () => {
-  for (const range of ["Day", "Week", "Month", "Year"] as const) {
-    for (const v of rangeSeries([], range, 0)) expect(Number.isFinite(v)).toBe(true);
-    for (const v of rangeSeries([point(NOW, 1000)], range, 1000)) expect(Number.isFinite(v)).toBe(true);
-  }
-});
-
-test("the Overview renders a funded vault without throwing, and draws no wobble", async () => {
-  useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
-  const client = new MockVaultClient();
-  await seedVault(client, "GUSER");
-  render(
-    <VaultProvider client={client}>
-      <ToastProvider>
-        <DesktopOverview />
-      </ToastProvider>
-    </VaultProvider>,
-  );
-
-  await waitFor(() => expect(screen.getByText("USD Bucket")).toBeInTheDocument());
-  expect(screen.getByLabelText("Your value")).toBeInTheDocument();
-  expect(screen.getByLabelText("Range")).toBeInTheDocument();
-});
-
-test("an unfunded vault renders the Overview flat — no buckets, no chart, no crash", async () => {
-  // No address → no buckets, and `VaultProvider` never runs the dev seed (same idiom as
-  // `earn-empty.test.tsx`). Handing it an address instead would have the provider seed the vault out
-  // from under the assertions — the empty state would then only render until the seed landed, which is
-  // a race, not a test.
-  useWallet.mockReturnValue({ address: null, isConnected: false });
-  render(
-    <VaultProvider client={new MockVaultClient()}>
-      <ToastProvider>
-        <DesktopOverview />
-      </ToastProvider>
-    </VaultProvider>,
-  );
-
-  await waitFor(() => expect(screen.getByText("No deposits yet")).toBeInTheDocument());
-  expect(screen.getByText("Deposit to start earning")).toBeInTheDocument();
-  expect(screen.queryByText(/performance fee/i)).toBeNull();
-  expect(screen.getByText("Deposit your money to create your first earning bucket.")).toBeInTheDocument();
-  expect(screen.getByText("No agent activity yet")).toBeInTheDocument();
-  expect(screen.getByText("Deposit first; automated moves will show here.")).toBeInTheDocument();
-  // Before the first deposit, Growth offers the same deterministic simulator as the Earn surface.
-  expect(screen.getByText("Simulate earnings")).toBeInTheDocument();
-  expect(screen.getByText("$1,000")).toBeInTheDocument();
-  expect(screen.getByTestId("growth-simulator")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole("button", { name: /verify identity/i })).toBeInTheDocument());
+  expect(screen.queryByRole("button", { name: "Spend" })).toBeNull();
 });

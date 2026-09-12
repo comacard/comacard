@@ -16,19 +16,13 @@ import type { ComacardAccount } from "../../lib/comacard/api";
  * of available credit and whatever else gates the card, and recomputing that in the client is how
  * a screen ends up promising credit the card will refuse.
  *
- * Limit and score sit underneath because they explain the headline. The score is there in
- * particular because it is the one figure the holder can move, and moving it raises the headline
- * without another deposit.
+ * Nothing sits under it. The limit and the score were there to explain the headline and did the
+ * opposite: three figures in a stack, two of which a reader has to already understand to know why
+ * they differ. Both have a screen of their own where they are the subject.
  */
-
-function line(account: ComacardAccount | null): string | null {
-  if (!account?.credit) return null;
-  return `Limit ${account.credit.limitCtc} · Score ${account.credit.score}`;
-}
 
 export function CardHero({ account }: { account: ComacardAccount | null }) {
   const spendable = account ? Number(account.card.spendableCtc) : 0;
-  const detail = line(account);
   // Three states, and the two that are not a number are not the same state. An unverified holder
   // has no card yet; a null account means the backend could not be read at all. Rendering 0.0000
   // for either reads as "your card is empty", which is a claim about money that nothing here
@@ -56,9 +50,6 @@ export function CardHero({ account }: { account: ComacardAccount | null }) {
           className="mt-2 block whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] [font-variant-numeric:tabular-nums]"
         />
       )}
-      {detail && !unissued && !unknown ? (
-        <div className="mt-2.5 text-[12.5px] font-medium text-faint tabular-nums">{detail}</div>
-      ) : null}
     </div>
   );
 }

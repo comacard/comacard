@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
+import { MockVaultClient} from "@sorosense/vault-client";
 import { VaultProvider } from "../../../../providers/VaultProvider";
 import AccountPage from "../page";
 
@@ -56,9 +56,6 @@ test("shows the identicon and a truncated address, and names no wallet product",
 
 test("does not claim a connection date it has no source for", async () => {
   renderAccount();
-  // useAutoCompound() resolves on a later microtask; wait for it to land before asserting, so the
-  // state update commits inside act() rather than after the test body returns.
-  await screen.findByTestId("auto-compound-state");
   expect(document.body.textContent).not.toMatch(/since/i);
 });
 
@@ -81,72 +78,10 @@ test("Activity routes to the central activity page", async () => {
   expect(push).toHaveBeenCalledWith("/transactions");
 });
 
-test("auto-reinvest reads ON for a fresh user — the seam's default is enabled (unset = on)", async () => {
-  renderAccount();
-  const control = await screen.findByRole("switch");
-  // Wait for the seam read to land *first* (the switch is disabled while loading) — asserting
-  // aria-checked alone would pass on the hook's initial state even if the read never fired.
-  await waitFor(() => expect(control).toBeEnabled());
-  expect(control).toHaveAttribute("aria-checked", "true");
-});
 
-test("auto-reinvest reads OFF for a depositor who revoked it", async () => {
-  const client = new MockVaultClient();
-  await client.setAutoCompound(ADDRESS, false).signAndSubmit(mockSigner("depositor", ADDRESS));
-  renderAccount(client);
-  await waitFor(() => expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false"));
-});
 
-test("R1/R2 — the switch is live and revocable: OFF, then ON again, both wallet-signed", async () => {
-  const user = userEvent.setup();
-  const client = new MockVaultClient();
-  renderAccount(client);
-  const control = await screen.findByRole("switch");
-  await waitFor(() => expect(control).toBeEnabled());
 
-  await user.click(control);
-  await waitFor(() => expect(control).toHaveAttribute("aria-checked", "false"));
-  await expect(client.autoCompoundEnabled(ADDRESS)).resolves.toBe(false);
-  expect(signTransaction).toHaveBeenCalledTimes(1);
 
-  await user.click(control);
-  await waitFor(() => expect(control).toHaveAttribute("aria-checked", "true"));
-  await expect(client.autoCompoundEnabled(ADDRESS)).resolves.toBe(true);
-  expect(signTransaction).toHaveBeenCalledTimes(2);
-});
-
-test("R1 — toggling never touches the safety mandate (KTD3): hasConsent is unchanged", async () => {
-  const user = userEvent.setup();
-  const client = new MockVaultClient();
-  await client.setPolicyConsent(ADDRESS).signAndSubmit(mockSigner("depositor", ADDRESS));
-  const setPolicyConsent = vi.spyOn(client, "setPolicyConsent");
-  renderAccount(client);
-  const control = await screen.findByRole("switch");
-  await waitFor(() => expect(control).toBeEnabled());
-
-  await user.click(control);
-  await waitFor(() => expect(control).toHaveAttribute("aria-checked", "false"));
-
-  // This is the invariant the whole ticket rests on: the economic preference and the irrevocable
-  // safety mandate are separate grants, and this switch writes only the former.
-  await expect(client.hasConsent(ADDRESS)).resolves.toBe(true);
-  expect(setPolicyConsent).not.toHaveBeenCalled();
-});
-
-test("a declined signature leaves the switch where it was and says so", async () => {
-  const user = userEvent.setup();
-  signTransaction.mockRejectedValueOnce({ code: -1, message: "The user closed the modal." });
-  const client = new MockVaultClient();
-  renderAccount(client);
-  const control = await screen.findByRole("switch");
-  await waitFor(() => expect(control).toBeEnabled());
-
-  await user.click(control);
-
-  expect(await screen.findByText("Signature cancelled. Nothing changed.")).toBeInTheDocument();
-  expect(control).toHaveAttribute("aria-checked", "true"); // never moved
-  await expect(client.autoCompoundEnabled(ADDRESS)).resolves.toBe(true); // nothing written
-});
 
 test("Log out confirms before disconnecting", async () => {
   const user = userEvent.setup();

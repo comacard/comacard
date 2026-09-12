@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Switch, Toast } from "../../../components/ui";
+import { Button, Toast } from "../../../components/ui";
 import { Identicon } from "../../../components/account/Identicon";
 import { FaucetSection } from "../../../components/account/FaucetSection";
 import { LogoutSheet } from "../../../components/account/LogoutSheet";
-import { useAutoCompound } from "../../../hooks/useAutoCompound";
 import { useNav } from "../../../hooks/useNav";
 import { useWallet } from "../../../hooks/useWallet";
 import { useRedirectDesktopToHome } from "../../../hooks/useRedirectDesktopToHome";
@@ -21,7 +20,6 @@ export default function AccountPage() {
   const [toast, setToast] = useState<{ message: string } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const notify = (message: string) => setToast({ message });
-  const { enabled, loading, pending, toggle } = useAutoCompound(notify);
   const redirecting = useRedirectDesktopToHome();
 
   useEffect(() => {
@@ -66,7 +64,7 @@ export default function AccountPage() {
 
         <section className="mt-5">
           <h2 className="ml-1 mb-2.5 text-sm font-medium text-muted">General</h2>
-          <div className="space-y-2.5">
+          <div>
             <button onClick={() => nav.forward("/transactions")} className={mobilePanel}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
                 <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
@@ -80,26 +78,6 @@ export default function AccountPage() {
               </svg>
             </button>
 
-            <div className={mobilePanel}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
-                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                <path d="M21 21v-5h-5" />
-              </svg>
-              <span className="min-w-0 grow">
-                <span className="block font-semibold">Auto reinvest rewards</span>
-                <span className="block text-[12.5px] text-muted">Yield rewards flow back into your pool</span>
-              </span>
-              <span data-testid="auto-compound-state" data-state={enabled ? "on" : "off"} className="shrink-0">
-                <Switch
-                  checked={enabled}
-                  label="Auto reinvest rewards"
-                  readOnly={loading || pending}
-                  onChange={() => void toggle()}
-                />
-              </span>
-            </div>
           </div>
         </section>
 

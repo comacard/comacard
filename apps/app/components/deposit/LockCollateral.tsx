@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
-import { badgeForSymbol, Button, CoinBadge, Keypad, Skeleton, TransactionStatus } from "../ui";
+import { badgeForSymbol, Button, CoinBadge, Keypad, PendingLabel, Skeleton, TransactionStatus } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
 import { assetBySlug, useCollateral, type CollateralAsset } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
@@ -173,9 +173,9 @@ export function LockCollateral({ sym }: { sym: string }) {
           <p className="mt-2 text-[13px] leading-snug text-muted">
             You hold no {asset.symbol} on Sepolia, so there is nothing to lock yet.
           </p>
-          {txStatus ? (
+          {txStatus === "failed" ? (
             <TransactionStatus
-              status={txStatus}
+              status="failed"
               detail={error ? error.message.split("\n")[0] : undefined}
               href={hash ? explorerTx(SEPOLIA_CHAIN_ID, hash) : undefined}
               className="mt-4"
@@ -223,9 +223,9 @@ export function LockCollateral({ sym }: { sym: string }) {
             />
           </div>
 
-          {txStatus ? (
+          {txStatus === "failed" ? (
             <TransactionStatus
-              status={txStatus}
+              status="failed"
               detail={error ? error.message.split("\n")[0] : undefined}
               href={hash ? explorerTx(SEPOLIA_CHAIN_ID, hash) : undefined}
               className="mb-3"
@@ -235,7 +235,11 @@ export function LockCollateral({ sym }: { sym: string }) {
           <div className="mt-auto">
             {onSepolia ? (
               <Button onClick={onLock} disabled={busy || entered <= 0n || exceeded}>
-                {busy ? "Confirm in your wallet…" : `Lock ${asset.symbol}`}
+                {busy ? (
+                  <PendingLabel status={txStatus === "confirming" ? "confirming" : "signing"} />
+                ) : (
+                  `Lock ${asset.symbol}`
+                )}
               </Button>
             ) : (
               <>

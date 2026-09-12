@@ -74,6 +74,8 @@ test("says where the money actually goes, since there is no merchant", () => {
 test("uses the cardholder's words, not the contract's", () => {
   render(<SpendScreen />);
 
+  // Cardholder vocabulary, never the contract's: `draw` and "outstanding principal" are ledger
+  // entries, and a screen named after them needs a glossary.
   expect(screen.getByRole("button", { name: "Spend" })).toBeInTheDocument();
-  expect(screen.queryByText(/draw|borrow|principal/i)).toBeNull();
+  expect(screen.queryByText(/draw|principal|outstanding/i)).toBeNull();
 });

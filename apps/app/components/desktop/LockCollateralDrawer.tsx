@@ -9,6 +9,7 @@ import {
   Button,
   CoinBadge,
   Skeleton,
+  PendingLabel,
   TransactionStatus,
 } from "../ui";
 import { useCollateral, type CollateralAsset } from "../../hooks/useCollateral";
@@ -220,20 +221,22 @@ export function LockCollateralDrawer({ open, onClose }: { open: boolean; onClose
             />
           </div>
 
-          {txStatus ? (
+          {txStatus === "failed" ? (
             <TransactionStatus
-              status={txStatus}
+              status="failed"
               detail={error ? error.message.split("\n")[0] : undefined}
               href={hash ? explorerTx(SEPOLIA_CHAIN_ID, hash) : undefined}
             />
           ) : null}
 
           <Button onClick={onLock} disabled={busy || switching || entered <= 0n || exceeded}>
-            {switching
-              ? "Switching…"
-              : busy
-                ? "Confirm in your wallet…"
-                : `Lock ${asset.symbol}`}
+            {switching ? (
+              "Switching…"
+            ) : busy ? (
+              <PendingLabel status={txStatus === "confirming" ? "confirming" : "signing"} />
+            ) : (
+              `Lock ${asset.symbol}`
+            )}
           </Button>
         </div>
       )}

@@ -17,4 +17,5 @@ export { CountUp } from "./CountUp";
 export { TransferStatus } from "./TransferStatus";
 export { Switch } from "./Switch";
 export { CopyButton } from "./CopyButton";
-export { TransactionStatus, type TxStatus } from "./TransactionStatus";
+export { TransactionStatus, TX_LABEL, type TxStatus } from "./TransactionStatus";
+export { PendingLabel } from "./PendingLabel";

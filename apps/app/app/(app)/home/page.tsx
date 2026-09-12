@@ -12,6 +12,7 @@ import { useKycStart } from "../../../hooks/useKycStart";
 import { CardFolderPanel } from "../../../components/card/CardFolderPanel";
 import { CollateralList } from "../../../components/card/CollateralList";
 import { IncomingDeposits } from "../../../components/card/IncomingDeposits";
+import { SpentTotal } from "../../../components/card/SpentTotal";
 import { useCollateral } from "../../../hooks/useCollateral";
 import { useRemoteCollateral } from "../../../hooks/useRemoteCollateral";
 import { useCreditLine } from "../../../hooks/useCreditLine";
@@ -74,39 +75,51 @@ function MobileHome() {
         <Button className="mb-[22px]" onClick={verify} disabled={starting}>
           {starting ? "Opening…" : "Verify identity"}
         </Button>
-      ) : owes ? (
-        /* An open balance is the only thing that needs doing, so it is the only thing offered.
-           Spending more while a cycle is open delays the payment that would score it. */
-        <div className="mb-[22px] rounded-[16px] border border-line bg-white px-4 py-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[13px] text-muted">You owe</span>
-            <span className="text-[16px] font-semibold tabular-nums">{owedLabel} tCTC</span>
-          </div>
-          <Button className="mt-3" onClick={() => nav.forward("/pay")}>
-            Pay
-          </Button>
-        </div>
       ) : (
-        <div className="mb-[22px] flex gap-2.5">
-          <Button
-            className="flex-1"
-            onClick={() => nav.forward("/spend")}
-            disabled={(available ?? 0n) === 0n}
-          >
-            Spend
-          </Button>
-          <Button variant="glass" className="flex-1" onClick={() => nav.forward("/deposit")}>
-            Deposit
-          </Button>
-        </div>
+        <>
+          {/* An open balance leads, because settling it is what scores. It does not replace the
+              other two: depositing has nothing to do with owing, and hiding it was a mistake. */}
+          {owes ? (
+            <div className="mb-2.5 rounded-[16px] border border-line bg-white px-4 py-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[13px] text-muted">Current balance</span>
+                <span className="text-[16px] font-semibold tabular-nums">{owedLabel} tCTC</span>
+              </div>
+              <Button className="mt-3" onClick={() => nav.forward("/pay")}>
+                Repay
+              </Button>
+            </div>
+          ) : null}
+
+          <div className="mb-[22px] flex gap-2.5">
+            <Button
+              variant={owes ? "glass" : "ink"}
+              className="flex-1"
+              onClick={() => nav.forward("/spend")}
+              disabled={(available ?? 0n) === 0n}
+            >
+              Spend
+            </Button>
+            <Button variant="glass" className="flex-1" onClick={() => nav.forward("/deposit")}>
+              Deposit
+            </Button>
+          </div>
+        </>
       )}
 
       {/* Before the collateral list, because an incoming deposit is the answer to "why has my
           limit not moved". Seeing the backing first and the explanation second is backwards. */}
       <IncomingDeposits deposits={account?.pendingDeposits ?? []} className="mb-[22px]" />
 
-      {/* What the headline is actually built on, before the wallet. Locking more moves the number
-          at the top of this screen; the wallet balance below does not. */}
+      {/* Taken from the card, above what backs it. Read from Draw events rather than the wallet,
+          because tCTC that arrived from anywhere else was never spent on this card.
+          Hidden while a balance is open: the two figures are different questions — what is owed
+          now, and what has ever been taken — but they read as one repeated number until the first
+          repayment makes them diverge. */}
+      {owes ? null : <SpentTotal className="mb-[22px]" />}
+
+      {/* What the headline is actually built on. Locking more moves the number at the top of this
+          screen. */}
       <CollateralList assets={collateral} remote={remoteCollateral} className="mb-[22px] mt-0" />
 
       <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Transactions</h2>

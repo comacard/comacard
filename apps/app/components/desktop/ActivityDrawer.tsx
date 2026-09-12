@@ -3,25 +3,26 @@ import { useState } from "react";
 import { Drawer } from "../ui/Drawer";
 import { Segmented } from "../ui";
 import { ActivityList } from "../activity/ActivityList";
-import { useActivity } from "../../hooks/useActivity";
+import { useTransactions } from "../../hooks/useTransactions";
 import { usePendingExit } from "../../hooks/usePendingExit";
 
-const TABS = ["All", "Yours", "Agent"] as const;
+const TABS = ["All", "Card", "Deposit"] as const;
 type Tab = (typeof TABS)[number];
-/** Tab → the ActivityItem.cat it filters to (All is the UI-only sentinel). */
-const TAB_CAT: Record<Tab, "you" | "auto" | null> = { All: null, Yours: "you", Agent: "auto" };
+/** Tab → the ActivityItem.group it filters to (All is the UI-only sentinel). Same three the mobile
+ *  Transactions page uses, named for a secured credit card rather than for the machinery. */
+const TAB_CAT: Record<Tab, "card" | "deposit" | null> = { All: null, Card: "card", Deposit: "deposit" };
 const EMPTY_COPY: Record<Tab, { title: string; description: string }> = {
   All: {
-    title: "No activity yet",
-    description: "Deposit first; your actions and automated updates will show here.",
+    title: "No transactions yet",
+    description: "Put down a deposit and everything that follows will show here.",
   },
-  Yours: {
-    title: "No account activity yet",
-    description: "Deposits and withdrawals will show here.",
+  Card: {
+    title: "Nothing spent yet",
+    description: "What you spend and pay back on the card will show here.",
   },
-  Agent: {
-    title: "No agent activity yet",
-    description: "Deposit first; automated moves will show here.",
+  Deposit: {
+    title: "No deposits yet",
+    description: "Collateral you lock will show here.",
   },
 };
 
@@ -32,11 +33,11 @@ const EMPTY_COPY: Record<Tab, { title: string; description: string }> = {
  * panel host opens the safe-exit dialog).
  */
 export function ActivityDrawer({ open, onClose, onReview }: { open: boolean; onClose: () => void; onReview: () => void }) {
-  const { loading, items } = useActivity();
+  const { loading, items } = useTransactions();
   const pend = usePendingExit();
   const [tab, setTab] = useState<Tab>("All");
   const cat = TAB_CAT[tab];
-  const shown = cat === null ? items : items.filter((a) => a.cat === cat);
+  const shown = cat === null ? items : items.filter((a) => a.group === cat);
   const empty = EMPTY_COPY[tab];
   return (
     <Drawer open={open} onClose={onClose} label="Activity">

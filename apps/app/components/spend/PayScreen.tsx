@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatUnits } from "viem";
 import { useSwitchChain } from "wagmi";
-import { Button, TransactionStatus } from "../ui";
+import { Button, PendingLabel, TransactionStatus } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { CREDITCOIN_CHAIN_ID, explorerTx } from "../../lib/comacard/contracts";
 
 /**
- * Paying the card balance off.
+ * Repaying the card balance.
  *
  * **One button, for the whole balance, and that is a correctness decision rather than a
  * simplification.** Only a payment that clears the balance to zero closes a credit cycle and counts
@@ -95,10 +95,10 @@ export function PayScreen() {
 
   return (
     <div className="flex min-h-[calc(100dvh-92px)] flex-col">
-      <SubHeader title="Pay" />
+      <SubHeader title="Repay" />
 
       <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="text-[15px] font-medium text-muted">You owe</div>
+        <div className="text-[15px] font-medium text-muted">Current balance</div>
         <div className="mt-2 whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] tabular-nums">
           {fmt(owed)} tCTC
         </div>
@@ -110,9 +110,9 @@ export function PayScreen() {
         ) : null}
       </div>
 
-      {txStatus ? (
+      {txStatus === "failed" ? (
         <TransactionStatus
-          status={txStatus}
+          status="failed"
           detail={error ? error.message.split("\n")[0] : undefined}
           href={hash ? explorerTx(CREDITCOIN_CHAIN_ID, hash) : undefined}
           className="mb-3"
@@ -125,13 +125,15 @@ export function PayScreen() {
         ) : (
           <>
             <Button onClick={onPay} disabled={busy || switching || tooSoon}>
-              {switching
-                ? "Switching…"
-                : busy
-                  ? "Confirm in your wallet…"
-                  : tooSoon
-                    ? `Wait ${secondsLeft}s`
-                    : `Pay ${fmt(owed)} tCTC`}
+              {switching ? (
+                "Switching…"
+              ) : busy ? (
+                <PendingLabel status={txStatus === "confirming" ? "confirming" : "signing"} />
+              ) : tooSoon ? (
+                `Wait ${secondsLeft}s`
+              ) : (
+                `Repay ${fmt(owed)} tCTC`
+              )}
             </Button>
             {tooSoon ? (
               <p className="mt-2 text-center text-[12px] leading-snug text-muted">

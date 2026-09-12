@@ -57,23 +57,39 @@ vi.mock("../../../../hooks/useWalletAssets", () => ({
 const cardAccount = vi.fn();
 vi.mock("../../../../hooks/useCardAccount", () => ({ useCardAccount: () => cardAccount() }));
 
+vi.mock("../../../../hooks/useCreditHistory", () => ({
+  useCreditHistory: () => ({
+    events: [],
+    borrowed: 0n,
+    repaid: 0n,
+    cyclesClosed: 0,
+    loading: false,
+    error: false,
+  }),
+}));
+
 /** Home lists what backs the limit. Mocked for the same reason as the hooks above. */
 const collateral = vi.fn(() => ({ assets: [], totalValue: 0n, loading: false, error: false }));
 vi.mock("../../../../hooks/useCollateral", () => ({ useCollateral: () => collateral() }));
 
-/** The desktop deposit drawer signs, so it reaches for the write client and wagmi's chain switch. */
-vi.mock("../../../../hooks/useCreditLine", () => ({
-  useCreditLine: () => ({
-    lock: vi.fn(),
-    lockToken: vi.fn(),
-    score: 0n,
-    txStatus: null,
-    hash: undefined,
-    error: null,
-    reset: vi.fn(),
-    onSepolia: true,
-  }),
-}));
+/**
+ * The write client, reached by the deposit drawer and by Home's own read of what is owed. A `vi.fn`
+ * so a test can put a balance on the card.
+ */
+const creditLine = vi.fn();
+vi.mock("../../../../hooks/useCreditLine", () => ({ useCreditLine: () => creditLine() }));
+const DEFAULT_LINE = {
+  lock: vi.fn(),
+  lockToken: vi.fn(),
+  score: 0n,
+  drawn: 0n,
+  available: 0n,
+  txStatus: null,
+  hash: undefined,
+  error: null,
+  reset: vi.fn(),
+  onSepolia: true,
+};
 vi.mock("wagmi", () => ({ useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }) }));
 
 /** Four on-chain rows, in the shape the indexer hook emits. Mocked for the same reason as the two
@@ -97,6 +113,7 @@ vi.mock("../../../../hooks/useKycStart", () => ({
 
 /** A funded wallet whose owner has cleared identity: the ordinary case. */
 function fundedAndVerified() {
+  creditLine.mockReturnValue(DEFAULT_LINE);
   walletAssets.mockReturnValue({
     loading: false,
     assets: [asset("CTC", 2_000n * 10n ** 18n, 191.08), asset("ETH", 3n * 10n ** 14n, 0.74)],
@@ -134,7 +151,9 @@ test("leads with what the card can spend, not with what the wallet holds", async
   withProviders(<HomePage />, client);
 
   await waitFor(() => expect(screen.getByText("Spendable")).toBeInTheDocument());
-  expect(screen.getByText("Limit 0.4975 · Score 42")).toBeInTheDocument();
+  // One figure, not three. Limit and score stacked under it explained nothing a reader did not
+  // already have to know, and both are the subject of a screen of their own.
+  expect(screen.queryByText(/Limit .* · Score/)).toBeNull();
 
   // The wallet total used to be the headline. It read $191.82 next to a 0.4975 tCTC limit, which
   // is a card balance off by three orders of magnitude. Wallet balances now live on Account,
@@ -160,13 +179,16 @@ test("an empty wallet says so and offers no activity link", async () => {
     priceError: false,
   });
   cardAccount.mockReturnValue({ account: null, error: null, loading: false, refresh: vi.fn() });
+  creditLine.mockReturnValue(DEFAULT_LINE);
   transactions.mockReturnValue({ loading: false, error: false, items: [] });
   withProviders(<HomePage />, new MockVaultClient());
 
   // A card state that could not be read is not a card with nothing on it. Rendering 0.0000 tCTC
   // here would be a claim about money that nothing in this render actually knows.
   await waitFor(() => expect(screen.getByText("\u2014")).toBeInTheDocument());
-  expect(screen.queryByText(/tCTC/)).toBeNull();
+  // "Spendable" still labels the hero; what must not appear is a figure under it. The row below
+  // showing "0 tCTC" spent is a different number and a known one.
+  expect(screen.queryByText(/0\.0000 tCTC/)).toBeNull();
   expect(screen.getByText("No transactions yet")).toBeInTheDocument();
   expect(screen.queryByText("View all activity")).toBeNull();
 });
@@ -193,61 +215,22 @@ beforeEach(() => {
   fundedAndVerified();
 });
 
-test("desktop hero: eyebrow, flat Total segmented pressed, 'Earned this month' sub-stat, no risk words", async () => {
-  isDesktop.mockReturnValue(true);
-  useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
-  const client = new MockVaultClient();
-  await seedVault(client, "GUSER");
-  withProviders(<HomePage />, client);
 
-  await waitFor(() => expect(screen.getByText(/your value/i)).toBeInTheDocument());
-  const total = screen.getByRole("button", { name: "Total" });
-  expect(total).toHaveAttribute("aria-pressed", "true");
-  expect(total).not.toHaveClass("bg-white"); // flat segmented, not a white raised pill
-  expect(screen.getByText(/Earned this month/i)).toBeInTheDocument();
+
+
+
+test("an open balance leads with Repay but never hides Deposit", async () => {
+  useWallet.mockReturnValue({ address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0", isConnected: true });
+  fundedAndVerified();
+  creditLine.mockReturnValue({ ...DEFAULT_LINE, drawn: 1_000_000_000_000_000_000n, available: 5n });
+  withProviders(<HomePage />, new MockVaultClient());
+
+  await waitFor(() => expect(screen.getByRole("button", { name: "Repay" })).toBeInTheDocument());
+  // Depositing collateral has nothing to do with owing, and an earlier version dropped it.
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
-  // ExitApproval's own copy legitimately says "safe exit" (invisible-safety wording); it's mounted
-  // but aria-hidden (sheet closed), so scope this check to the visible page, not the hidden dialog.
-  expect(screen.queryByText(/\b(risk|score|Safe|Watch|Sentinel)\b/i, { ignore: '[aria-hidden="true"] *' })).toBeNull();
-  isDesktop.mockReturnValue(false); // reset for any later test
-});
+  expect(screen.getByRole("button", { name: "Spend" })).toBeInTheDocument();
 
-test("desktop bottom row: Buckets, Growth (green bars), Agent; banner shows on frozen seed", async () => {
-  isDesktop.mockReturnValue(true);
-  useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
-  const client = new MockVaultClient();
-  await seedVault(client, "GUSER"); // seeds a frozen EUR pool
-  withProviders(<HomePage />, client);
-
-  await waitFor(() => expect(screen.getByRole("heading", { name: "Buckets" })).toBeInTheDocument());
-  expect(screen.getByRole("heading", { name: "Growth" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Agent" })).toBeInTheDocument();
-  expect(screen.getAllByTestId("bars").length).toBeGreaterThan(0); // green Bars rendered
-  expect(screen.getByText(/your earning is paused/i)).toBeInTheDocument(); // frozen → banner
-  isDesktop.mockReturnValue(false);
-});
-
-test("desktop FreezeBanner is hidden when nothing is frozen", async () => {
-  isDesktop.mockReturnValue(true);
-  useWallet.mockReturnValue({ address: "GEMPTY", isConnected: true });
-  const client = new MockVaultClient(); // no seed → no frozen pool
-  withProviders(<HomePage />, client);
-
-  await waitFor(() => expect(screen.getByRole("heading", { name: "Buckets" })).toBeInTheDocument());
-  expect(screen.queryByText(/your earning is paused/i)).toBeNull(); // no banner when not pending
-  isDesktop.mockReturnValue(false);
-});
-
-test("desktop shows loading skeletons before data resolves, and none after", async () => {
-  isDesktop.mockReturnValue(true);
-  useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
-  const client = new MockVaultClient();
-  await seedVault(client, "GUSER");
-  withProviders(<HomePage />, client);
-  // First render: useBuckets is still loading → skeletons stand in for value/chart/buckets/growth.
-  expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
-  // Once the reads resolve, the skeletons are gone.
-  await waitFor(() => expect(screen.getByRole("heading", { name: "Buckets" })).toBeInTheDocument());
-  await waitFor(() => expect(screen.queryAllByTestId("skeleton")).toHaveLength(0));
-  isDesktop.mockReturnValue(false);
+  // "You owe" and "Spent from your card" are different questions that happen to hold the same
+  // figure until the first repayment, so only one of them is on screen at a time.
+  expect(screen.queryByText("Spent from your card")).toBeNull();
 });

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
-import { Button, Keypad, TransactionStatus } from "../ui";
+import { Button, Keypad, PendingLabel, TransactionStatus } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { CREDITCOIN_CHAIN_ID, explorerTx } from "../../lib/comacard/contracts";
@@ -11,14 +11,14 @@ import { CREDITCOIN_CHAIN_ID, explorerTx } from "../../lib/comacard/contracts";
 /**
  * Spending against the card's limit.
  *
- * The contract calls this `draw`, and nothing here does. A cardholder spends; only a lender draws,
- * and naming the button after the ledger entry rather than the act is how a screen ends up
- * needing a glossary. The same goes for the rest of this surface: the balance is what you owe, not
- * "outstanding principal", and settling it is paying, not repaying a facility.
+ * **"Spend", not the contract's "draw".** Naming a control after its ledger entry is how a screen
+ * ends up needing a glossary, so the whole surface uses a cardholder's words: the balance is what
+ * you owe, not "outstanding principal", and clearing it is paying, not repaying a facility.
  *
- * What it actually does is honest about where the money goes: there is no merchant in this demo,
- * so the CTC lands in the holder's own wallet on Creditcoin. The copy says that rather than
- * implying a purchase happened somewhere.
+ * Spend is a chosen word rather than an exact one, and the gap is worth knowing about: there is no
+ * merchant and no payment rail, so the tCTC lands in the holder's own wallet — a cash advance
+ * rather than a purchase. The line under the button says so before the signature, because a screen
+ * that implied a shop would leave someone looking for one.
  *
  * Both writes here are on **Creditcoin**, not Sepolia. That is the opposite of the deposit screen,
  * and getting it backwards produces a signature that fails on a chain mismatch, so the switch is
@@ -101,9 +101,11 @@ export function SpendScreen() {
         hint={`Your card has ${fmt(ceiling)} tCTC`}
       />
 
-      {txStatus ? (
+      {/* Only `failed` gets a pill. It carries a reason and an explorer link, which have nowhere to
+          go inside a button; the in-flight states report from the button itself. */}
+      {txStatus === "failed" ? (
         <TransactionStatus
-          status={txStatus}
+          status="failed"
           detail={error ? error.message.split("\n")[0] : undefined}
           href={hash ? explorerTx(CREDITCOIN_CHAIN_ID, hash) : undefined}
           className="mb-3"
@@ -112,7 +114,13 @@ export function SpendScreen() {
 
       <div className="mt-auto">
         <Button onClick={onSpend} disabled={busy || switching || entered <= 0n || exceeded}>
-          {switching ? "Switching…" : busy ? "Confirm in your wallet…" : "Spend"}
+          {switching ? (
+            "Switching…"
+          ) : busy ? (
+            <PendingLabel status={txStatus === "confirming" ? "confirming" : "signing"} />
+          ) : (
+            "Spend"
+          )}
         </Button>
         {/* Said before the signature, not after. There is no merchant in this demo, and a screen
             that implied a purchase would leave the holder looking for one. */}

@@ -46,7 +46,7 @@ test("pays the exact balance, never a rounded figure", async () => {
   const user = userEvent.setup();
   render(<PayScreen />);
 
-  await user.click(screen.getByRole("button", { name: /^Pay/ }));
+  await user.click(screen.getByRole("button", { name: /^Repay/ }));
 
   // `repay()` reverts when msg.value exceeds the debt, so the displayed 0.24 must not be what is
   // sent back — the wei figure from the account row is.
@@ -60,7 +60,7 @@ test("offers no way to pay part of the balance", () => {
   // action that quietly wastes the cycle.
   expect(screen.queryByRole("textbox")).toBeNull();
   expect(screen.queryByLabelText(/amount/i)).toBeNull();
-  expect(screen.getByRole("button", { name: /^Pay 0\.24 tCTC$/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^Repay 0\.24 tCTC$/ })).toBeInTheDocument();
 });
 
 test("holds the payment until the cycle has been open a minute, and says why", async () => {
@@ -79,7 +79,7 @@ test("switches to Creditcoin first rather than signing on Sepolia", async () => 
   creditLine.mockReturnValue(line({ onCreditcoin: false }));
   render(<PayScreen />);
 
-  await user.click(screen.getByRole("button", { name: /^Pay/ }));
+  await user.click(screen.getByRole("button", { name: /^Repay/ }));
 
   expect(switchChainAsync).toHaveBeenCalledWith({ chainId: 102031 });
   expect(repay).toHaveBeenCalled();
@@ -89,6 +89,6 @@ test("a settled card offers nothing to pay", () => {
   creditLine.mockReturnValue(line({ drawn: 0n, drawnAt: 0n }));
   render(<PayScreen />);
 
-  expect(screen.queryByRole("button", { name: /^Pay/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Repay/ })).toBeNull();
   expect(screen.getByRole("button", { name: "Back to home" })).toBeInTheDocument();
 });

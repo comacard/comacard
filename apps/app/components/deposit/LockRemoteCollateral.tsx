@@ -4,7 +4,16 @@ import { useRouter } from "next/navigation";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useConfig, useSwitchChain, useWriteContract } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
-import { AssetIcon, badgeForSymbol, Button, CoinBadge, Keypad, Skeleton, TransactionStatus } from "../ui";
+import {
+  AssetIcon,
+  badgeForSymbol,
+  Button,
+  CoinBadge,
+  Keypad,
+  PendingLabel,
+  Skeleton,
+  TransactionStatus,
+} from "../ui";
 import { SubHeader } from "../ui/SubHeader";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { useRemoteCollateral, type RemoteAsset } from "../../hooks/useRemoteCollateral";
@@ -237,11 +246,15 @@ export function LockRemoteCollateral({ id }: { id: string }) {
 
       <div className="mt-auto">
         <Button onClick={onLock} disabled={busy || switching || entered <= 0n || exceeded}>
-          {switching
-            ? `Switching to ${asset.chainName}…`
-            : busy
-              ? "Confirm in your wallet…"
-              : `Lock ${symbol}`}
+          {switching ? (
+            `Switching to ${asset.chainName}…`
+          ) : busy ? (
+            // No `txStatus` here: this screen drives its own write, so the phase it can report is
+            // the signature it is waiting on.
+            <PendingLabel status="signing" />
+          ) : (
+            `Lock ${symbol}`
+          )}
         </Button>
         <p className="mt-2 text-center text-[12px] leading-snug text-muted">
           Signed across to Creditcoin in about fifteen minutes. Your {symbol} stays on{" "}

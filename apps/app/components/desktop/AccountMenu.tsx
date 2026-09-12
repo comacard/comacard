@@ -2,22 +2,17 @@
 
 import { useState } from "react";
 import { Dropdown } from "../ui/Dropdown";
-import { Switch } from "../ui";
 import { FaucetSection } from "../account/FaucetSection";
 import { Identicon } from "../account/Identicon";
 import { LogoutSheet } from "../account/LogoutSheet";
 import { useWallet } from "../../hooks/useWallet";
-import { useAutoCompound } from "../../hooks/useAutoCompound";
 import { useNav } from "../../hooks/useNav";
 import { usePanel } from "../../hooks/usePanel";
-import { useToast } from "../../hooks/useToast";
 
 const truncate = (address: string) => `${address.slice(0, 4)}...${address.slice(-4)}`;
 
 export function AccountMenu() {
   const { address, walletName, disconnect } = useWallet();
-  const { show } = useToast();
-  const { enabled, loading, pending, toggle } = useAutoCompound(show);
   const nav = useNav();
   const { open: openPanel } = usePanel();
   const [open, setOpen] = useState(false);
@@ -97,21 +92,6 @@ export function AccountMenu() {
               <path d="M9 6l6 6-6 6" />
             </svg>
           </button>
-          <div className="flex w-full items-center gap-[13px] rounded-xl px-3 py-2.5">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-2">
-              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-              <path d="M21 21v-5h-5" />
-            </svg>
-            <span className="grow">
-              <span className="block text-sm font-semibold">Auto reinvest rewards</span>
-              <span className="block text-xs text-muted">Yield rewards flow back into your pool</span>
-            </span>
-            <span data-testid="auto-compound-state" data-state={enabled ? "on" : "off"}>
-              <Switch checked={enabled} label="Auto reinvest rewards" readOnly={loading || pending} onChange={() => void toggle()} />
-            </span>
-          </div>
         </div>
 
         <FaucetSection compact />
