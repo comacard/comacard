@@ -26,11 +26,11 @@ signed message.
 | `WormholeVault` | Optimism Sepolia (`11155420`) | [`0xCaBFa324576c655D0276647A7f0aF5e779123e0B`](https://sepolia-optimism.etherscan.io/address/0xCaBFa324576c655D0276647A7f0aF5e779123e0B) |
 | `WormholeVault` | BSC Testnet (`97`) | [`0x9d8B6852705dD7585B3907244d603547a4eA32d6`](https://testnet.bscscan.com/address/0x9d8B6852705dD7585B3907244d603547a4eA32d6) |
 | `WormholeVault` | Avalanche Fuji (`43113`) | [`0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b`](https://testnet.snowtrace.io/address/0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b) |
-| `ReleaseRelay` | Base Sepolia | [`0x4f75738d7738a5735B6Bb83f77225D02F7cB49EB`](https://sepolia.basescan.org/address/0x4f75738d7738a5735B6Bb83f77225D02F7cB49EB) |
-| `ReleaseRelay` | Arbitrum Sepolia | [`0xAAf7439Bd2d4353efB121A06A4884577F0E40D5f`](https://sepolia.arbiscan.io/address/0xAAf7439Bd2d4353efB121A06A4884577F0E40D5f) |
-| `ReleaseRelay` | Optimism Sepolia | [`0x9dAf66b75d348D4f90B125a282bBFA608Ecec13C`](https://sepolia-optimism.etherscan.io/address/0x9dAf66b75d348D4f90B125a282bBFA608Ecec13C) |
-| `ReleaseRelay` | BSC Testnet | [`0x6a93d6b1119653AAe3291e24A8FAf615652AdB1B`](https://testnet.bscscan.com/address/0x6a93d6b1119653AAe3291e24A8FAf615652AdB1B) |
-| `ReleaseRelay` | Avalanche Fuji | [`0x9E3369116948DD10F28B158e650efdd3031b37d2`](https://testnet.snowtrace.io/address/0x9E3369116948DD10F28B158e650efdd3031b37d2) |
+| `ReleaseRelay` | Base Sepolia | [`0x70DC0F161Cef5C029b75ccEaA9b75445B4c8B8E6`](https://sepolia.basescan.org/address/0x70DC0F161Cef5C029b75ccEaA9b75445B4c8B8E6) |
+| `ReleaseRelay` | Arbitrum Sepolia | [`0x1bb43c2efb341cF099E4F016465e624C6F6B892b`](https://sepolia.arbiscan.io/address/0x1bb43c2efb341cF099E4F016465e624C6F6B892b) |
+| `ReleaseRelay` | Optimism Sepolia | [`0x4659f0d99587D4fA396840d982a4215FcFe8a557`](https://sepolia-optimism.etherscan.io/address/0x4659f0d99587D4fA396840d982a4215FcFe8a557) |
+| `ReleaseRelay` | BSC Testnet | [`0x5844Cf8Bbf41a2e25Ed3F40Ee96E64F31330cA3D`](https://testnet.bscscan.com/address/0x5844Cf8Bbf41a2e25Ed3F40Ee96E64F31330cA3D) |
+| `ReleaseRelay` | Avalanche Fuji | [`0xbD3328Bde4B15CF562938202a586C63aCd92b705`](https://testnet.snowtrace.io/address/0xbD3328Bde4B15CF562938202a586C63aCd92b705) |
 
 The Creditcoin and Sepolia contracts are UUPS proxies. The vaults are not: one
 is deployed per chain, its job is small, and a proxy on every chain is machinery
@@ -109,6 +109,14 @@ Proved on Fuji end to end: 0.2 AVAX released, signed in about thirty seconds,
 executed, withdrawn. The credit disappeared on Creditcoin the moment the request
 was accepted, 77.5 CTC of collateral value down to 72.5, and the vault went from
 0.5 AVAX to 0.3.
+
+A release names the chain it is for, inside the signed payload, and a relay
+refuses one addressed elsewhere. The first version did not, and every relay
+trusts the same emitter — so one signed release executed on all five, approving
+that amount out of each vault. The amount is the same on every chain but the
+asset is not: 0.2 AVAX is 5 CTC, and the same message on BSC approves 0.2 BNB,
+which is 120 CTC. Found by running the worker against the live deployment and
+confirmed with `cast call`; the relays were redeployed and the old ones disarmed.
 
 A release is version 2 of the payload a deposit uses. A vault that predates
 releases refuses one as an unsupported version rather than reading it as a
