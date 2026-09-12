@@ -305,10 +305,15 @@ export function CardFolder({
                 </span>
               </span>
             </span>
-            <span className="flex min-w-0 items-baseline justify-between gap-4">
-              <span className="truncate text-lg font-medium leading-tight text-foreground">
+            <span className="flex min-w-0 items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate text-lg font-medium leading-tight text-foreground">
                 {title}
               </span>
+              {/* `shrink-0`, and that is the fix rather than a preference. DigitSwap lays every
+                  glyph out in a fixed `1ch` slot inside a `whitespace-nowrap` inline-flex, so it
+                  has no way to reflow: squeezed by a long name it does not shrink, it gets clipped,
+                  and a card number cut to "9924 8604 6558 5" is worse than useless. The number
+                  takes the width it needs and the name, which can be abbreviated, yields. */}
               <DigitSwap
                 value={
                   areDetailsVisible
@@ -324,7 +329,7 @@ export function CardFolder({
                     : "text-muted-foreground"
                 }
                 suffixClassName="text-foreground"
-                className="truncate font-mono text-xs tracking-[0.08em] tabular-nums"
+                className="shrink-0 font-mono text-[11px] tracking-[0.04em] tabular-nums"
               />
             </span>
           </span>

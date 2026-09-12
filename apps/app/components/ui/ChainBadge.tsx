@@ -1,0 +1,85 @@
+/**
+ * The chain a token lives on, as a small mark pinned to the token's own icon.
+ *
+ * A corner badge rather than a second icon in the row, because the chain is not a separate thing
+ * being listed — it is half of the asset's identity. USDC on Base and USDC on Arbitrum are
+ * different assets in different vaults, and two rows reading "USDC" with the same blue circle would
+ * be indistinguishable in exactly the place where picking the wrong one costs money.
+ *
+ * An unknown chain renders nothing at all. A generic placeholder would suggest the app knows which
+ * chain it is and has merely lost the picture.
+ */
+
+/**
+ * Every mark here is the project's own, from Trust Wallet's asset registry, rather than drawn in
+ * this file. A hand-approximated logo is simply a wrong logo: the first attempt gave Base a circle
+ * with a notch cut out of it, when the real mark is a plain blue rounded square.
+ */
+const FILE: Record<string, string> = {
+  ethereum: "/chains/ethereum.png",
+  sepolia: "/chains/ethereum.png",
+  base: "/chains/base.png",
+  arbitrum: "/chains/arbitrum.png",
+  creditcoin: "/chains/creditcoin.png",
+};
+
+/** Matches on the leading word so "Base Sepolia" and "Arbitrum Sepolia" resolve to their own L2
+ *  rather than to Ethereum, which a naive "contains sepolia" test would get backwards. */
+export function chainLogo(chainName: string): string | null {
+  const name = chainName.toLowerCase();
+  if (name.startsWith("base")) return FILE.base as string;
+  if (name.startsWith("arbitrum")) return FILE.arbitrum as string;
+  if (name.startsWith("optimism")) return null;
+  if (name.includes("creditcoin")) return FILE.creditcoin as string;
+  if (name.includes("sepolia") || name.includes("ethereum")) return FILE.ethereum as string;
+  return null;
+}
+
+export function ChainBadge({
+  chainName,
+  size = 16,
+  className = "",
+}: {
+  chainName: string;
+  size?: number;
+  className?: string;
+}) {
+  const src = chainLogo(chainName);
+  if (!src) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- tiny static icon; next/image mishandles local SVG
+    <img
+      src={src}
+      // Decorative: every row that shows this badge already names the chain in its text, and an
+      // alt here lands in the row's accessible name twice over ("USDC Sepolia tUSDC Sepolia …").
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      style={{ width: size, height: size }}
+      // `rounded-full` would clip the corners off Base's square mark, so the rounding comes from
+      // the artwork itself and this only draws the ring that lifts it off the token icon.
+      className={`rounded-[28%] ring-2 ring-white ${className}`}
+    />
+  );
+}
+
+/** A token icon with its chain pinned to the bottom-right corner. */
+export function AssetIcon({
+  children,
+  chainName,
+  badgeSize = 16,
+}: {
+  children: React.ReactNode;
+  chainName: string;
+  badgeSize?: number;
+}) {
+  return (
+    <span className="relative inline-flex shrink-0">
+      {children}
+      <span className="absolute -bottom-0.5 -right-0.5 inline-flex">
+        <ChainBadge chainName={chainName} size={badgeSize} />
+      </span>
+    </span>
+  );
+}

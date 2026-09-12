@@ -1,6 +1,6 @@
-import { DepositKeypad } from "../../../../components/deposit/DepositKeypad";
+import { LockCollateral } from "../../../../components/deposit/LockCollateral";
 
 export default async function DepositPage({ params }: { params: Promise<{ sym: string }> }) {
   const { sym } = await params;
-  return <DepositKeypad sym={sym} />;
+  return <LockCollateral sym={sym} />;
 }

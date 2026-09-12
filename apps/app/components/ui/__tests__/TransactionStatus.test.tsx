@@ -11,7 +11,7 @@ test("names the three waits a person can actually tell apart", () => {
   expect(screen.getByRole("status")).toHaveTextContent("Processing Transaction");
 
   rerender(<TransactionStatus status="confirmed" />);
-  expect(screen.getByRole("status")).toHaveTextContent("Transaction Safe");
+  expect(screen.getByRole("status")).toHaveTextContent("Successful");
 
   rerender(<TransactionStatus status="failed" />);
   expect(screen.getByRole("status")).toHaveTextContent("Transaction Failed");

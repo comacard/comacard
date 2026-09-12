@@ -14,6 +14,7 @@ import { useIsDesktop } from "../../hooks/useIsDesktop";
  */
 const PANEL_ROUTES: { match: (path: string) => boolean; to: string }[] = [
   { match: (p) => p === "/add-funds" || p === "/deposit" || p.startsWith("/deposit/"), to: "/home?panel=deposit" },
+  { match: (p) => p === "/spend" || p === "/pay", to: "/home" },
   { match: (p) => p === "/withdraw", to: "/home?panel=withdraw" },
   { match: (p) => p === "/transactions", to: "/home?panel=activity" },
 ];

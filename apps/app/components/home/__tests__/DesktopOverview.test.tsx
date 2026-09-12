@@ -29,6 +29,32 @@ vi.mock("next/navigation", () => ({
 const useWallet = vi.fn();
 vi.mock("../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }));
 
+/**
+ * The deposit drawer signs collateral locks, so it reaches for the chain reads, the write client
+ * and wagmi's chain switch. Mocked rather than provided: this file tests the Overview's own
+ * composition, and a real WagmiProvider here would test wagmi's cache over the network.
+ */
+vi.mock("../../../hooks/useCollateral", () => ({
+  useCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false }),
+}));
+
+vi.mock("../../../hooks/useRemoteCollateral", () => ({
+  useRemoteCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false, configured: true }),
+}));
+vi.mock("../../../hooks/useCreditLine", () => ({
+  useCreditLine: () => ({
+    lock: vi.fn(),
+    lockToken: vi.fn(),
+    score: 0n,
+    txStatus: null,
+    hash: undefined,
+    error: null,
+    reset: vi.fn(),
+    onSepolia: true,
+  }),
+}));
+vi.mock("wagmi", () => ({ useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }) }));
+
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const NOW = Date.UTC(2026, 6, 10, 12, 0, 0);

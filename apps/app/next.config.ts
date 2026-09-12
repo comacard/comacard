@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["tendentiously-impalpable-dede.ngrok-free.dev"],
+  allowedDevOrigins: [
+    "tendentiously-impalpable-dede.ngrok-free.dev",
+    "tapeless-overbill-upcountry.ngrok-free.dev",
+  ],
 
   /**
    * `@x402/core`, `@x402/evm` and `@x402/svm` are direct dependencies for one reason: nothing in

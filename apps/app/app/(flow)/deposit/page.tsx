@@ -1,5 +1,5 @@
-import { AddFunds } from "../../../components/deposit/AddFunds";
+import { CollateralPicker } from "../../../components/deposit/CollateralPicker";
 
 export default function DepositPage() {
-  return <AddFunds />;
+  return <CollateralPicker />;
 }

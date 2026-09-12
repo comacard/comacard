@@ -48,7 +48,8 @@ Plain, second person, concrete. Say what happens to the reader's money and stop.
 Two rules that are not negotiable:
 
 **No em dashes.** Use a full stop when it is two sentences, a comma for a pause,
-a colon when the second half explains the first.
+a colon when the second half explains the first. This started here and now applies
+to anything written for this project, comments included.
 
 **No technical talk in the marketing copy.** Contracts, proofs, attestation and
 test counts belong in the README, not on this page. A visitor cares what happens
@@ -62,6 +63,11 @@ company go in with it. Do not leave a real-sounding name on an invented quote.
 
 Marketing copy is free to be warm, but a number on this page should be one a
 reader could go and check.
+
+**The "Get Coma Card" buttons go nowhere.** Both are plain `<button>` elements
+with no handler and no href. The cardholder app lives in `apps/app`; the handoff
+needs nothing more than a link, and until it exists the page's only call to
+action is inert.
 
 ## Things that will bite you
 

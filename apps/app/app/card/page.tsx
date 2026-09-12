@@ -3,10 +3,14 @@
 import { useEffect } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { CardFolderPanel } from "../../components/card/CardFolderPanel";
+import { CollateralList } from "../../components/card/CollateralList";
 import { KycSheet } from "../../components/card/KycSheet";
 import { Button, CopyButton, SubHeader, Toast, TransactionStatus } from "../../components/ui";
+import { groupAccountNumber } from "../../lib/comacard/format";
 import { useCardAccount } from "../../hooks/useCardAccount";
 import { useCreditLine } from "../../hooks/useCreditLine";
+import { useCollateral } from "../../hooks/useCollateral";
+import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { useKycStart } from "../../hooks/useKycStart";
 
 /**
@@ -48,6 +52,9 @@ function CardScreen() {
   // Null unless a draw, repay or lock is in flight. Nothing on this screen starts one yet; the
   // pill is wired so the moment a spend control lands it reports without further plumbing.
   const { txStatus, hash, error: txError } = useCreditLine();
+  // Native plus every listed ERC20, read off the chain rather than from a hardcoded list.
+  const { assets: collateral } = useCollateral();
+  const { assets: remoteCollateral } = useRemoteCollateral();
 
 
 
@@ -108,13 +115,16 @@ function CardScreen() {
               <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-faint">
                 Account number
               </div>
-              <div className="mt-1 truncate font-mono text-[14px] font-semibold tabular-nums">
-                {account.card.accountNumber}
+              {/* Grouped to be read; copied raw, because a payment form rejects the spaces. */}
+              <div className="mt-1 truncate font-mono text-[14px] font-semibold tracking-[0.04em] tabular-nums">
+                {groupAccountNumber(account.card.accountNumber)}
               </div>
             </div>
             <CopyButton value={account.card.accountNumber} label="Copy account number" />
           </div>
         ) : null}
+
+        <CollateralList assets={collateral} remote={remoteCollateral} />
 
         {account?.credit ? (
           <dl className="mt-4 grid grid-cols-3 gap-2">

@@ -15,6 +15,30 @@ vi.mock("next/navigation", () => ({
 vi.mock("../../../hooks/usePanel", () => ({ usePanel: () => ({ panel: null, open: openPanel, close: vi.fn() }) }));
 const useWallet = vi.fn();
 vi.mock("../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }));
+/**
+ * The faucet section reads collateral, wallet balances and the write client. Mocked, not provided:
+ * this file tests the Account screen's own composition, and a real WagmiProvider here would test
+ * wagmi's cache over the network.
+ */
+vi.mock("../../../hooks/useCollateral", () => ({
+  useCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false }),
+}));
+vi.mock("../../../hooks/useCreditLine", () => ({
+  useCreditLine: () => ({ mint: vi.fn(), onSepolia: true }),
+}));
+vi.mock("wagmi", () => ({
+  useSwitchChain: () => ({ switchChainAsync: vi.fn() }),
+  useConfig: () => ({}),
+}));
+vi.mock("wagmi/actions", () => ({ waitForTransactionReceipt: vi.fn() }));
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
+
+vi.mock("../../../hooks/useWalletAssets", () => ({
+  useWalletAssets: () => ({ assets: [], totalUsd: null, loading: false }),
+}));
+
 
 const ADDRESS = "GABCDEF12345678K3X9";
 const signTransaction = vi.fn(async (xdr: string) => xdr);

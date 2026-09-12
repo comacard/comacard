@@ -96,7 +96,10 @@ export function CardArtwork({
           <span className="text-[7px] font-medium uppercase tracking-[0.18em] text-white/40">
             Cardholder
           </span>
-          <span className="max-w-[150px] truncate text-[11px] font-medium uppercase tracking-[0.1em] text-white/90">
+          {/* The face carries the name in full. It is the embossed line, there is room for it
+              here, and it is the one place a long document name should not be abbreviated. Tighter
+              tracking than the label above buys the extra characters. */}
+          <span className="max-w-[185px] truncate text-[11px] font-medium uppercase tracking-[0.055em] text-white/90">
             {holder}
           </span>
         </span>

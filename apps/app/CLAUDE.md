@@ -1,38 +1,130 @@
 @AGENTS.md
 
-## SoroSense frontend (Ancung — Linear STE-7 · units U13–U17)
+# @comacard/app
 
-- **Next 16 · Tailwind v4 · React 19** — read `node_modules/next/dist/docs/` before writing Next code (breaking changes; see AGENTS.md above). All wallet code client-only (`"use client"` + `useEffect`), never module scope — avoid `window is not defined` / hydration (KTD7).
-- **Wallet-connect:** Stellar Wallets Kit, Freighter-first (fallback xBull/Lobstr/WalletConnect); non-custodial, signing in the wallet popup.
-- **Design source of truth:** `docs/mockups/sorosense-mock-2.html` — monochrome + Switzer + semantic accents (green=positive, red=danger, amber=attention). Card = white edge + soft shadow; **Button** (dimensional capsule) vs **Pill** (flat); frosted-glass toast. U13 spec + plan in `docs/superpowers/`.
-- **Invariants (STE-7):** 3-tab nav Home/Earn/Account · no risk labels/tiers · no chatbot · no hub/explore catalog · Freighter-first (not passkey) · primitives DRY (no per-screen re-styling).
-- **New-feature review:** before implementing a feature/scope addition beyond the current unit's plan, create a Linear ticket describing it, mention PM **`@axelmatsama`**, and wait for his approval comment before coding (example: STE-36). Read his comment for context first.
+The cardholder app. Next 16 (App Router, Turbopack) + React 19 + Tailwind 4 (`@theme` in
+`app/globals.css`, no config file).
 
-## Consuming the backend (U2 · U3 · U4 — two honest sources)
+```bash
+bun run dev        # localhost:3000
+bun run test       # vitest
+bun run lint       # eslint, NOT biome. See the note at the bottom.
+```
 
-Every read surface has **exactly two sources, and a gate between them**: `apiEnabled() && <read> !== null` ⇒ the backend's data; otherwise the local fixture. Same shape in `useBuckets` / `useApy` / `useRates` / `useActivity` / `useFunding` / `usePendingExit`. A backend that dies mid-demo therefore degrades a screen to fixtures — never to a blank one, and never to a silent `$0`. **With the API on and answering, no fixture is reachable on any data path** (U4) — that is the invariant to preserve, and the `grep` for `BUCKET_META|POOL_META` outside `data.ts` is how you check it.
+## Where this code came from, and why that still shows
 
-- **`lib/api/`** is the only transport. `client.ts` never throws (a `Result`-shaped union), never fetches with `NEXT_PUBLIC_API_URL` unset, and decodes `bigint` fields — which arrive as **decimal strings** — with `toBigInt` (`Number()` rounds past ~900M base units). `types.ts` **re-declares** the wire shapes; it must never `import` from `backend/` (the frontend is not a dependent of it). `lib/api/__tests__/http.contract.test.ts` boots the **real** backend app and decodes those shapes off it — add a case there for every new route, or the types will silently drift.
-- **KTD4 — never source per-user vault state from HTTP in mock mode.** In mock mode the browser's `MockVaultClient` and a mock-mode backend are *different in-memory instances*: a deposit made in the browser this session does not exist in the backend's, so a Home sourced from `/holdings` renders **blank**. Offline ⇒ shares/value/frozen come from the **seam**, names/tags/APY/FX from `BUCKET_META` + `getFxRateToUsd`. Real mode ⇒ the `/holdings` row **is** the row (the browser and the backend read the same chain), including the `valueUsd` the backend blended from the live oracle — never re-derive it from `getFxRateToUsd`, whose `{USD:1, EUR:1.08, MXN:0.055}` are constants, not rates.
-  - **Operational corollary:** if you set `NEXT_PUBLIC_API_URL`, point it at a backend reading the **same chain the browser signs against**. An API-on frontend against a *mock-mode* backend correctly shows an empty Home ("No buckets yet") — the two vaults are different objects. That is the misconfiguration, not a bug. (`FRONTEND_ORIGIN` on the backend must also allow your port; it defaults to `:3000`.)
-- **`BUCKET_META` · `POOL_META` · `getFxRateToUsd` · `getActivity` · `STABLECOINS` in `lib/vault/data.ts` are OFFLINE-FALLBACK ONLY** and are annotated as such (R11). Do not delete them (the offline demo and the Playwright baseline render them) and do not import them into a component — reach them through the hook, or the backend can no longer correct that surface. Two exceptions, both deliberate: `stablecoinByCurrency` (the faucet needs it in both modes) and `bucketLabel` (`"USD bucket"` names the *currency bucket*, a product concept no backend read carries — a `/holdings` row's `name` is the venue).
-- **Realtime is a 15s poll, not SSE (KTD7).** Stellar RPC has no event streaming, so the backend polls the chain and a mounted surface polls the backend. Hooks refetch on mount, on a vault `version` bump (our own write), and on the interval (somebody else's — the keeper, a freeze, another device). **With the API off no timer is started at all**, so offline stays at zero network and no timer outlives a test.
-- **Anything with a clock is read after mount only** (`now === null` → `useEffect`), never during render: a relative time computed during SSR bakes the server's clock into the HTML and desyncs the first client paint. Same rule as all wallet code being client-only.
-- **Yield accrues on-chain once a bucket is allocated** (vault binver 1.3.0, mark-to-market NAV): an **unallocated** bucket reads `earned` = **$0.00** with a step-function value chart, but once the keeper allocates into an accruing `yield_pool` the `share_price` rises and both `earned` and the value chart curve up. Never fabricate growth on an unaccrued bucket, and never flatten a real accrued gain back to $0.
+This app started as a **verbatim copy of the SoroSense Stellar frontend** and is being converted in
+place. That history explains almost every oddity you will hit:
 
-### The rate seam and the exit target (U4)
+- `@sorosense/vault-client` is still imported in ~60 files, and the whole `lib/vault/` seam is still
+  Stellar-shaped.
+- `localStorage` keys are still prefixed `soro.` (`soro.wallet`, `soro.onboarding.done`).
+- `/earn` and `/deposit` are **untouched SoroSense screens**. `/deposit` still lists USDC, EURC and
+  CETES labelled "Stellar", and the Deposit button on Home leads there.
+- `lib/wallet-real.ts` is the old Stellar Wallets Kit implementation, unwired since the move to
+  Reown. Dead, kept for reference.
 
-- **`useApy` has three sources and the order is load-bearing.** A **funded** bucket's rate is its `GET /holdings` row — the pool the money is *actually* in. An **unfunded** bucket's is `GET /rates` (`useRates`) — the venue the agent *would* allocate it to. `BUCKET_META` renders only with the API off or after a failed read. Reading `/rates` first would quote a funded bucket the best-safe venue's rate while its money sits in a different pool, so do not "simplify" the chain into one lookup. `/rates` carries **no per-user state** (KTD4 does not apply): no wallet is needed, which is exactly what lets the Earn empty-state hero quote a real rate before anyone connects.
-- **The exit target comes from `GET /pools/:id`, and it has to.** On-chain, `ExitProposal.toPool` is a seam `PoolId` from the backend catalog (`blend-eurc`); `POOL_META`'s keys are the **local seed's** (`pool-defindex-eur`, `lib/vault/seed.ts`). The fixture can therefore only ever name a pool the browser's mock proposed to itself — it knows nothing about the pool the keeper actually proposed. The route 404s an id it cannot resolve (never a 200 carrying `null`), and an unresolvable target renders **unnamed**: the sheet must not borrow a fixture name for a pool nobody resolved.
-- **`VaultProvider` runs the dev seed on mount** for any mock client whose USD bucket is empty and an address is present. A test that wants a *connected but unfunded* vault must therefore either pass `address: null` (the `earn-empty.test.tsx` idiom) or fund USD first — asserting on the frame before the seed lands is a race, not a test, and one extra render is all it takes to lose it.
+Screens that have been converted (`/`, `/home`, `/card`, `/transactions`) carry no Stellar wording.
+Do not assume the rest have.
 
-### The Earn screen and the two charts (U3)
+## The wallet layer
 
-- **`useEarnings`: in real mode `GET /earnings` IS the view.** The backend reconstructs cost basis from decoded chain events and blends to USD with the live oracle, so the hook re-derives *nothing* — `lib/vault/contributions.ts` is not consulted at all (a test counts every read of it). The only transformation is `toBigInt` on `nativeValue`, which arrives as a decimal string. Offline ⇒ today's hybrid: the headline from the vault seam, the timeline shape from `buildEarningsFixture`.
-- **A 200 whose body is not an earnings view is a *failed read*, not a crashed render.** `client.ts` guarantees the body is JSON; only the caller knows what shape it was owed, so the shape check lives in the hook and a wrong-shaped body falls back exactly like a 503 would.
-- **The offline hybrid still clamps earned to 0 for a non-mock client — do not "simplify" that away.** The hybrid is also the *fallback* when a configured backend fails mid-demo, and in that state the client is real while `getContributions` is a browser-memory ledger that did not survive the reload. `value − contributions` would then report the user's **entire principal as profit** — the exact bug this plan kills on the backend, resurrected on the frontend's error path. A browser cost basis is only a cost basis for the client that recorded it (the mock, which genuinely accrues via `simulateYield`). **"We cannot know" must never render as "profit."**
-- **No component synthesizes a series.** The desktop hero's value chart plots `view.chart` (`rangeSeries`, exported and unit-tested, clipped to Day/Week/Month/Year); the Growth card buckets `view.chart` into per-interval deltas. A window holding fewer than two points did not *move* — it renders as a flat two-point line at the value we hold, never as an invented curve. `ValueChart` draws a flat series through the **middle**: pinning it to `min` would render an honest level line as "your value fell to zero".
-- **Zero earnings is a zero-state, not a chart of stubs.** All-zero `monthly` ⇒ `GrowthCard` / `GrowthChart` say "No earnings yet" and draw nothing; a month that earned exactly zero renders neutral and unsigned, and the gain pill only appears when there is a gain. Bars at the 8px floor read as a chart that failed to load, and a green "+$0.00" claims a gain that did not happen — both are the sine wave's lie told quietly. The `max > 0` guards are load-bearing: an all-zero series is now a **reachable** state, and `v / 0` puts `NaN` in a style attribute.
-- **`lib/earnings/fixtures.ts` is OFFLINE-ONLY** and emits the *same* `ChartPoint` the backend sends (`lib/api/types.ts`), so one chart component feeds both modes and a fixture cannot drift into a shape the real response could not produce. Value is not a second curve there: `value(t) = principal + earned(t)`, stretched onto the live `{ balanceUsd, earnedUsd }`.
-- **`lib/earn/simulate.ts` is NOT a mock** — the deterministic projection is honest math and an explicit product surface (no chatbot, no LLM). Leave it alone.
-- **Tests: one file per mode.** `config.ts` reads `NEXT_PUBLIC_API_URL` at module scope (Next inlines it), so a file cannot be both on and off. The API-on files set it in `vi.hoisted` and are named `*.api.test.tsx`; every other file in the suite runs with the var **absent**, which is what keeps the offline half honest. Playwright's 8/8 baseline runs with it unset.
+**Reown AppKit + wagmi + viem.** `@reown/appkit-adapter-ethers` was removed; do not add it back.
+Both adapters register the `eip155` namespace and installing the pair breaks connection state
+silently.
+
+`lib/wallet.ts` is the seam: five functions (`connect`, `getAddress`, `getWalletId`,
+`signTransaction`, `disconnect`) that `WalletProvider` and every screen already consume. Swapping
+ethers for wagmi touched no component because of it. New code can use wagmi hooks directly.
+
+**Everything from `@reown/*` and `wagmi/actions` is imported dynamically**, and that is load-bearing,
+not style. `WalletProvider` is a client component, so Next evaluates it on the server too, and a
+static import drags the connector stack into the SSR graph.
+
+**`WalletProvider` is the single answer to "who is connected".** `AuthGate` gates on it and every
+screen reads it. Reading `useAccount()` from wagmi instead makes one screen disagree with the rest of
+the app about whether anyone is signed in.
+
+**Connect happens on Sepolia, then switches to Creditcoin.** AppKit's adapter fires
+`wallet_switchEthereumChain` during connect and never offers to ADD an unknown chain, so leading with
+Creditcoin fails outright with "Connection declined" for any wallet that has not added CC3. Sepolia
+ships in every wallet; `selectCreditcoin()` moves the session over afterwards, through the one code
+path that does fall back to `wallet_addEthereumChain`. Each network also needs
+`rpcUrls.chainDefault` as well as `rpcUrls.default`: add-chain reads the former and sends an empty
+array without it.
+
+**`@x402/core`, `@x402/evm` and `@x402/svm` are dependencies precisely because nothing imports
+them.** `@wagmi/connectors` reaches `@coinbase/cdp-sdk` through its Base Account connector, that SDK
+imports all three, and an unresolved one fails the whole graph: every route returns 500 on a code
+path this app cannot execute. Stubbing them out instead removed Coinbase Wallet from the modal.
+
+## Two backends, two clients
+
+| | Env var | Serves |
+| --- | --- | --- |
+| `lib/comacard/` | `NEXT_PUBLIC_COMACARD_API_URL` | the credit line: KYC, card, limit |
+| `lib/api/` | `NEXT_PUBLIC_API_URL` | the SoroSense vault backend, currently unset |
+
+Pointing one at the other 404s every read. `lib/comacard/graphql/` reads the Envio indexer directly,
+because the API exposes no `Attestation` route and that row is how a screen learns collateral has
+finished crossing.
+
+## Prices
+
+`lib/comacard/oracle.ts` reads them from contracts, not a price API: Chainlink ETH/USD on Sepolia,
+and the Uniswap V2 CTC/WETH pool's reserve ratio on Ethereum mainnet for ETH/CTC. CTC/USD falls out
+of the two. That pool holds about 1.8 WETH, which is cheap to move. It is an honest live number for
+a testnet demo and **not** collateral-grade pricing. Say it that way if anyone asks.
+
+## Collateral is multi-asset
+
+`useCollateral` reads the token list from `listedTokens()` on chain, never a hardcoded list, because
+listing a token is a governance call. `tokenConfig.price` is per **whole** token and each token
+carries its own `decimals`: treating 6-decimal tUSDC as 18 values it at a trillionth of its worth.
+Total value comes from `collateralValueOf()`, not from re-summing the parts here.
+
+`lockToken` is **two transactions**: an ERC20 approval whose receipt must be awaited, then the lock.
+The vault credits what actually arrived, so never assume the requested amount is what got locked.
+
+## KYC
+
+Didit's hosted flow is embedded in an iframe (`components/card/KycSheet.tsx`), not opened in a new
+tab. It sends no `X-Frame-Options` and no `frame-ancestors`, so it frames cleanly.
+
+**`allow="camera; microphone"` on that iframe is the whole thing.** Framing policy and permission
+policy are separate gates: without it the page still renders and then dies at the face check with
+`NotAllowedError`, which reads as a broken product. Both were measured against a live session.
+
+The verdict never comes back through the iframe. Didit reports it by webhook to `apps/kyc`, so the
+sheet polls our own backend and takes the screen back with a success state when it clears. Brave's
+shields refuse the frame on a localhost page, and a cross-origin frame cannot be inspected, so the
+"open in a new tab" escape is always visible rather than revealed after a failure nothing can detect.
+
+## Things that bite
+
+**`.stagger > *` animates direct children to `opacity: 1`**, and an animation beats a utility class.
+A `Toast` placed inside a `.stagger` wrapper is permanently visible with an empty message.
+
+**Read the clock after mount, never during render.** A relative time computed while rendering bakes
+the server's clock into the HTML and makes the render impure; the lint rule catches it.
+
+**`torph` needs `matchMedia` and `getAnimations`**, neither of which jsdom has. `vitest.setup.ts`
+shims both and reports reduced motion, so morphing labels assert on final text instead of racing a
+frame.
+
+**`userEvent.setup()` installs its own clipboard stub**, so a clipboard spy has to be planted after
+it, not before.
+
+**Vitest does not read tsconfig paths.** The `@/` alias is declared again in `vitest.config.mts`; the
+vendored beUI card-folder uses it.
+
+## Lint
+
+`bun run lint` here is **ESLint**, inherited from the SoroSense port. The repo root uses **Biome**,
+and the pre-commit hook runs `biome check --staged --write`.
+
+That hook is fine in normal use: it only looks at staged files. It becomes a wall when this app is
+staged in bulk, which is exactly what the port did: one commit staging the whole tree had Biome
+rewrite 171 files and still fail with ~187 errors, because SoroSense was written to a different
+style. Commits covering the port therefore need `--no-verify`, and clearing that is a real decision
+someone has to make: exclude `apps/app` from Biome, or convert the app to it.

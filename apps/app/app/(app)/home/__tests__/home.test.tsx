@@ -57,6 +57,25 @@ vi.mock("../../../../hooks/useWalletAssets", () => ({
 const cardAccount = vi.fn();
 vi.mock("../../../../hooks/useCardAccount", () => ({ useCardAccount: () => cardAccount() }));
 
+/** Home lists what backs the limit. Mocked for the same reason as the hooks above. */
+const collateral = vi.fn(() => ({ assets: [], totalValue: 0n, loading: false, error: false }));
+vi.mock("../../../../hooks/useCollateral", () => ({ useCollateral: () => collateral() }));
+
+/** The desktop deposit drawer signs, so it reaches for the write client and wagmi's chain switch. */
+vi.mock("../../../../hooks/useCreditLine", () => ({
+  useCreditLine: () => ({
+    lock: vi.fn(),
+    lockToken: vi.fn(),
+    score: 0n,
+    txStatus: null,
+    hash: undefined,
+    error: null,
+    reset: vi.fn(),
+    onSepolia: true,
+  }),
+}));
+vi.mock("wagmi", () => ({ useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }) }));
+
 /** Four on-chain rows, in the shape the indexer hook emits. Mocked for the same reason as the two
  *  above: this file tests what Home composes, not react-query's cache over a GraphQL endpoint. */
 const transactions = vi.fn();
@@ -86,7 +105,11 @@ function fundedAndVerified() {
     priceError: false,
   });
   cardAccount.mockReturnValue({
-    account: { kyc: { verified: true, status: "Approved", sessionId: "s" }, card: { issued: true } },
+    account: {
+      kyc: { verified: true, status: "Approved", sessionId: "s" },
+      card: { issued: true, spendableCtc: "0.4975" },
+      credit: { score: 42, limitCtc: "0.4975", availableCtc: "0.4975", drawnCtc: "0.0000" },
+    },
     error: null,
     loading: false,
     refresh: vi.fn(),
@@ -103,16 +126,22 @@ function fundedAndVerified() {
   });
 }
 
-test("home renders wallet assets, the card, a transaction preview and a View all link", async () => {
+test("leads with what the card can spend, not with what the wallet holds", async () => {
   useWallet.mockReturnValue({ address: "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0", isConnected: true });
   fundedAndVerified();
   const client = new MockVaultClient();
   await seedVault(client, "0xE4db09135Ab50c59A8824ca99a6CC59D5c418fa0");
   withProviders(<HomePage />, client);
 
-  await waitFor(() => expect(screen.getByText("Creditcoin")).toBeInTheDocument());
-  expect(screen.getByText("Ethereum")).toBeInTheDocument();
-  expect(screen.getByText("2,000.00 tCTC")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText("Spendable")).toBeInTheDocument());
+  expect(screen.getByText("Limit 0.4975 · Score 42")).toBeInTheDocument();
+
+  // The wallet total used to be the headline. It read $191.82 next to a 0.4975 tCTC limit, which
+  // is a card balance off by three orders of magnitude. Wallet balances now live on Account,
+  // beside the faucet that fixes a low one.
+  expect(screen.queryByText("2,000.00 tCTC")).toBeNull();
+  expect(screen.queryByText("In your wallet")).toBeNull();
+
   // The card moved onto Home. The fixture has no issued card, so the folder carries the
   // not-issued label rather than a holder name.
   expect(screen.getByRole("button", { name: /not issued yet/i })).toBeInTheDocument();
@@ -134,7 +163,10 @@ test("an empty wallet says so and offers no activity link", async () => {
   transactions.mockReturnValue({ loading: false, error: false, items: [] });
   withProviders(<HomePage />, new MockVaultClient());
 
-  await waitFor(() => expect(screen.getByText("Nothing in this wallet yet")).toBeInTheDocument());
+  // A card state that could not be read is not a card with nothing on it. Rendering 0.0000 tCTC
+  // here would be a claim about money that nothing in this render actually knows.
+  await waitFor(() => expect(screen.getByText("\u2014")).toBeInTheDocument());
+  expect(screen.queryByText(/tCTC/)).toBeNull();
   expect(screen.getByText("No transactions yet")).toBeInTheDocument();
   expect(screen.queryByText("View all activity")).toBeNull();
 });

@@ -1,0 +1,262 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { formatUnits, parseUnits, type Address } from "viem";
+import { useConfig, useSwitchChain, useWriteContract } from "wagmi";
+import { readContract, waitForTransactionReceipt } from "wagmi/actions";
+import { AssetIcon, badgeForSymbol, Button, CoinBadge, Keypad, Skeleton, TransactionStatus } from "../ui";
+import { SubHeader } from "../ui/SubHeader";
+import { useCreditLine } from "../../hooks/useCreditLine";
+import { useRemoteCollateral, type RemoteAsset } from "../../hooks/useRemoteCollateral";
+import { collateralValue, limitFrom } from "../../lib/comacard/credit";
+import { erc20Abi, wormholeCoreAbi, wormholeVaultAbi } from "../../lib/comacard/contracts";
+
+/**
+ * Locking collateral on a chain Attestcoin cannot reach.
+ *
+ * Same promise as the Sepolia screen — the asset stays where it is and only a message crosses — but
+ * three things differ enough to be worth naming.
+ *
+ * **The wait is about fifteen minutes, not eight.** The vault publishes at *finalized* consistency
+ * and an L2 finalizes against Ethereum, so the guardians sign long after the lock confirms. That is
+ * a deliberate choice on the contract side: this number decides how much someone may borrow, and
+ * instant consistency would credit collateral a reorg could take back. Between the lock and the
+ * signature the limit does not move, and a screen that says nothing about it reads as broken.
+ *
+ * **Wormhole charges a message fee out of the same `msg.value`.** The vault takes the fee first and
+ * credits the remainder rather than crediting collateral it does not hold, so locking exactly N
+ * means sending N plus the fee. It is zero on these testnets today, which is exactly why it is read
+ * rather than assumed.
+ *
+ * **`lockToken` here is payable**, unlike the Sepolia one, for that same fee.
+ */
+
+const fmt = (value: bigint, decimals: number, maxDigits = 6): string =>
+  Number(formatUnits(value, decimals)).toLocaleString("en-US", { maximumFractionDigits: maxDigits });
+
+function parseAmount(text: string, decimals: number): bigint {
+  try {
+    return parseUnits(text === "" || text === "." ? "0" : text, decimals);
+  } catch {
+    return 0n;
+  }
+}
+
+export function LockRemoteCollateral({ id }: { id: string }) {
+  const router = useRouter();
+  const config = useConfig();
+  const { assets, loading } = useRemoteCollateral();
+  const { score } = useCreditLine();
+  const { switchChainAsync, isPending: switching } = useSwitchChain();
+  const { writeContractAsync, data: hash, error, reset } = useWriteContract();
+
+  const [amount, setAmount] = useState("0");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const asset: RemoteAsset | null =
+    assets.find((a) => a.id.toLowerCase() === id.toLowerCase()) ?? null;
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+        <SubHeader title="Lock collateral" />
+        <Skeleton className="h-16 w-full rounded-[16px]" />
+        <Skeleton className="mt-3 h-[300px] w-full rounded-[16px]" />
+      </div>
+    );
+  }
+
+  if (!asset || !asset.vault || asset.evmChainId === null) {
+    return (
+      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+        <SubHeader title="Lock collateral" />
+        <p className="mt-6 text-center text-[13px] text-muted">
+          That asset is not accepted as collateral.
+        </p>
+        <div className="mt-auto">
+          <Button onClick={() => router.push("/deposit")}>Choose an asset</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const symbol = asset.native ? "ETH" : "USDC";
+  const entered = parseAmount(amount, asset.decimals);
+  const exceeded = entered > asset.available;
+  const value = collateralValue(entered, asset.decimals, asset.price);
+  const addedLimit = limitFrom(value, score ?? 0n);
+  const vault = asset.vault;
+  const chainId = asset.evmChainId;
+
+  const onLock = async () => {
+    if (busy || entered <= 0n || exceeded) return;
+    setBusy(true);
+    try {
+      await switchChainAsync({ chainId });
+
+      // Read rather than assumed: it is zero on these testnets today and governance can change it.
+      const core = await readContract(config, {
+        address: vault,
+        abi: wormholeVaultAbi,
+        functionName: "WORMHOLE",
+        chainId,
+      });
+      const fee = await readContract(config, {
+        address: core,
+        abi: wormholeCoreAbi,
+        functionName: "messageFee",
+        chainId,
+      });
+
+      let sent: `0x${string}`;
+      if (asset.native) {
+        // The vault credits `msg.value - fee`, so the fee rides on top of the amount rather than
+        // coming out of it. Sending only `entered` would credit slightly less than was asked for.
+        sent = await writeContractAsync({
+          address: vault,
+          abi: wormholeVaultAbi,
+          functionName: "lockNative",
+          value: entered + fee,
+          chainId,
+        });
+      } else {
+        const token = (`0x${asset.token.slice(26)}`) as Address;
+        const allowance = await readContract(config, {
+          address: token,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [(await config.connectors[0]?.getAccounts().then((a) => a[0])) as Address, vault],
+          chainId,
+        });
+        if (allowance < entered) {
+          const approval = await writeContractAsync({
+            address: token,
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [vault, entered],
+            chainId,
+          });
+          await waitForTransactionReceipt(config, { hash: approval, chainId });
+        }
+        sent = await writeContractAsync({
+          address: vault,
+          abi: wormholeVaultAbi,
+          functionName: "lockToken",
+          args: [token, entered],
+          value: fee,
+          chainId,
+        });
+      }
+
+      await waitForTransactionReceipt(config, { hash: sent, chainId });
+      setDone(true);
+    } catch {
+      // Surfaced by `error` below; caught only to stop an unhandled rejection.
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <TransactionStatus
+            status="confirmed"
+            size="large"
+            href={hash && asset.explorer ? `${asset.explorer}/tx/${hash}` : undefined}
+          />
+          {/* The one thing this screen exists to say. Without it the next fifteen minutes look
+              like a deposit that did not work. */}
+          <p className="mt-5 max-w-[280px] text-center text-[13px] leading-snug text-muted">
+            Your {symbol} is locked on {asset.chainName}. It takes about fifteen minutes to be
+            signed across to Creditcoin, and your limit moves then.
+          </p>
+        </div>
+        <Button
+          onClick={() => {
+            reset();
+            setAmount("0");
+            router.push("/home");
+          }}
+        >
+          Done
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <SubHeader title={`Lock ${symbol}`} />
+
+      <div className="mb-3 flex items-center gap-3 rounded-[16px] border border-line bg-white px-4 py-3 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
+        <AssetIcon chainName={asset.chainName}>
+          <CoinBadge token={badgeForSymbol(symbol)} size={34} />
+        </AssetIcon>
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] font-semibold">{symbol}</div>
+          <div className="mt-[2px] text-[12px] text-muted">
+            {fmt(asset.available, asset.decimals)} {symbol} on {asset.chainName}
+          </div>
+        </div>
+      </div>
+
+      {asset.pending ? (
+        <div className="mb-3 rounded-[16px] border border-line bg-white px-4 py-3 text-[12.5px] leading-snug text-warn [box-shadow:0_1px_2px_rgba(17,19,22,.04)]">
+          {fmt(asset.locked - asset.credited, asset.decimals)} {symbol} is already locked and
+          waiting to be signed across.
+        </div>
+      ) : null}
+
+      <Keypad
+        value={amount}
+        onChange={setAmount}
+        symbol=""
+        onQuick={(pct) =>
+          setAmount(
+            formatUnits((asset.available * BigInt(Math.round(pct * 1000))) / 1000n, asset.decimals),
+          )
+        }
+        invalid={exceeded}
+        hint={`You only have ${fmt(asset.available, asset.decimals)} ${symbol}`}
+      />
+
+      <div className="mb-3 rounded-[16px] border border-line bg-white px-4 py-3 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
+        <Line label="Collateral value" value={`${fmt(value, 18, 4)} tCTC`} />
+        <Line
+          label={`Estimated limit at score ${score ?? 0n}`}
+          value={`+${fmt(addedLimit, 18, 4)} tCTC`}
+        />
+      </div>
+
+      {error ? (
+        <TransactionStatus status="failed" detail={error.message.split("\n")[0]} className="mb-3" />
+      ) : null}
+
+      <div className="mt-auto">
+        <Button onClick={onLock} disabled={busy || switching || entered <= 0n || exceeded}>
+          {switching
+            ? `Switching to ${asset.chainName}…`
+            : busy
+              ? "Confirm in your wallet…"
+              : `Lock ${symbol}`}
+        </Button>
+        <p className="mt-2 text-center text-[12px] leading-snug text-muted">
+          Signed across to Creditcoin in about fifteen minutes. Your {symbol} stays on{" "}
+          {asset.chainName}.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Line({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1">
+      <span className="text-[12.5px] text-muted">{label}</span>
+      <span className="text-[13px] font-semibold tabular-nums">{value}</span>
+    </div>
+  );
+}

@@ -91,7 +91,7 @@ export function AccountMenu() {
             </svg>
             <span className="grow">
               <span className="block text-sm font-semibold">Activity</span>
-              <span className="block text-xs text-muted">All agent and account actions</span>
+              <span className="block text-xs text-muted">Deposits, spending and repayments</span>
             </span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="text-muted">
               <path d="M9 6l6 6-6 6" />

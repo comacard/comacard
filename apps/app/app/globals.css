@@ -221,3 +221,31 @@ body { background: var(--color-bg); color: var(--color-ink); font-family: var(--
 @media (prefers-reduced-motion: reduce) {
   .page-enter { animation: none; }
 }
+
+/* The tick in SuccessCheck draws itself once. `pathLength` is not set, so the dash values are in
+   user units and sized against these two paths specifically: the r=9 ring is ~57 long and the tick
+   ~11. Both are generous, because a dash array longer than the path simply starts fully hidden,
+   while one that is short leaves a visible stub before the animation runs. */
+@keyframes success-draw {
+  from { stroke-dashoffset: var(--draw-length); }
+  to { stroke-dashoffset: 0; }
+}
+.success-check-ring {
+  --draw-length: 60;
+  stroke-dasharray: var(--draw-length);
+  animation: success-draw 0.34s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+.success-check-tick {
+  --draw-length: 14;
+  stroke-dasharray: var(--draw-length);
+  /* Starts as the ring closes, so the mark completes rather than the two drawing over each other. */
+  animation: success-draw 0.22s cubic-bezier(0.33, 1, 0.68, 1) 0.2s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .success-check-ring,
+  .success-check-tick {
+    animation: none;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+}

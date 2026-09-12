@@ -14,7 +14,7 @@ import { ActivityList } from "../activity/ActivityList";
 import { FreezeBar } from "../desktop/FreezeBar";
 import { GrowthChart, SimulationAmountStepper, useGrowthSimulation } from "../desktop/GrowthChart";
 import { SafeExitDialog } from "../desktop/SafeExitDialog";
-import { AddFundsDrawer } from "../desktop/AddFundsDrawer";
+import { LockCollateralDrawer } from "../desktop/LockCollateralDrawer";
 import { WithdrawDrawer } from "../desktop/WithdrawDrawer";
 import { ActivityDrawer } from "../desktop/ActivityDrawer";
 import { ValueChart } from "./ValueChart";
@@ -317,7 +317,7 @@ export function DesktopOverview() {
 
       <SafeExitDialog open={panel === "safe-exit"} onClose={close} />
 
-      <AddFundsDrawer open={panel === "deposit"} onClose={close} />
+      <LockCollateralDrawer open={panel === "deposit"} onClose={close} />
       <WithdrawDrawer open={panel === "withdraw"} onClose={close} />
       <ActivityDrawer open={panel === "activity"} onClose={close} onReview={() => open("safe-exit")} />
     </>

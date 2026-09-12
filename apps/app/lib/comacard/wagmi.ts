@@ -55,6 +55,42 @@ export const sepolia: AppKitNetwork = {
 };
 
 /**
+ * Base Sepolia. Collateral locked here reaches Creditcoin through Wormhole, not Attestcoin.
+ *
+ * Attestcoin proves Ethereum and Sepolia and nothing else, so every other chain needs a different
+ * carrier. The asset still never moves: a `WormholeVault` holds it here and publishes a signed
+ * message saying so.
+ */
+export const baseSepolia: AppKitNetwork = {
+  id: 84532,
+  caipNetworkId: "eip155:84532",
+  chainNamespace: "eip155",
+  name: "Base Sepolia",
+  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://base-sepolia-rpc.publicnode.com"] },
+    chainDefault: { http: ["https://base-sepolia-rpc.publicnode.com"] },
+  },
+  blockExplorers: { default: { name: "Basescan", url: "https://sepolia.basescan.org" } },
+  testnet: true,
+};
+
+/** Arbitrum Sepolia. Same Wormhole path as Base. */
+export const arbitrumSepolia: AppKitNetwork = {
+  id: 421614,
+  caipNetworkId: "eip155:421614",
+  chainNamespace: "eip155",
+  name: "Arbitrum Sepolia",
+  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://arbitrum-sepolia-rpc.publicnode.com"] },
+    chainDefault: { http: ["https://arbitrum-sepolia-rpc.publicnode.com"] },
+  },
+  blockExplorers: { default: { name: "Arbiscan", url: "https://sepolia.arbiscan.io" } },
+  testnet: true,
+};
+
+/**
  * Sepolia leads, and that ordering is load-bearing rather than alphabetical.
  *
  * AppKit connects on whichever network is active and its adapter fires `wallet_switchEthereumChain`
@@ -64,7 +100,12 @@ export const sepolia: AppKitNetwork = {
  * `lib/wallet-reown.ts` moves the session over afterwards, through the one code path that does
  * fall back to `wallet_addEthereumChain`.
  */
-export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [sepolia, creditcoinTestnet];
+export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [
+  sepolia,
+  creditcoinTestnet,
+  baseSepolia,
+  arbitrumSepolia,
+];
 
 export const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID ?? "";
 
