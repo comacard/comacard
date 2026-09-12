@@ -194,7 +194,7 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
 
         bytes32 assetId = CollateralMessage.assetId(chainId, token);
         uint8 decimals = _debit(chainId, assetId, amount);
-        sequence = _publishRelease(token, amount, decimals);
+        sequence = _publishRelease(chainId, token, amount, decimals);
 
         emit ReleaseRequested(msg.sender, assetId, amount, sequence);
         IScoreRefresher(creditLine).refreshScore(msg.sender);
@@ -228,7 +228,7 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
         return asset.decimals;
     }
 
-    function _publishRelease(bytes32 token, uint256 amount, uint8 decimals)
+    function _publishRelease(uint16 chainId, bytes32 token, uint256 amount, uint8 decimals)
         private
         returns (uint64)
     {
@@ -238,6 +238,7 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
         return wormhole.publishMessage{value: fee}(
             0,
             CollateralMessage.encodeRelease(
+                chainId,
                 CollateralMessage.Deposit({
                     account: msg.sender, token: token, amount: amount, decimals: decimals
                 })

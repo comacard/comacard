@@ -52,6 +52,7 @@ contract ReleaseRelay is Ownable2Step {
     error NotTheHub(uint16 chainId, bytes32 emitter);
     error AlreadyConsumed(bytes32 hash);
     error NotTheOperator(address vaultOperator);
+    error WrongChain(uint16 expected, uint16 actual);
 
     constructor(
         address wormhole,
@@ -86,7 +87,16 @@ contract ReleaseRelay is Ownable2Step {
 
         // decodeRelease refuses a deposit payload, so a message meant for the
         // hub cannot be replayed here as a withdrawal.
-        CollateralMessage.Deposit memory d = CollateralMessage.decodeRelease(vaaData.payload);
+        (uint16 destination, CollateralMessage.Deposit memory d) =
+            CollateralMessage.decodeRelease(vaaData.payload);
+
+        // And this refuses another chain's release. Every relay trusts the same
+        // emitter, so without it one signed release is a withdrawal from every
+        // vault at once — the amount is the same on each, but the asset is not,
+        // and 0.2 of a cheap coin becomes 0.2 of an expensive one.
+        uint16 here = WORMHOLE.chainId();
+        if (destination != here) revert WrongChain(here, destination);
+
         address token = address(uint160(uint256(d.token)));
 
         VAULT.approveRelease(d.account, token, d.amount);
