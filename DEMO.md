@@ -154,70 +154,73 @@ Worth naming while it is on screen: assets are keyed by chain *and* address, so
 USDC on Base and USDC on Arbitrum are two different assets. They are held in
 different vaults and a depeg on one says nothing about the other.
 
-### 4d — And it goes home again (optional, the strongest one)
+### 4d — And it goes home again (the strongest one)
 
-The question a judge is already forming is "so you are holding my money". This
-answers it, and it answers it faster than any other part of the demo because
-Fuji signs in about thirty seconds.
+One command, the whole cross-chain story, against the live testnets:
 
 ```sh
-cd contracts && source .env
-CC=https://rpc.cc3-testnet.creditcoin.network
-HUB=0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f
-ZERO=0x0000000000000000000000000000000000000000000000000000000000000000
-
-# 1. Ask. Show valueOf before and after — the credit is gone immediately.
-cast call $HUB "valueOf(address)(uint256)" $YOUR_ADDRESS --rpc-url $CC
-cast send $HUB "requestRelease(uint16,bytes32,uint256)" 6 $ZERO 20000000000000000 \
-  --rpc-url $CC --private-key $WALLET_PK
-cast call $HUB "valueOf(address)(uint256)" $YOUR_ADDRESS --rpc-url $CC
-
-# 2. The worker delivers it once the guardians sign. Or by hand:
-cd ../apps/worker && bun run relay watch
+cd apps/worker
+bun run roundtrip        # Avalanche Fuji, about a minute end to end
+bun run roundtrip 4      # BSC Testnet
+bun run roundtrip 10004  # Base Sepolia, about twenty
 ```
+
+It locks on the far chain, waits for the guardians, delivers to Creditcoin, asks
+for some back, waits again, releases, and withdraws — printing what each
+contract says at every step. A real run:
+
+```
+[1] locking 0.02 on Avalanche Fuji
+    wormhole sequence 1 — the asset stays here, only the message crosses
+[3] delivering it to Creditcoin
+    credited 61.5000 CTC (+0.5000 CTC)   limit 485.1443 CTC (+0.4244 CTC)
+[4] asking for 0.01 back — nobody approves this
+    credit gone first: 61.5000 CTC → 61.2500 CTC
+[7] the borrower takes it — the relay approves, it never pushes
+```
+
+**Use Fuji or BSC on camera.** They are L1s and the guardians sign in well under
+a minute; the three L2s finalize against Ethereum and take fifteen to twenty.
 
 Three things to say while it runs, in this order:
 
-**Nobody approved this.** The borrower asked Creditcoin, Creditcoin checked the
-debt still stands up without the collateral, and the guardians carried the
-answer. There is no operator in that path — the vault's operator is a contract
-that only relays what was signed.
+**Nobody approved the withdrawal.** The borrower asked Creditcoin, Creditcoin
+checked the debt still stands up without the collateral, and the guardians
+carried the answer. The vault's operator is a contract that only relays what was
+signed.
 
-**The credit disappears before the money moves.** That ordering is the whole
-safety argument: `valueOf` drops the instant the request is accepted, so there
-is no window where the collateral is both backing a limit and on its way out.
+**The credit disappears before the money moves** — step 4 prints exactly that.
+It is the whole safety argument: there is no window where the collateral is both
+backing a limit and on its way out.
 
-**Try it with a debt outstanding and it refuses.** The reliable way to show this
-is to draw everything first, so *any* release strands the debt:
+**The coin never left its chain.** The AVAX is still on Fuji; what crossed was a
+message. No bridge, no wrapped asset.
+
+Two things worth showing deliberately if there is time:
+
+**It refuses when a debt would be stranded.** Draw everything first, so any
+release strands it — a small release against a large limit succeeds, which is
+correct and looks like nothing happening:
 
 ```sh
 AVAIL=$(cast call $ASC_CREDIT_LINE_ADDRESS "availableOf(address)(uint256)" \
   $YOUR_ADDRESS --rpc-url $CC | awk '{print $1}')
-cast send $ASC_CREDIT_LINE_ADDRESS "draw(uint256)" $AVAIL \
-  --rpc-url $CC --private-key $WALLET_PK
-# now request any release at all
+cast send $ASC_CREDIT_LINE_ADDRESS "draw(uint256)" $AVAIL --rpc-url $CC --private-key $WALLET_PK
+# then any release at all
 ```
 
-It comes back `ReleaseWouldStrandDebt(479.03, 478.82)` — refusing by exactly the
-margin it would have been short. A small release against a large limit will
-*succeed*, which is correct and looks like nothing happening, so draw first.
+It comes back `ReleaseWouldStrandDebt(479.03, 478.82)`, short by exactly the
+margin. A withdrawal that succeeds is a feature; one that knows when to say no
+is a credit product.
 
-A withdrawal that succeeds is a feature; one that knows when to say no is a
-credit product.
+**Repaying needs the exact figure.** `repay()` reverts with
+`RepaymentExceedsDebt` if `msg.value` is over the outstanding — it refuses
+rather than refunding. Read `accountOf(...).drawn` and send that.
 
-**Repaying afterwards needs the exact figure.** `repay()` reverts with
-`RepaymentExceedsDebt` if `msg.value` is over the outstanding, so read it first
-rather than rounding up:
-
-```sh
-cast call $ASC_CREDIT_LINE_ADDRESS "accountOf(address)(...)" $YOUR_ADDRESS --rpc-url $CC
-cast send $ASC_CREDIT_LINE_ADDRESS "repay()" --value <exactly that> ...
-```
-
-The honest caveat, and say it before anyone asks: **the Sepolia leg is still
+The caveat to say before anyone asks: **the Sepolia leg is still
 operator-approved.** Attestcoin writability is in third-party audit, so
-Creditcoin cannot write back to Ethereum yet. Anything that arrived by Wormhole
-goes back without us; anything proved by Attestcoin waits on a person.
+Creditcoin cannot write back to Ethereum. Anything that arrived by Wormhole goes
+back without us; anything proved by Attestcoin waits on a person.
 
 ### 5 — The moment (2:00–2:40)
 

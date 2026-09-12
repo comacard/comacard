@@ -12,7 +12,8 @@
     "clean": "rm -rf dist .turbo",
     "demo": "bun src/demo.ts",
     "relay": "bun src/relay.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "roundtrip": "bun src/roundtrip.ts"
   },
   "dependencies": {
     "@comacard/attestcoin": "workspace:*",

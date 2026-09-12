@@ -66,11 +66,15 @@ function emitter(address: string): string {
  * reorg could take back.
  */
 export async function fetchVaa(
-  chainId: WormholeChainId,
+  chainId: number,
   sequence: bigint,
   timeoutMs = 30 * 60_000,
+  /** Defaults to that chain's vault. Releases are emitted by the hub instead. */
+  emitterAddress?: string,
 ): Promise<string> {
-  const url = `${config.wormholescan}/v1/signed_vaa/${chainId}/${emitter(vaults[chainId].vault)}/${sequence}`;
+  const from = emitterAddress ?? vaults[chainId as WormholeChainId]?.vault;
+  if (!from) throw new Error(`no emitter for chain ${chainId}`);
+  const url = `${config.wormholescan}/v1/signed_vaa/${chainId}/${emitter(from)}/${sequence}`;
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
