@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { TextMorph } from "torph/react";
 import { formatUnits } from "viem";
 import { useConfig, useSwitchChain } from "wagmi";
-import { waitForTransactionReceipt } from "wagmi/actions";
+
 import { useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
+import { awaitSuccess } from "../../lib/comacard/tx";
 import { badgeForSymbol, CoinBadge, Spinner, SuccessCheck } from "../ui";
 import type { TokenSym } from "../ui/CoinBadge";
 
@@ -146,9 +147,10 @@ export function FaucetSection({ compact = false }: { compact?: boolean }) {
       setPhase(token, "processing");
       const hash = await mint(token, mintAmount(price));
 
-      // Signed is not mined. The tokens do not exist until this resolves.
+      // Signed is not mined, and mined is not minted: a reverted faucet call produces a receipt
+      // like any other, and awaiting it alone put a checkmark on rows that got nothing.
       setPhase(token, "confirming");
-      await waitForTransactionReceipt(config, { hash, chainId: SEPOLIA_CHAIN_ID });
+      await awaitSuccess(config, hash, SEPOLIA_CHAIN_ID);
 
       // The balance on this row comes from `useCollateral`. Invalidating is what turns a landed
       // transaction into a number the holder can see, without a reload.

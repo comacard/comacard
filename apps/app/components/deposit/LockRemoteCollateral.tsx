@@ -3,11 +3,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { type Address, formatUnits, parseUnits } from "viem";
 import { useConfig, useSwitchChain, useWriteContract } from "wagmi";
-import { readContract, waitForTransactionReceipt } from "wagmi/actions";
+import { readContract } from "wagmi/actions";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { erc20Abi, wormholeCoreAbi, wormholeVaultAbi } from "../../lib/comacard/contracts";
 import { collateralValue, limitFrom } from "../../lib/comacard/credit";
+import { awaitSuccess } from "../../lib/comacard/tx";
 import {
   AssetIcon,
   Button,
@@ -106,6 +107,29 @@ export function LockRemoteCollateral({ id }: { id: string }) {
     try {
       await switchChainAsync({ chainId });
 
+      const who = (await config.connectors[0]?.getAccounts().then((a) => a[0])) as Address;
+      // The figure the lock is supposed to move, read before and after. `nativeBalanceOf` rather
+      // than `balanceOf`: the vault holds native and token balances in separate maps.
+      const heldByVault = async (): Promise<bigint> =>
+        asset.native
+          ? await readContract(config, {
+              address: vault,
+              abi: wormholeVaultAbi,
+              functionName: "nativeBalanceOf",
+              args: [who],
+              chainId,
+            })
+          : await readContract(config, {
+              address: vault,
+              abi: wormholeVaultAbi,
+              // `tokenBalanceOf`, and the native one above is `nativeBalanceOf`. Neither is
+              // `balanceOf`: one contract holds both kinds and a single name would have to overload.
+              functionName: "tokenBalanceOf",
+              args: [who, `0x${asset.token.slice(26)}` as Address],
+              chainId,
+            });
+      const before = await heldByVault();
+
       // Read rather than assumed: it is zero on these testnets today and governance can change it.
       const core = await readContract(config, {
         address: vault,
@@ -137,7 +161,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
           address: token,
           abi: erc20Abi,
           functionName: "allowance",
-          args: [(await config.connectors[0]?.getAccounts().then((a) => a[0])) as Address, vault],
+          args: [who, vault],
           chainId,
         });
         if (allowance < entered) {
@@ -148,7 +172,18 @@ export function LockRemoteCollateral({ id }: { id: string }) {
             args: [vault, entered],
             chainId,
           });
-          await waitForTransactionReceipt(config, { hash: approval, chainId });
+          // An approval that reverted is followed by a lock that reverts, with nothing on screen
+          // saying which of the two failed.
+          await awaitSuccess(config, approval, chainId, async () => {
+            const granted = await readContract(config, {
+              address: token,
+              abi: erc20Abi,
+              functionName: "allowance",
+              args: [who, vault],
+              chainId,
+            });
+            return granted >= entered;
+          });
         }
         sent = await writeContractAsync({
           address: vault,
@@ -160,7 +195,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
         });
       }
 
-      await waitForTransactionReceipt(config, { hash: sent, chainId });
+      await awaitSuccess(config, sent, chainId, async () => (await heldByVault()) > before);
       setDone(true);
     } catch {
       // Surfaced by `error` below; caught only to stop an unhandled rejection.

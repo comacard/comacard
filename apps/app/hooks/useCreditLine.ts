@@ -1,5 +1,6 @@
 "use client";
 import { useCallback } from "react";
+import type { Address } from "viem";
 import {
   useAccount,
   useConfig,
@@ -7,7 +8,7 @@ import {
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
-import { readContract, waitForTransactionReceipt } from "wagmi/actions";
+import { readContract } from "wagmi/actions";
 import type { TxStatus } from "../components/ui/TransactionStatus";
 import {
   CREDIT_LINE,
@@ -19,6 +20,7 @@ import {
   sourceVaultAbi,
   testTokenAbi,
 } from "../lib/comacard/contracts";
+import { awaitSuccess } from "../lib/comacard/tx";
 
 /**
  * The three transactions a cardholder signs, and the reads that bound them.
@@ -156,8 +158,19 @@ export function useCreditLine() {
           args: [vault, amount],
           chainId: SEPOLIA_CHAIN_ID,
         });
-        // The lock reverts if it runs before the approval is mined, so this wait is load-bearing.
-        await waitForTransactionReceipt(config, { hash: approval, chainId: SEPOLIA_CHAIN_ID });
+        // The lock reverts if it runs before the approval is mined, so this wait is load-bearing —
+        // and an approval that reverted is followed by a lock that reverts, with nothing on screen
+        // saying which of the two failed.
+        await awaitSuccess(config, approval, SEPOLIA_CHAIN_ID, async () => {
+          const granted = await readContract(config, {
+            address: token,
+            abi: erc20Abi,
+            functionName: "allowance",
+            args: [address as Address, vault],
+            chainId: SEPOLIA_CHAIN_ID,
+          });
+          return granted >= amount;
+        });
       }
 
       return writeContractAsync({
@@ -219,15 +232,19 @@ export function useCreditLine() {
 
   // The four stages a person can tell apart, derived once here so no screen has to reassemble them
   // from three booleans and get the order wrong. Null means nothing is in flight.
-  const txStatus: TxStatus | null = error
-    ? "failed"
-    : receipt.isSuccess
-      ? "confirmed"
-      : receipt.isLoading
-        ? "confirming"
-        : isPending
-          ? "signing"
-          : null;
+  // `receipt.isSuccess` is wagmi reporting that the QUERY resolved, not that the transaction
+  // succeeded: a revert resolves it too, with `status: "reverted"`. Reading only the flag showed a
+  // green check for every reverted draw and repayment.
+  const txStatus: TxStatus | null =
+    error || receipt.data?.status === "reverted"
+      ? "failed"
+      : receipt.isSuccess
+        ? "confirmed"
+        : receipt.isLoading
+          ? "confirming"
+          : isPending
+            ? "signing"
+            : null;
 
   return {
     address,
