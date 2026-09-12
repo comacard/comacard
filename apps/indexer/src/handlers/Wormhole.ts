@@ -199,17 +199,13 @@ indexer.onEvent({ contract: "WormholeVault", event: "Unlocked" }, async ({ event
   });
 
   // The last of the three stages: the borrower has actually taken it.
-  const open = (await context.RemoteWithdrawal.getWhere({ account: { _eq: account } })).filter(
-    (w) => w.asset_id === asset && w.amount === event.params.amount && w.withdrawnAt === undefined,
-  );
-  const oldest = open.sort((a, b) => Number(a.requestedAt - b.requestedAt))[0];
-  if (oldest) {
-    context.RemoteWithdrawal.set({
-      ...oldest,
-      withdrawnAt: at,
-      withdrawTxHash: event.transaction.hash,
-    });
-  }
+  await recordStage(context, "withdrawn", {
+    account,
+    assetId: asset,
+    amount: event.params.amount,
+    at,
+    txHash: event.transaction.hash,
+  });
 });
 
 indexer.onEvent(
