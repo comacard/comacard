@@ -1,8 +1,8 @@
+import { MockVaultClient } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient } from "@sorosense/vault-client";
+import { SEED_SAFE_EXIT, seedVault } from "../../../lib/vault/seed";
 import { VaultProvider } from "../../../providers/VaultProvider";
-import { seedVault, SEED_SAFE_EXIT } from "../../../lib/vault/seed";
 import { SafeExitDialog } from "../SafeExitDialog";
 
 const useWallet = vi.fn();
@@ -14,7 +14,11 @@ async function setup() {
   const client = new MockVaultClient();
   await seedVault(client, "GUSER"); // frozen EUR pool + proposal
   const onClose = vi.fn();
-  render(<VaultProvider client={client}><SafeExitDialog open onClose={onClose} /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <SafeExitDialog open onClose={onClose} />
+    </VaultProvider>,
+  );
   return { client, onClose };
 }
 

@@ -13,12 +13,13 @@
  * one — the fixture path. That is deliberate: the deletion has to hold in both modes, and the offline
  * timeline is the one Playwright's baseline renders.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+
 import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../providers/VaultProvider";
-import { ToastProvider } from "../../../providers/ToastProvider";
-import { seedVault } from "../../../lib/vault/seed";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ChartPoint } from "../../../hooks/useEarnings";
+import { seedVault } from "../../../lib/vault/seed";
+import { ToastProvider } from "../../../providers/ToastProvider";
+import { VaultProvider } from "../../../providers/VaultProvider";
 import { DesktopOverview, rangeSeries } from "../DesktopOverview";
 
 vi.mock("next/navigation", () => ({
@@ -39,7 +40,13 @@ vi.mock("../../../hooks/useCollateral", () => ({
 }));
 
 vi.mock("../../../hooks/useRemoteCollateral", () => ({
-  useRemoteCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false, configured: true }),
+  useRemoteCollateral: () => ({
+    assets: [],
+    totalValue: 0n,
+    loading: false,
+    error: false,
+    configured: true,
+  }),
 }));
 vi.mock("../../../hooks/useCreditLine", () => ({
   useCreditLine: () => ({
@@ -53,7 +60,9 @@ vi.mock("../../../hooks/useCreditLine", () => ({
     onSepolia: true,
   }),
 }));
-vi.mock("wagmi", () => ({ useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }) }));
+vi.mock("wagmi", () => ({
+  useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }),
+}));
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -108,7 +117,8 @@ test("a range holding no movement still renders — flat at the last known value
 test("every value in the series is finite — a NaN would blank the SVG path", () => {
   for (const range of ["Day", "Week", "Month", "Year"] as const) {
     for (const v of rangeSeries([], range, 0)) expect(Number.isFinite(v)).toBe(true);
-    for (const v of rangeSeries([point(NOW, 1000)], range, 1000)) expect(Number.isFinite(v)).toBe(true);
+    for (const v of rangeSeries([point(NOW, 1000)], range, 1000))
+      expect(Number.isFinite(v)).toBe(true);
   }
 });
 
@@ -146,7 +156,9 @@ test("an unfunded vault renders the Overview flat — no buckets, no chart, no c
   await waitFor(() => expect(screen.getByText("No deposits yet")).toBeInTheDocument());
   expect(screen.getByText("Deposit to start earning")).toBeInTheDocument();
   expect(screen.queryByText(/performance fee/i)).toBeNull();
-  expect(screen.getByText("Deposit your money to create your first earning bucket.")).toBeInTheDocument();
+  expect(
+    screen.getByText("Deposit your money to create your first earning bucket."),
+  ).toBeInTheDocument();
   expect(screen.getByText("No agent activity yet")).toBeInTheDocument();
   expect(screen.getByText("Deposit first; automated moves will show here.")).toBeInTheDocument();
   // Before the first deposit, Growth offers the same deterministic simulator as the Earn surface.

@@ -1,16 +1,21 @@
 "use client";
 import { useState } from "react";
+import type { ChartPoint, MonthlyEarned } from "../../hooks/useEarnings";
+import type { PeriodName } from "../../lib/earn/simulate";
 import { Card, Segmented } from "../ui";
 import { Bars } from "./Bars";
 import { MonthlyBreakdown } from "./MonthlyBreakdown";
-import type { ChartPoint, MonthlyEarned } from "../../hooks/useEarnings";
-import type { PeriodName } from "../../lib/earn/simulate";
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const PERIODS: readonly PeriodName[] = ["day", "week", "month", "year"];
 /** Capitalized in the DOM: CSS `capitalize` does not change a button's accessible name. */
-const PERIOD_LABEL: Record<PeriodName, string> = { day: "Day", week: "Week", month: "Month", year: "Year" };
+const PERIOD_LABEL: Record<PeriodName, string> = {
+  day: "Day",
+  week: "Week",
+  month: "Month",
+  year: "Year",
+};
 
 /**
  * A FIXED calendar window + bar count per period, so the four tabs are genuinely distinct charts — not
@@ -116,10 +121,14 @@ export function GrowthCard({
           <MonthlyBreakdown monthly={monthly} now={now} />
         </>
       ) : (
-        <div data-testid="growth-zero" className="flex flex-col items-center gap-2 px-4 py-9 text-center">
+        <div
+          data-testid="growth-zero"
+          className="flex flex-col items-center gap-2 px-4 py-9 text-center"
+        >
           <span className="text-[15px] font-semibold">No earnings yet</span>
           <span className="max-w-[260px] text-[13.5px] leading-snug text-muted">
-            Your deposits are allocated and safe. Yield shows up here as it accrues. Nothing is hidden.
+            Your deposits are allocated and safe. Yield shows up here as it accrues. Nothing is
+            hidden.
           </span>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { UNIT, toAmount, fromAmount, formatCurrency } from "../units";
+import { formatCurrency, fromAmount, toAmount, UNIT } from "../units";
 
 test("toAmount parses decimals to base units and floors", () => {
   expect(toAmount("1024.30")).toBe(10_243_000_000n);

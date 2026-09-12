@@ -1,13 +1,13 @@
-import { StellarWalletsKit, Networks } from "@creit.tech/stellar-wallets-kit";
+import { Networks, StellarWalletsKit } from "@creit.tech/stellar-wallets-kit";
 import { FREIGHTER_ID } from "@creit.tech/stellar-wallets-kit/modules/freighter";
+import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils";
 import {
   WalletConnectModule,
   WalletConnectTargetChain,
 } from "@creit.tech/stellar-wallets-kit/modules/wallet-connect";
-import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils";
-import { UniversalProvider } from "@walletconnect/universal-provider";
-import { createAppKit, type AppKit } from "@reown/appkit/core";
+import { type AppKit, createAppKit } from "@reown/appkit/core";
 import { mainnet } from "@reown/appkit/networks";
+import { UniversalProvider } from "@walletconnect/universal-provider";
 import { toWalletError } from "./wallet-error";
 
 // NOTE: @creit.tech/stellar-wallets-kit@2.5.0 ships `StellarWalletsKit` as a
@@ -27,16 +27,15 @@ const WALLET_ID_KEY = "soro.wallet.id";
 const FREIGHTER_WC_ID = "997a355c8f682468706a76cff1b004a7115f505fb962dac54b6e9b442dd1c380";
 const WC_TESTNET = "stellar:testnet";
 
-type StellarWindow = Window & typeof globalThis & { stellar?: { provider?: string; platform?: string } };
+type StellarWindow = Window &
+  typeof globalThis & { stellar?: { provider?: string; platform?: string } };
 type WcProvider = Awaited<ReturnType<typeof UniversalProvider.init>>;
 
-let mobileWc:
-  | {
-      provider: WcProvider;
-      modal: AppKit;
-      address?: string;
-    }
-  | null = null;
+let mobileWc: {
+  provider: WcProvider;
+  modal: AppKit;
+  address?: string;
+} | null = null;
 
 class SoroWalletConnectModule extends WalletConnectModule {
   async isPlatformWrapper(): Promise<boolean> {
@@ -90,7 +89,9 @@ async function getMobileWalletConnect() {
   const modal = createAppKit({
     projectId,
     networks: [mainnet],
-    universalProvider: provider as unknown as Parameters<typeof createAppKit>[0]["universalProvider"],
+    universalProvider: provider as unknown as Parameters<
+      typeof createAppKit
+    >[0]["universalProvider"],
     manualWCControl: true,
     enableReconnect: true,
     featuredWalletIds: [FREIGHTER_WC_ID],
@@ -111,7 +112,12 @@ async function connectMobileWalletConnect(): Promise<{ address: string; name: st
     const session = await wc.provider.connect({
       namespaces: {
         stellar: {
-          methods: ["stellar_signXDR", "stellar_signAndSubmitXDR", "stellar_signMessage", "stellar_signAuthEntry"],
+          methods: [
+            "stellar_signXDR",
+            "stellar_signAndSubmitXDR",
+            "stellar_signMessage",
+            "stellar_signAuthEntry",
+          ],
           chains: [WC_TESTNET],
           events: ["accountsChanged"],
         },
@@ -138,13 +144,19 @@ async function mobileWalletConnectAddress() {
   return account;
 }
 
-async function mobileWalletConnectRequest<T>(method: string, params: Record<string, string>): Promise<T> {
+async function mobileWalletConnectRequest<T>(
+  method: string,
+  params: Record<string, string>,
+): Promise<T> {
   const wc = await getMobileWalletConnect();
   if (!wc.provider.session) throw new Error("No WalletConnect session found.");
-  return wc.provider.request<T>({
-    method,
-    params,
-  }, WC_TESTNET);
+  return wc.provider.request<T>(
+    {
+      method,
+      params,
+    },
+    WC_TESTNET,
+  );
 }
 
 export function getKit(): typeof StellarWalletsKit {
@@ -197,7 +209,8 @@ export function getWalletName(): string {
 }
 
 export function getWalletId(): string {
-  if (typeof window !== "undefined" && isFreighterMobile() && walletConnectProjectId()) return "wallet_connect";
+  if (typeof window !== "undefined" && isFreighterMobile() && walletConnectProjectId())
+    return "wallet_connect";
   return getKit().selectedModule.productId;
 }
 
@@ -231,9 +244,12 @@ export async function signTransaction(xdr: string): Promise<string> {
     // Real transaction XDRs fall through to signTransaction below, so the swap is automatic at U20.
     if (xdr.startsWith("mock-xdr-")) {
       if (isFreighterMobile() && walletConnectProjectId()) {
-        const { signature } = await mobileWalletConnectRequest<{ signature: string }>("stellar_signMessage", {
-          message: xdr,
-        });
+        const { signature } = await mobileWalletConnectRequest<{ signature: string }>(
+          "stellar_signMessage",
+          {
+            message: xdr,
+          },
+        );
         return signature;
       }
       // Sign on the WALLET'S current network. The kit defaults signMessage to the network passed
@@ -245,7 +261,10 @@ export async function signTransaction(xdr: string): Promise<string> {
       return signedMessage;
     }
     if (isFreighterMobile() && walletConnectProjectId()) {
-      const { signedXDR } = await mobileWalletConnectRequest<{ signedXDR: string }>("stellar_signXDR", { xdr });
+      const { signedXDR } = await mobileWalletConnectRequest<{ signedXDR: string }>(
+        "stellar_signXDR",
+        { xdr },
+      );
       return signedXDR;
     }
     const { signedTxXdr } = await getKit().signTransaction(xdr, {

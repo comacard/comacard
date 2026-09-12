@@ -1,6 +1,6 @@
 "use client";
-import { Spinner } from "../ui";
 import type { PendingDeposit } from "../../lib/comacard/api";
+import { Spinner } from "../ui";
 
 /**
  * Deposits locked on another chain and not yet delivered.

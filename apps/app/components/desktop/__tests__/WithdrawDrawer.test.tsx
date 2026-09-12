@@ -1,11 +1,11 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../providers/VaultProvider";
-import { ToastProvider } from "../../../providers/ToastProvider";
-import { seedVault } from "../../../lib/vault/seed";
-import { WithdrawDrawer } from "../WithdrawDrawer";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { getContributions, resetContributions } from "../../../lib/vault/contributions";
+import { seedVault } from "../../../lib/vault/seed";
+import { ToastProvider } from "../../../providers/ToastProvider";
+import { VaultProvider } from "../../../providers/VaultProvider";
+import { WithdrawDrawer } from "../WithdrawDrawer";
 
 const useWallet = vi.fn();
 vi.mock("../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }));
@@ -20,9 +20,11 @@ async function setup() {
   const client = new MockVaultClient();
   await seedVault(client, "GUSER"); // funds USD + EUR (≥2 buckets)
   render(
-    <VaultProvider client={client}><ToastProvider>
-      <WithdrawDrawer open onClose={onClose} />
-    </ToastProvider></VaultProvider>,
+    <VaultProvider client={client}>
+      <ToastProvider>
+        <WithdrawDrawer open onClose={onClose} />
+      </ToastProvider>
+    </VaultProvider>,
   );
   return { sign, client, onClose };
 }

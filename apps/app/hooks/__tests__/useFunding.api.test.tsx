@@ -39,7 +39,12 @@ afterEach(() => {
 
 function respondWith(body: unknown, status = 200) {
   fetchMock.mockImplementation(() =>
-    Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })),
+    Promise.resolve(
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
+    ),
   );
 }
 
@@ -48,9 +53,15 @@ function Probe() {
   if (loading) return <span>loading</span>;
   return (
     <ul>
-      <li data-testid="syms">{options.stablecoins.map((s) => `${s.sym}:${s.currency}:${s.chains.join("+")}`).join(",")}</li>
-      <li data-testid="rwa">{options.rwa.map((r) => `${r.id}|${r.name}|${r.venue}|${r.currency}`).join(",")}</li>
-      <li data-testid="rwa-keys">{options.rwa[0] ? Object.keys(options.rwa[0]).sort().join(",") : ""}</li>
+      <li data-testid="syms">
+        {options.stablecoins.map((s) => `${s.sym}:${s.currency}:${s.chains.join("+")}`).join(",")}
+      </li>
+      <li data-testid="rwa">
+        {options.rwa.map((r) => `${r.id}|${r.name}|${r.venue}|${r.currency}`).join(",")}
+      </li>
+      <li data-testid="rwa-keys">
+        {options.rwa[0] ? Object.keys(options.rwa[0]).sort().join(",") : ""}
+      </li>
     </ul>
   );
 }

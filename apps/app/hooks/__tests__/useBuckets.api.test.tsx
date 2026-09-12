@@ -9,10 +9,11 @@
  * `lib/api/config.ts` reads `NEXT_PUBLIC_API_URL` at module scope the way Next inlines it, so the var is
  * set in a `vi.hoisted` block — it runs before this file's imports.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+
 import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../providers/VaultProvider";
+import { render, screen, waitFor } from "@testing-library/react";
 import { seedVault } from "../../lib/vault/seed";
+import { VaultProvider } from "../../providers/VaultProvider";
 import { useBuckets } from "../useBuckets";
 
 vi.hoisted(() => {
@@ -79,7 +80,12 @@ afterEach(() => {
 /** A fresh Response per call — a body reads once, and the hook refetches on a vault bump / poll. */
 function holdingsAlways(body: unknown, status = 200) {
   return () =>
-    Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
+    Promise.resolve(
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
+    );
 }
 
 function Probe() {

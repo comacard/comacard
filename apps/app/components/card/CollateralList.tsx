@@ -1,9 +1,9 @@
 "use client";
 import { formatUnits } from "viem";
-import { AssetIcon, badgeForSymbol, CoinBadge } from "../ui";
-import type { TokenSym } from "../ui/CoinBadge";
 import type { CollateralAsset } from "../../hooks/useCollateral";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
+import { AssetIcon, badgeForSymbol, CoinBadge } from "../ui";
+import type { TokenSym } from "../ui/CoinBadge";
 
 /**
  * What is backing the limit, one row per asset.
@@ -33,7 +33,10 @@ function amount(value: bigint, decimals: number, symbol: string): string {
 function valueCtc(asset: CollateralAsset, held: bigint): string {
   const whole = Number(formatUnits(held, asset.decimals));
   const price = Number(formatUnits(asset.price, 18));
-  return (whole * price).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  return (whole * price).toLocaleString("en-US", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  });
 }
 
 export function CollateralList({

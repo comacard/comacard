@@ -2,20 +2,13 @@
 import { useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
-import { Drawer } from "../ui/Drawer";
-import {
-  AssetIcon,
-  badgeForSymbol,
-  Button,
-  CoinBadge,
-  Skeleton,
-  TransactionStatus,
-} from "../ui";
-import { useCollateral, type CollateralAsset } from "../../hooks/useCollateral";
-import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
+import { type CollateralAsset, useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
-import { collateralValue, limitFrom } from "../../lib/comacard/credit";
+import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { explorerTx, SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
+import { collateralValue, limitFrom } from "../../lib/comacard/credit";
+import { AssetIcon, Button, badgeForSymbol, CoinBadge, Skeleton, TransactionStatus } from "../ui";
+import { Drawer } from "../ui/Drawer";
 
 /**
  * The desktop half of the deposit flow, as two in-drawer steps: pick an asset, then an amount.
@@ -229,11 +222,7 @@ export function LockCollateralDrawer({ open, onClose }: { open: boolean; onClose
           ) : null}
 
           <Button onClick={onLock} disabled={busy || switching || entered <= 0n || exceeded}>
-            {switching
-              ? "Switching…"
-              : busy
-                ? "Confirm in your wallet…"
-                : `Lock ${asset.symbol}`}
+            {switching ? "Switching…" : busy ? "Confirm in your wallet…" : `Lock ${asset.symbol}`}
           </Button>
         </div>
       )}

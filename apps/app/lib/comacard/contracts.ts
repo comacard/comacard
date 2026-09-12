@@ -81,18 +81,66 @@ export const wormholeVaultAbi = [
   // Wormhole charges a fee to publish, and the vault takes it out of the same `msg.value` rather
   // than crediting collateral it does not hold. So `lockNative` credits `msg.value - fee`, and a
   // screen that wants to lock exactly N has to send N + fee.
-  { type: "function", name: "lockNative", stateMutability: "payable", inputs: [], outputs: [{ type: "uint64" }] },
+  {
+    type: "function",
+    name: "lockNative",
+    stateMutability: "payable",
+    inputs: [],
+    outputs: [{ type: "uint64" }],
+  },
   // Payable too, for the same fee. Easy to miss: the Sepolia `lockToken` is not.
-  { type: "function", name: "lockToken", stateMutability: "payable", inputs: [{ name: "token", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "uint64" }] },
-  { type: "function", name: "nativeBalanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "tokenBalanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }, { name: "token", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "supportedToken", stateMutability: "view", inputs: [{ name: "token", type: "address" }], outputs: [{ type: "bool" }] },
-  { type: "function", name: "WORMHOLE", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  {
+    type: "function",
+    name: "lockToken",
+    stateMutability: "payable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "uint64" }],
+  },
+  {
+    type: "function",
+    name: "nativeBalanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "tokenBalanceOf",
+    stateMutability: "view",
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "token", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "supportedToken",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "WORMHOLE",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
 ] as const;
 
 /** Just `messageFee()`, which is what a lock has to cover on top of the amount. */
 export const wormholeCoreAbi = [
-  { type: "function", name: "messageFee", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "messageFee",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;
 
 /**
@@ -101,21 +149,69 @@ export const wormholeCoreAbi = [
  * and every call degrades to `unknown`.
  */
 export const creditLineAbi = [
-  { type: "function", name: "draw", stateMutability: "nonpayable", inputs: [{ name: "amount", type: "uint256" }], outputs: [] },
+  {
+    type: "function",
+    name: "draw",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: [],
+  },
   { type: "function", name: "repay", stateMutability: "payable", inputs: [], outputs: [] },
-  { type: "function", name: "limitOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "availableOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "scoreOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "isOverdue", stateMutability: "view", inputs: [{ name: "borrower", type: "address" }], outputs: [{ type: "bool" }] },
-  { type: "function", name: "collateralPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "limitOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "availableOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "scoreOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "isOverdue",
+    stateMutability: "view",
+    inputs: [{ name: "borrower", type: "address" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "collateralPrice",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
 
   // ---- multi-asset collateral ----
   // `collateralValueOf` is the sum the limit is actually derived from: native collateral plus every
   // listed token, each scaled by its own decimals and priced in the credit asset. Reading it beats
   // re-adding the parts in TypeScript, where a decimals mistake would quietly misprice a 6-decimal
   // stablecoin by a factor of a trillion.
-  { type: "function", name: "collateralValueOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "listedTokens", stateMutability: "view", inputs: [], outputs: [{ type: "address[]" }] },
+  {
+    type: "function",
+    name: "collateralValueOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "listedTokens",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address[]" }],
+  },
   {
     // The only way to read native collateral that has actually been proved on Creditcoin:
     // `CreditAccount.collateral` is internal, and this view is what exposes it.
@@ -152,7 +248,16 @@ export const creditLineAbi = [
       { name: "listed", type: "bool" },
     ],
   },
-  { type: "function", name: "tokenCollateral", stateMutability: "view", inputs: [{ name: "account", type: "address" }, { name: "token", type: "address" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "tokenCollateral",
+    stateMutability: "view",
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "token", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
   {
     type: "event",
     name: "Drawn",
@@ -176,18 +281,78 @@ export const creditLineAbi = [
 
 export const sourceVaultAbi = [
   { type: "function", name: "lock", stateMutability: "payable", inputs: [], outputs: [] },
-  { type: "function", name: "unlock", stateMutability: "nonpayable", inputs: [{ name: "amount", type: "uint256" }], outputs: [] },
-  { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "releasable", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "unlock",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "releasable",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
 
   // ---- ERC20 collateral. Additive: the native calls above are unchanged. ----
   // `lockToken` needs an ERC20 approval first, and it credits what ACTUALLY arrived rather than the
   // amount asked for, so a fee-on-transfer token cannot over-credit itself.
-  { type: "function", name: "lockToken", stateMutability: "nonpayable", inputs: [{ name: "token", type: "address" }, { name: "amount", type: "uint256" }], outputs: [] },
-  { type: "function", name: "unlockToken", stateMutability: "nonpayable", inputs: [{ name: "token", type: "address" }, { name: "amount", type: "uint256" }], outputs: [] },
-  { type: "function", name: "supportedToken", stateMutability: "view", inputs: [{ name: "token", type: "address" }], outputs: [{ type: "bool" }] },
-  { type: "function", name: "tokenBalanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }, { name: "token", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "tokenReleasable", stateMutability: "view", inputs: [{ name: "account", type: "address" }, { name: "token", type: "address" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "lockToken",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "unlockToken",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "supportedToken",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "tokenBalanceOf",
+    stateMutability: "view",
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "token", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "tokenReleasable",
+    stateMutability: "view",
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "token", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
   {
     type: "event",
     name: "TokenLocked",
@@ -224,7 +389,13 @@ export const explorerTx = (chainId: number, hash: string): string =>
  * every time a chain is added.
  */
 export const remoteHubAbi = [
-  { type: "function", name: "listedAssets", stateMutability: "view", inputs: [], outputs: [{ type: "bytes32[]" }] },
+  {
+    type: "function",
+    name: "listedAssets",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32[]" }],
+  },
   {
     type: "function",
     name: "remoteAsset",
@@ -237,8 +408,23 @@ export const remoteHubAbi = [
       { name: "listed", type: "bool" },
     ],
   },
-  { type: "function", name: "collateralOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }, { name: "assetId", type: "bytes32" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "valueOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "collateralOf",
+    stateMutability: "view",
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "assetId", type: "bytes32" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "valueOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
   {
     type: "event",
     name: "AssetListed",
@@ -269,12 +455,54 @@ export const WORMHOLE_CHAIN_NAMES: Record<number, string> = {
 
 /** Just enough ERC20 to read a token and approve a lock. */
 export const erc20Abi = [
-  { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
-  { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
-  { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
-  { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "allowance", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "bool" }] },
+  {
+    type: "function",
+    name: "symbol",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "string" }],
+  },
+  {
+    type: "function",
+    name: "name",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "string" }],
+  },
+  {
+    type: "function",
+    name: "decimals",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint8" }],
+  },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
 ] as const;
 
 /**
@@ -289,6 +517,18 @@ export const erc20Abi = [
  * mintable this way.
  */
 export const testTokenAbi = [
-  { type: "function", name: "faucet", stateMutability: "nonpayable", inputs: [{ name: "wholeTokens", type: "uint256" }], outputs: [] },
-  { type: "function", name: "FAUCET_LIMIT", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "faucet",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "wholeTokens", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "FAUCET_LIMIT",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;

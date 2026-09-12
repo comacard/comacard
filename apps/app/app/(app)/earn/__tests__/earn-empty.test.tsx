@@ -1,6 +1,6 @@
+import { MockVaultClient } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient } from "@sorosense/vault-client";
 import { VaultProvider } from "../../../../providers/VaultProvider";
 import EarnPage from "../page";
 
@@ -12,7 +12,11 @@ vi.mock("../../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }))
 async function renderEmpty() {
   // No address → no buckets → hasDeposit false, and VaultProvider never seeds.
   useWallet.mockReturnValue({ address: null, isConnected: false });
-  render(<VaultProvider client={new MockVaultClient()}><EarnPage /></VaultProvider>);
+  render(
+    <VaultProvider client={new MockVaultClient()}>
+      <EarnPage />
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByText("Earn balance")).toBeInTheDocument());
 }
 

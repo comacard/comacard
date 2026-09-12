@@ -1,14 +1,17 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { Dropdown } from "../Dropdown";
 
 function harness(open: boolean, onClose = () => {}) {
   return render(
     <div>
       <div className="relative">
-        <button>trigger</button>
-        <Dropdown open={open} onClose={onClose} label="Account"><a href="#">item</a></Dropdown>
+        <button type="button">trigger</button>
+        <Dropdown open={open} onClose={onClose} label="Account">
+          {/* biome-ignore lint/a11y/useValidAnchor: fixture anchor, the assertion is about Dropdown not navigation */}
+          <a href="#">item</a>
+        </Dropdown>
       </div>
-      <button>outside</button>
+      <button type="button">outside</button>
     </div>,
   );
 }

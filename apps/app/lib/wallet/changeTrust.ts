@@ -13,7 +13,14 @@
  * already exist and are correct; do not "fix" that ternary.
  */
 
-import { Asset, BASE_FEE, Horizon, Networks, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
+import {
+  Asset,
+  BASE_FEE,
+  Horizon,
+  Networks,
+  Operation,
+  TransactionBuilder,
+} from "@stellar/stellar-sdk";
 import type { StablecoinSym } from "../vault/data";
 import { assetFor, horizonUrl } from "./balance";
 

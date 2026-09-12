@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
 import type { Currency, ExitProposal } from "@sorosense/vault-client";
-import { useWallet } from "./useWallet";
-import { useVault } from "./useVault";
-import { apiEnabled } from "../lib/api/config";
+import { useEffect, useState } from "react";
 import { apiGet } from "../lib/api/client";
+import { apiEnabled } from "../lib/api/config";
 import type { Pool } from "../lib/api/types";
-import { ACTIVE_BUCKET_CURRENCIES, STABLECOINS, getPoolMeta } from "../lib/vault/data";
+import { ACTIVE_BUCKET_CURRENCIES, getPoolMeta, STABLECOINS } from "../lib/vault/data";
+import { useVault } from "./useVault";
+import { useWallet } from "./useWallet";
 
 const CURRENCIES = ACTIVE_BUCKET_CURRENCIES;
 
@@ -72,7 +72,8 @@ export function usePendingExit(): PendingExitView | null {
         const amount = await client.assetValueOf(address, currency);
         const sym = STABLECOINS.find((s) => s.currency === currency)?.sym ?? currency;
         const toMeta = proposal ? await resolveExitTarget(proposal.toPool) : null;
-        if (!cancelled) setView({ currency, proposal, fromLabel: `Paused ${sym} pool`, sym, amount, toMeta });
+        if (!cancelled)
+          setView({ currency, proposal, fromLabel: `Paused ${sym} pool`, sym, amount, toMeta });
         return;
       }
       if (!cancelled) setView(null);

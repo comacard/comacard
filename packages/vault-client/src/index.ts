@@ -20,10 +20,9 @@ export type {
   SignerRole,
   TxResult,
   VaultClient,
-} from './interface';
-export { SHARE_PRICE_SCALE, DEFAULT_YIELD_RATE_BPS } from './interface';
+} from "./interface";
+export { DEFAULT_YIELD_RATE_BPS, SHARE_PRICE_SCALE } from "./interface";
 
-export { MockVaultClient, mockSigner } from './mock';
-
-export { RealVaultClient } from './real';
-export type { RealVaultClientOptions, BindingsVaultClient } from './real';
+export { MockVaultClient, mockSigner } from "./mock";
+export type { BindingsVaultClient, RealVaultClientOptions } from "./real";
+export { RealVaultClient } from "./real";

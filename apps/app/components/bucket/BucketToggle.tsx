@@ -32,6 +32,7 @@ export function BucketToggle({
 
   return (
     <button
+      type="button"
       onClick={multi ? onCycle : undefined}
       aria-label="Switch bucket"
       className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-white bg-card pl-2 pr-4 text-[15px] font-semibold [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_8px_18px_-10px_rgba(17,19,22,.18)]"
@@ -45,7 +46,17 @@ export function BucketToggle({
       )}
       {v.name}
       {multi && (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
         </svg>
       )}

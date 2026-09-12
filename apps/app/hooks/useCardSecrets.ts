@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { comacardApiEnabled, getCard, type FullCard } from "../lib/comacard/api";
+import { comacardApiEnabled, type FullCard, getCard } from "../lib/comacard/api";
 import { useWallet } from "./useWallet";
 
 /**

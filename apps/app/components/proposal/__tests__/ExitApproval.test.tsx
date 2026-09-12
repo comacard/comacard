@@ -1,8 +1,8 @@
+import { MockVaultClient } from "@sorosense/vault-client";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient } from "@sorosense/vault-client";
+import { SEED_SAFE_EXIT, seedVault } from "../../../lib/vault/seed";
 import { VaultProvider } from "../../../providers/VaultProvider";
-import { seedVault, SEED_SAFE_EXIT } from "../../../lib/vault/seed";
 import { ExitApproval } from "../ExitApproval";
 
 const useWallet = vi.fn();
@@ -19,7 +19,11 @@ function setup() {
 test("shows the safe-exit move + approve/decline actions", async () => {
   const { client, onClose } = setup();
   await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><ExitApproval open onClose={onClose} /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ExitApproval open onClose={onClose} />
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByText("Paused EURC pool")).toBeInTheDocument());
   expect(screen.getByText("DeFindex EURC")).toBeInTheDocument();
@@ -32,7 +36,11 @@ test("approve signs approveExit and moves the bucket to the safe pool", async ()
   const { client, onClose } = setup();
   await seedVault(client, "GUSER");
   const user = userEvent.setup();
-  render(<VaultProvider client={client}><ExitApproval open onClose={onClose} /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ExitApproval open onClose={onClose} />
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByText("DeFindex EURC")).toBeInTheDocument());
   await user.click(screen.getByRole("button", { name: "Approve and sign in wallet" }));
@@ -46,7 +54,11 @@ test("decline closes without calling the seam — funds stay put", async () => {
   const { client, onClose } = setup();
   await seedVault(client, "GUSER");
   const user = userEvent.setup();
-  render(<VaultProvider client={client}><ExitApproval open onClose={onClose} /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ExitApproval open onClose={onClose} />
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByText("DeFindex EURC")).toBeInTheDocument());
   await user.click(screen.getByRole("button", { name: "Keep it paused" }));
@@ -66,7 +78,11 @@ test("a rejected approval says nothing moved — the proposal stays pending, the
   await seedVault(client, "GUSER");
   const user = userEvent.setup();
   client.simulateFailure();
-  render(<VaultProvider client={client}><ExitApproval open onClose={onClose} /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ExitApproval open onClose={onClose} />
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByText("DeFindex EURC")).toBeInTheDocument());
   await user.click(screen.getByRole("button", { name: "Approve and sign in wallet" }));
@@ -82,7 +98,11 @@ test("a double-press fires one approval, not two", async () => {
   const { client, onClose } = setup();
   await seedVault(client, "GUSER");
   const approveExit = vi.spyOn(client, "approveExit");
-  render(<VaultProvider client={client}><ExitApproval open onClose={onClose} /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ExitApproval open onClose={onClose} />
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByText("DeFindex EURC")).toBeInTheDocument());
   // Both presses land in the SAME tick, before React can re-render the button into its disabled

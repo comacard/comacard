@@ -1,16 +1,20 @@
 "use client";
+import { type Currency, MockVaultClient } from "@sorosense/vault-client";
 import { useEffect, useMemo, useState } from "react";
-import { MockVaultClient, type Currency } from "@sorosense/vault-client";
-import { useBuckets } from "./useBuckets";
-import { useVault } from "./useVault";
-import { useWallet } from "./useWallet";
-import { apiEnabled } from "../lib/api/config";
 import { apiGet, toBigInt } from "../lib/api/client";
+import { apiEnabled } from "../lib/api/config";
 import type { EarningsResponse } from "../lib/api/types";
+import {
+  buildEarningsFixture,
+  type ChartPoint,
+  type MonthlyEarned,
+} from "../lib/earnings/fixtures";
 import { getContributions } from "../lib/vault/contributions";
 import { getFxRateToUsd, isActiveBucketCurrency } from "../lib/vault/data";
 import { UNIT } from "../lib/vault/units";
-import { buildEarningsFixture, type ChartPoint, type MonthlyEarned } from "../lib/earnings/fixtures";
+import { useBuckets } from "./useBuckets";
+import { useVault } from "./useVault";
+import { useWallet } from "./useWallet";
 
 /**
  * Re-exported so consumers (`GrowthCard`, `MonthlyBreakdown`, `DesktopOverview`) depend on this hook's
@@ -41,7 +45,13 @@ export interface EarningsView {
 }
 
 const EMPTY: EarningsView = {
-  hasDeposit: false, balanceUsd: 0, apy: 0, earnedUsd: 0, buckets: [], chart: [], monthly: [],
+  hasDeposit: false,
+  balanceUsd: 0,
+  apy: 0,
+  earnedUsd: 0,
+  buckets: [],
+  chart: [],
+  monthly: [],
 };
 
 /** How often a mounted Earn surface re-reads the backend. Mirrors `HOLDINGS_POLL_MS` (KTD7). */
@@ -147,7 +157,9 @@ export function useEarnings(): { loading: boolean; view: EarningsView } {
       if (!result.ok || !isEarningsResponse(result.value)) {
         // Never swallowed, never fatal: the caller falls back to the offline hybrid rather than
         // rendering a blank Earn screen — or, worse, a silent $0 that reads as a real balance.
-        const reason = result.ok ? "parse: /earnings body is not an earnings view" : `${result.code}: ${result.message}`;
+        const reason = result.ok
+          ? "parse: /earnings body is not an earnings view"
+          : `${result.code}: ${result.message}`;
         console.error(`[earnings] ${reason}`);
         setRemote({ loading: false, view: null });
         return;
@@ -182,7 +194,9 @@ export function useEarnings(): { loading: boolean; view: EarningsView } {
 
     const breakdown: BucketBreakdown[] = buckets.map((b) => {
       const fx = getFxRateToUsd(b.currency);
-      const earnedNative = mockLedger ? Number(b.value - getContributions(b.currency)) / Number(UNIT) : 0;
+      const earnedNative = mockLedger
+        ? Number(b.value - getContributions(b.currency)) / Number(UNIT)
+        : 0;
       return {
         currency: b.currency,
         nativeValue: b.value,
@@ -194,12 +208,21 @@ export function useEarnings(): { loading: boolean; view: EarningsView } {
 
     const balanceUsd = totalUsd;
     const earnedUsd = breakdown.reduce((s, b) => s + b.earnedUsd, 0);
-    const apy = balanceUsd > 0 ? buckets.reduce((s, b) => s + b.valueUsd * b.apy, 0) / balanceUsd : 0;
+    const apy =
+      balanceUsd > 0 ? buckets.reduce((s, b) => s + b.valueUsd * b.apy, 0) / balanceUsd : 0;
 
     // The fixture is stretched onto the live figures, so the hero, the chart's last point and the
     // monthly sum are one number seen three ways.
     const { chart, monthly } = buildEarningsFixture(now, { balanceUsd, earnedUsd });
-    return { hasDeposit: buckets.length > 0, balanceUsd, apy, earnedUsd, buckets: breakdown, chart, monthly };
+    return {
+      hasDeposit: buckets.length > 0,
+      balanceUsd,
+      apy,
+      earnedUsd,
+      buckets: breakdown,
+      chart,
+      monthly,
+    };
   }, [useOffline, buckets, totalUsd, now, mockLedger]);
 
   if (live) return { loading: false, view: remote.view! };

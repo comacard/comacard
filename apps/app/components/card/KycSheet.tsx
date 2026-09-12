@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { TextMorph } from "torph/react";
 import { createPortal } from "react-dom";
+import { TextMorph } from "torph/react";
 
 /**
  * Identity verification, inside the app rather than in a new tab.
@@ -101,7 +101,16 @@ export function KycSheet({
           aria-label="Close verification"
           className="grid h-[38px] w-[38px] place-items-center rounded-full border border-white bg-card [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_8px_18px_-10px_rgba(17,19,22,.18)]"
         >
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+          <svg
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
         </button>
@@ -113,7 +122,17 @@ export function KycSheet({
       {done ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-8 text-center">
           <span className="grid h-[86px] w-[86px] place-items-center rounded-full bg-pos/10 text-pos motion-safe:animate-[rise_.5s_cubic-bezier(0.16,1,0.3,1)_both]">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <path d="M20 6 9 17l-5-5" />
             </svg>
           </span>

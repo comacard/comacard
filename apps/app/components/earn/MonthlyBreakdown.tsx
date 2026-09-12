@@ -5,8 +5,18 @@ import type { MonthlyEarned } from "../../hooks/useEarnings";
 const PAGE = 3;
 /** Explicit names: `toLocaleString` depends on the runtime's ICU data, which varies across CI images. */
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ] as const;
 
 /**
@@ -23,7 +33,8 @@ export function formatMonthLabel(label: string, now: number): string {
   return year === d.getUTCFullYear() ? name : `${name} ${year}`;
 }
 
-const usd = (n: number) => `$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const usd = (n: number) =>
+  `$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * Per-month earned, newest first. The backend sends `monthly` oldest→newest.
@@ -62,11 +73,22 @@ export function MonthlyBreakdown({ monthly, now }: { monthly: MonthlyEarned[]; n
       ))}
       {shown < rows.length && (
         <button
+          type="button"
           onClick={() => setShown((n) => Math.min(n + PAGE, rows.length))}
           className="flex w-full items-center justify-center gap-[3px] border-t border-line pb-[3px] pt-[13px] text-[13.5px] font-medium text-muted"
         >
           Load more
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M6 9l6 6 6-6" />
           </svg>
         </button>

@@ -6,5 +6,7 @@ import type { CSSProperties } from "react";
  * (globals.css) owns the tone + the sweep, and stills under prefers-reduced-motion.
  */
 export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
-  return <div data-testid="skeleton" aria-hidden style={style} className={`skeleton ${className}`} />;
+  return (
+    <div data-testid="skeleton" aria-hidden style={style} className={`skeleton ${className}`} />
+  );
 }

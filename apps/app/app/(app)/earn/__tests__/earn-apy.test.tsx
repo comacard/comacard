@@ -14,11 +14,12 @@
  * Here `NEXT_PUBLIC_API_URL` is set in a `vi.hoisted` block (it must land before `lib/api/config.ts` is
  * imported, which reads it at module scope the way Next inlines it).
  */
+
+import { MockVaultClient } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../../providers/VaultProvider";
 import { seedVault } from "../../../../lib/vault/seed";
+import { VaultProvider } from "../../../../providers/VaultProvider";
 import EarnPage from "../page";
 
 vi.hoisted(() => {
@@ -81,9 +82,30 @@ type Row = typeof USD_ROW;
  * read this route, and one quoting 8.59% can only have fallen back to the fixture.
  */
 const RATES = [
-  { currency: "USD", name: "DeFindex USDC vault", venue: "DeFindex", kind: "vault", tags: ["DeFindex", "Vault"], apy: 7.75 },
-  { currency: "EUR", name: "Blend EURC", venue: "Blend", kind: "lending", tags: ["Blend", "Fixed pool"], apy: 4.25 },
-  { currency: "MXN", name: "Etherfuse CETES", venue: "Etherfuse", kind: "rwa", tags: ["Etherfuse", "CETES"], apy: 5.57 },
+  {
+    currency: "USD",
+    name: "DeFindex USDC vault",
+    venue: "DeFindex",
+    kind: "vault",
+    tags: ["DeFindex", "Vault"],
+    apy: 7.75,
+  },
+  {
+    currency: "EUR",
+    name: "Blend EURC",
+    venue: "Blend",
+    kind: "lending",
+    tags: ["Blend", "Fixed pool"],
+    apy: 4.25,
+  },
+  {
+    currency: "MXN",
+    name: "Etherfuse CETES",
+    venue: "Etherfuse",
+    kind: "rwa",
+    tags: ["Etherfuse", "CETES"],
+    apy: 5.57,
+  },
 ];
 
 /**
@@ -98,7 +120,12 @@ function earningsFor(rows: Row[]) {
     balanceUsd,
     apy: balanceUsd > 0 ? rows.reduce((s, r) => s + r.valueUsd * r.apy, 0) / balanceUsd : 0,
     earnedUsd: 0,
-    buckets: rows.map((r) => ({ currency: r.currency, nativeValue: r.value, usdValue: r.valueUsd, earnedUsd: 0 })),
+    buckets: rows.map((r) => ({
+      currency: r.currency,
+      nativeValue: r.value,
+      usdValue: r.valueUsd,
+      earnedUsd: 0,
+    })),
     chart: [],
     monthly: [],
   };
@@ -108,10 +135,17 @@ function earningsFor(rows: Row[]) {
 function routeTo(rows: Row[]) {
   return (input: RequestInfo | URL) => {
     const url = typeof input === "string" ? input : input.toString();
-    const body = url.includes("/earnings") ? earningsFor(rows) : url.includes("/rates") ? RATES : rows;
+    const body = url.includes("/earnings")
+      ? earningsFor(rows)
+      : url.includes("/rates")
+        ? RATES
+        : rows;
     // A fresh Response per call: a body can only be read once, and the hooks refetch on a vault bump.
     return Promise.resolve(
-      new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } }),
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
     );
   };
 }
@@ -150,7 +184,7 @@ test("the funded hero shows the backend's rate for USD, not the fixture", async 
   expect(screen.getByText(/8\.20% APY/)).toBeInTheDocument();
   expect(screen.queryByText(/8\.59% APY/)).toBeNull(); // not the fixture…
   expect(screen.queryByText(/7\.75% APY/)).toBeNull(); // …and not /rates either: a funded bucket's rate
-                                                       // is the pool it is IN, not the one it would pick.
+  // is the pool it is IN, not the one it would pick.
 });
 
 test("every funded bucket takes its rate from its own /holdings row — no fixture rate leaks (KTD4)", async () => {
@@ -238,10 +272,16 @@ test("the funded bucket selector never offers MXN while CETES is coming soon", a
   await waitFor(() => expect(screen.getByText("Total earned")).toBeInTheDocument());
   expect(screen.getByRole("button", { name: "Switch bucket" })).toHaveTextContent("All buckets");
   await user.click(screen.getByRole("button", { name: "Switch bucket" }));
-  await waitFor(() => expect(screen.getByRole("button", { name: "Switch bucket" })).toHaveTextContent("USD bucket"));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Switch bucket" })).toHaveTextContent("USD bucket"),
+  );
   await user.click(screen.getByRole("button", { name: "Switch bucket" }));
-  await waitFor(() => expect(screen.getByRole("button", { name: "Switch bucket" })).toHaveTextContent("EUR bucket"));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Switch bucket" })).toHaveTextContent("EUR bucket"),
+  );
   await user.click(screen.getByRole("button", { name: "Switch bucket" }));
-  await waitFor(() => expect(screen.getByRole("button", { name: "Switch bucket" })).toHaveTextContent("All buckets"));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Switch bucket" })).toHaveTextContent("All buckets"),
+  );
   expect(document.body.textContent).not.toMatch(/MXN|CETES/);
 });

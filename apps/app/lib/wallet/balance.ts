@@ -87,7 +87,10 @@ export type BalanceResult = { ok: true; value: WalletBalance } | { ok: false; me
  * whole path testable against a recorded Horizon body. The SDK is used where it earns its weight —
  * building the `changeTrust` XDR (`changeTrust.ts`).
  */
-export async function readWalletBalance(sym: StablecoinSym, address: string): Promise<BalanceResult> {
+export async function readWalletBalance(
+  sym: StablecoinSym,
+  address: string,
+): Promise<BalanceResult> {
   const asset = assetFor(sym);
   if (!asset) return { ok: false, message: `Horizon is not configured for ${sym}` };
 
@@ -124,7 +127,9 @@ export async function readWalletBalance(sym: StablecoinSym, address: string): Pr
     return { ok: false, message: "Horizon response was not valid JSON" };
   }
 
-  const balances: HorizonBalance[] = Array.isArray(body.balances) ? (body.balances as HorizonBalance[]) : [];
+  const balances: HorizonBalance[] = Array.isArray(body.balances)
+    ? (body.balances as HorizonBalance[])
+    : [];
   const line = balances.find(
     (b) =>
       b.asset_type !== "native" && b.asset_code === asset.code && b.asset_issuer === asset.issuer,
@@ -139,7 +144,10 @@ export async function readWalletBalance(sym: StablecoinSym, address: string): Pr
   try {
     // Horizon amounts are non-negative, fixed 7-decimal strings — the exact shape `toAmount` parses
     // (shared with the deposit keypad, so the base-unit convention lives in one place, `units.ts`).
-    return { ok: true, value: { amount: toAmount(line.balance), trustline: true, unfunded: false } };
+    return {
+      ok: true,
+      value: { amount: toAmount(line.balance), trustline: true, unfunded: false },
+    };
   } catch {
     // `BigInt()` throws on a non-decimal string. The no-throw contract holds all the way through the
     // decode: a malformed amount is an error the caller falls back from, never an unhandled rejection.

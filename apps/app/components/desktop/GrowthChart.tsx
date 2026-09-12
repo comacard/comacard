@@ -1,15 +1,33 @@
 "use client";
-import { useState } from "react";
 import type { Currency } from "@sorosense/vault-client";
+import { useState } from "react";
 import type { MonthlyEarned } from "../../hooks/useEarnings";
-import { PERIOD_DAYS, simulate, simulateCurve, type PeriodName } from "../../lib/earn/simulate";
+import { PERIOD_DAYS, type PeriodName, simulate, simulateCurve } from "../../lib/earn/simulate";
 import { CountUp, Segmented } from "../ui";
 
 const SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const FULL = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 const CURRENCIES: readonly Currency[] = ["USD", "EUR"];
 const PERIODS: readonly PeriodName[] = ["day", "week", "month", "year"];
-const PERIOD_LABEL: Record<PeriodName, string> = { day: "Day", week: "Week", month: "Month", year: "Year" };
+const PERIOD_LABEL: Record<PeriodName, string> = {
+  day: "Day",
+  week: "Week",
+  month: "Month",
+  year: "Year",
+};
 const SYMBOL: Record<Currency, string> = { USD: "$", EUR: "€", MXN: "MX$" };
 const BAR_COUNT: Record<PeriodName, number> = { day: 4, week: 7, month: 10, year: 12 };
 const STEP = 500;
@@ -21,10 +39,12 @@ function monthIdx(label: string): number {
   const mm = Number(label.slice(5, 7));
   return mm >= 1 && mm <= 12 ? mm - 1 : 0;
 }
-const money = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (v: number) =>
+  `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const nativeMoney = (v: number, currency: Currency) =>
   `${SYMBOL[currency]}${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const nativeWhole = (v: number, currency: Currency) => `${SYMBOL[currency]}${Math.round(v).toLocaleString("en-US")}`;
+const nativeWhole = (v: number, currency: Currency) =>
+  `${SYMBOL[currency]}${Math.round(v).toLocaleString("en-US")}`;
 const progressLabel = (period: PeriodName, index: number, count: number) => {
   if (period === "day") return `${Math.round(((index + 1) * 24) / count)}h`;
   if (period === "week") return `Day ${index + 1}`;
@@ -68,7 +88,11 @@ export function SimulationAmountStepper({
       >
         -
       </button>
-      <CountUp value={amount} format={(n) => nativeWhole(n, currency)} className="min-w-[58px] text-center text-[12.5px] font-semibold [font-variant-numeric:tabular-nums]" />
+      <CountUp
+        value={amount}
+        format={(n) => nativeWhole(n, currency)}
+        className="min-w-[58px] text-center text-[12.5px] font-semibold [font-variant-numeric:tabular-nums]"
+      />
       <button
         type="button"
         onClick={() => step(STEP)}
@@ -123,6 +147,7 @@ function CompactEarningsSimulator({
       </div>
 
       <div className="relative mt-2">
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: onMouseLeave only clears a hover tooltip; there is no keyboard hover to mirror */}
         <div
           data-testid="simulator-bars"
           className="flex items-end gap-1"
@@ -131,6 +156,7 @@ function CompactEarningsSimulator({
         >
           {curve.map((v, i) => (
             <button
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length literal array, the index is the identity
               key={i}
               type="button"
               aria-label={`${progressLabel(period, i, curve.length)} ${nativeMoney(v, currency)}`}
@@ -145,9 +171,13 @@ function CompactEarningsSimulator({
         {hv !== undefined && (
           <div
             className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[125%] whitespace-nowrap rounded-[10px] border border-line bg-white px-2.5 py-1.5 text-[12.5px] font-semibold [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_8px_18px_-10px_rgba(17,19,22,.18)]"
-            style={{ left: `${((hover! + 0.5) / curve.length) * 100}%`, top: `${SIM_CHART_H * (1 - hv / max)}px` }}
+            style={{
+              left: `${((hover! + 0.5) / curve.length) * 100}%`,
+              top: `${SIM_CHART_H * (1 - hv / max)}px`,
+            }}
           >
-            {progressLabel(period, hover!, curve.length)} · <span className="text-pos">+{nativeMoney(hv, currency)}</span>
+            {progressLabel(period, hover!, curve.length)} ·{" "}
+            <span className="text-pos">+{nativeMoney(hv, currency)}</span>
           </div>
         )}
       </div>
@@ -213,7 +243,18 @@ export function GrowthChart({
         className="flex flex-1 flex-col items-center justify-center py-6 text-center"
       >
         <div className="grid h-12 w-12 place-items-center rounded-full border border-line bg-white [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.2)]">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-ink-2" aria-hidden="true">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-ink-2"
+            aria-hidden="true"
+          >
             <path d="M3 17l6-6 4 4 7-7" />
             <path d="M14 8h6v6" />
           </svg>
@@ -228,7 +269,13 @@ export function GrowthChart({
 
   return (
     <div className="relative mt-2">
-      <div data-testid="bars" className="flex items-end justify-start gap-[5px]" style={{ height: CHART_H }} onMouseLeave={() => setHover(null)}>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: onMouseLeave only clears a hover tooltip; there is no keyboard hover to mirror */}
+      <div
+        data-testid="bars"
+        className="flex items-end justify-start gap-[5px]"
+        style={{ height: CHART_H }}
+        onMouseLeave={() => setHover(null)}
+      >
         {monthly.map((m, i) => {
           const isLast = i === n - 1;
           const grad = isLast
@@ -244,7 +291,10 @@ export function GrowthChart({
               onMouseEnter={() => setHover(i)}
               onFocus={() => setHover(i)}
               onBlur={() => setHover(null)}
-              style={{ height: `${Math.max(6, (m.earnedUsd / max) * CHART_H)}px`, animationDelay: `${i * 40}ms` }}
+              style={{
+                height: `${Math.max(6, (m.earnedUsd / max) * CHART_H)}px`,
+                animationDelay: `${i * 40}ms`,
+              }}
               className={`grow-bar min-h-[6px] w-full max-w-[52px] flex-1 rounded-t-[4px] rounded-b-[2px] transition-opacity hover:opacity-[.82] ${grad}`}
             />
           );
@@ -252,7 +302,10 @@ export function GrowthChart({
       </div>
       <div className="mt-2 flex justify-start gap-[5px]">
         {monthly.map((m, i) => (
-          <span key={m.label} className="w-full max-w-[52px] flex-1 text-center text-[10px] font-medium text-faint">
+          <span
+            key={m.label}
+            className="w-full max-w-[52px] flex-1 text-center text-[10px] font-medium text-faint"
+          >
             {i % 3 === 0 || i === n - 1 ? (SHORT[monthIdx(m.label)] ?? "") : ""}
           </span>
         ))}
@@ -260,9 +313,13 @@ export function GrowthChart({
       {hv && (
         <div
           className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[125%] whitespace-nowrap rounded-[10px] border border-line bg-white px-2.5 py-1.5 text-[12.5px] font-semibold [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_8px_18px_-10px_rgba(17,19,22,.18)]"
-          style={{ left: `${((hover! + 0.5) / n) * 100}%`, top: `${CHART_H * (1 - hv.earnedUsd / max)}px` }}
+          style={{
+            left: `${((hover! + 0.5) / n) * 100}%`,
+            top: `${CHART_H * (1 - hv.earnedUsd / max)}px`,
+          }}
         >
-          {hover === n - 1 ? "This month" : (FULL[monthIdx(hv.label)] ?? "")} · <span className="text-pos">+{money(hv.earnedUsd)}</span>
+          {hover === n - 1 ? "This month" : (FULL[monthIdx(hv.label)] ?? "")} ·{" "}
+          <span className="text-pos">+{money(hv.earnedUsd)}</span>
         </div>
       )}
     </div>

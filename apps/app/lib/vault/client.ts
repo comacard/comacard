@@ -14,11 +14,11 @@
  */
 
 import {
-  MockVaultClient,
-  RealVaultClient,
   type Address,
   type Currency,
+  MockVaultClient,
   type PoolId,
+  RealVaultClient,
   type VaultClient,
 } from "@sorosense/vault-client";
 import { depositorSigner } from "./signer";
@@ -71,8 +71,8 @@ export interface PoolRegistry {
 export function buildPoolRegistry(
   addresses: Partial<Record<Currency, string>>,
 ): PoolRegistry | undefined {
-  const entries: Array<[PoolId, Address]> = [];
-  for (const [currency, slug] of Object.entries(DEMO_POOL_SLUG) as Array<[Currency, PoolId]>) {
+  const entries: [PoolId, Address][] = [];
+  for (const [currency, slug] of Object.entries(DEMO_POOL_SLUG) as [Currency, PoolId][]) {
     const address = addresses[currency];
     if (address) entries.push([slug, address]);
   }

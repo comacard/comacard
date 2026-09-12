@@ -1,11 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MonthlyBreakdown, formatMonthLabel } from "../MonthlyBreakdown";
+import { formatMonthLabel, MonthlyBreakdown } from "../MonthlyBreakdown";
 
 const NOW = Date.UTC(2026, 6, 10); // 2026-07
 
 const monthly = [
-  "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07",
+  "2025-11",
+  "2025-12",
+  "2026-01",
+  "2026-02",
+  "2026-03",
+  "2026-04",
+  "2026-05",
+  "2026-06",
+  "2026-07",
 ].map((label, i) => ({ label, earnedUsd: 10 + i }));
 
 test("formatMonthLabel distinguishes this month, this year, and last year", () => {

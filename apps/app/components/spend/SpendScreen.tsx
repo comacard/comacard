@@ -1,12 +1,12 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
-import { Button, Keypad, TransactionStatus } from "../ui";
-import { SubHeader } from "../ui/SubHeader";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { CREDITCOIN_CHAIN_ID, explorerTx } from "../../lib/comacard/contracts";
+import { Button, Keypad, TransactionStatus } from "../ui";
+import { SubHeader } from "../ui/SubHeader";
 
 /**
  * Spending against the card's limit.
@@ -96,7 +96,9 @@ export function SpendScreen() {
         value={amount}
         onChange={setAmount}
         symbol=""
-        onQuick={(pct) => setAmount(formatUnits((ceiling * BigInt(Math.round(pct * 1000))) / 1000n, 18))}
+        onQuick={(pct) =>
+          setAmount(formatUnits((ceiling * BigInt(Math.round(pct * 1000))) / 1000n, 18))
+        }
         invalid={exceeded}
         hint={`Your card has ${fmt(ceiling)} tCTC`}
       />

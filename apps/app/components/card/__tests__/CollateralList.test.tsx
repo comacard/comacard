@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { CollateralList } from "../CollateralList";
 import type { CollateralAsset } from "../../../hooks/useCollateral";
+import { CollateralList } from "../CollateralList";
 
 const asset = (over: Partial<CollateralAsset>): CollateralAsset => ({
   token: null,
@@ -43,9 +43,7 @@ test("reports the proved amount, not the locked one, and says what is still cros
   // the locked figure would claim credit the chain has not granted.
   render(
     <CollateralList
-      assets={[
-        asset({ locked: 3n * 10n ** 17n, proved: 10n ** 17n, crossing: true }),
-      ]}
+      assets={[asset({ locked: 3n * 10n ** 17n, proved: 10n ** 17n, crossing: true })]}
     />,
   );
   expect(screen.getByText("0.1000 ETH")).toBeInTheDocument();

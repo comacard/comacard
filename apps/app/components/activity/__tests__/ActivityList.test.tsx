@@ -1,10 +1,23 @@
 import { render, screen } from "@testing-library/react";
-import { ActivityList } from "../ActivityList";
 import type { ActivityItem } from "../../../lib/vault/data";
+import { ActivityList } from "../ActivityList";
 
 const items: ActivityItem[] = [
-  { id: 2, cat: "auto", kind: "rebalanced", detail: "Switched to DeFindex · 8.59% APY", when: "3h ago" },
-  { id: 1, cat: "auto", kind: "proposed-exit", detail: "Proposed safe exit from EURC pool", when: "6h ago", review: true },
+  {
+    id: 2,
+    cat: "auto",
+    kind: "rebalanced",
+    detail: "Switched to DeFindex · 8.59% APY",
+    when: "3h ago",
+  },
+  {
+    id: 1,
+    cat: "auto",
+    kind: "proposed-exit",
+    detail: "Proposed safe exit from EURC pool",
+    when: "6h ago",
+    review: true,
+  },
 ];
 
 test("renders activity details and a Review affordance for review items", () => {
@@ -22,7 +35,13 @@ test("shows a dead 'Reviewed' label (no active Review) once the exit is resolved
 });
 
 test("renders a designed empty state when empty copy is provided", () => {
-  render(<ActivityList items={[]} emptyTitle="No agent activity yet" emptyDescription="Deposit first; automated moves will show here." />);
+  render(
+    <ActivityList
+      items={[]}
+      emptyTitle="No agent activity yet"
+      emptyDescription="Deposit first; automated moves will show here."
+    />,
+  );
   expect(screen.getByText("No agent activity yet")).toBeInTheDocument();
   expect(screen.getByText("Deposit first; automated moves will show here.")).toBeInTheDocument();
 });

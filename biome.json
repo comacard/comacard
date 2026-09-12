@@ -18,7 +18,9 @@
       "!bun.lock",
       "!apps/indexer/abis",
       "!apps/indexer/.envio",
-      "!apps/indexer/envio-env.d.ts"
+      "!apps/indexer/envio-env.d.ts",
+      "!apps/app/public",
+      "!packages/vault-client/bindings/src"
     ]
   },
   "formatter": {
@@ -124,12 +126,20 @@
   },
   "overrides": [
     {
-      "includes": ["**/test/**", "**/*.test.ts", "**/*.spec.ts"],
+      "includes": [
+        "**/test/**",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        "**/*.test.tsx",
+        "**/*.spec.tsx",
+        "**/__tests__/**"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
             "noExplicitAny": "off",
-            "noConsole": "off"
+            "noConsole": "off",
+            "useAwait": "off"
           },
           "complexity": {
             "noExcessiveCognitiveComplexity": "off"
@@ -164,6 +174,38 @@
           "suspicious": {
             "noUnknownAtRules": "off"
           }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/vault-client/**",
+        "apps/app/lib/wallet*.ts",
+        "apps/app/lib/wallet/**",
+        "apps/app/lib/e2e/**",
+        "apps/app/e2e/**"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "useAwait": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/tsconfig*.json"],
+      "json": {
+        "parser": {
+          "allowComments": true
+        }
+      }
+    },
+    {
+      "includes": ["**/*.css"],
+      "css": {
+        "parser": {
+          "tailwindDirectives": true
         }
       }
     }

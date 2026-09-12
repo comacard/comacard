@@ -1,9 +1,9 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useBalance } from "wagmi";
-import { CREDITCOIN_CHAIN_ID, SEPOLIA_CHAIN_ID } from "../lib/comacard/contracts";
-import { readPrices, type Prices } from "../lib/comacard/oracle";
 import type { TokenSym } from "../components/ui/CoinBadge";
+import { CREDITCOIN_CHAIN_ID, SEPOLIA_CHAIN_ID } from "../lib/comacard/contracts";
+import { type Prices, readPrices } from "../lib/comacard/oracle";
 import { useWallet } from "./useWallet";
 
 /**

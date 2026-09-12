@@ -1,6 +1,6 @@
 "use client";
 import { BottomSheet, Toast } from "../ui";
-import { useExitApproval, ExitApprovalBody } from "./ExitApprovalBody";
+import { ExitApprovalBody, useExitApproval } from "./ExitApprovalBody";
 
 /**
  * The only mobile approval surface for a Sentinel-freeze exit. Now a thin wrapper: the BottomSheet +
@@ -13,7 +13,13 @@ export function ExitApproval({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <>
       <BottomSheet open={open} onClose={onClose} label="Approve safe exit">
-        <ExitApprovalBody pend={pend} busy={busy} variant="sheet" onApprove={onApprove} onDecline={onDecline} />
+        <ExitApprovalBody
+          pend={pend}
+          busy={busy}
+          variant="sheet"
+          onApprove={onApprove}
+          onDecline={onDecline}
+        />
       </BottomSheet>
       <Toast open={!!toast} message={toast ?? ""} />
     </>

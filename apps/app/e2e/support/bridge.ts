@@ -21,11 +21,16 @@ export async function keeper(
       // Dispatched, not indexed: `freeze` and `proposeExit` take no amount, and a cast that pretended
       // otherwise would silently accept one.
       switch (a) {
-        case "allocate": return k.allocate(c, amt);
-        case "compound": return k.compound(c, amt);
-        case "freeze": return k.freeze(c);
-        case "proposeExit": return k.proposeExit(c);
-        case "rebalance": return k.rebalance(c, amt);
+        case "allocate":
+          return k.allocate(c, amt);
+        case "compound":
+          return k.compound(c, amt);
+        case "freeze":
+          return k.freeze(c);
+        case "proposeExit":
+          return k.proposeExit(c);
+        case "rebalance":
+          return k.rebalance(c, amt);
       }
     },
     [action, currency, amount] as const,

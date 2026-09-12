@@ -9,11 +9,16 @@ import { buildPoolRegistry } from "../client";
 async function withEnv(env: Record<string, string>) {
   for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
   vi.resetModules();
-  const [factory, seam] = await Promise.all([import("../client"), import("@sorosense/vault-client")]);
+  const [factory, seam] = await Promise.all([
+    import("../client"),
+    import("@sorosense/vault-client"),
+  ]);
   return { ...factory, ...seam };
 }
 
-const CONTRACT = { NEXT_PUBLIC_VAULT_CONTRACT_ID: "CCONTRACTIDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" };
+const CONTRACT = {
+  NEXT_PUBLIC_VAULT_CONTRACT_ID: "CCONTRACTIDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+};
 const RPC = { NEXT_PUBLIC_STELLAR_RPC_URL: "https://soroban-testnet.stellar.org" };
 const PASSPHRASE = { NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015" };
 
@@ -39,7 +44,11 @@ test("no contract env ⇒ the mock, and not one network call (the offline guaran
 });
 
 test("all three vars set ⇒ the real client, carrying the connected address and signer", async () => {
-  const { createVaultClient, isIntegrationEnv, RealVaultClient } = await withEnv({ ...CONTRACT, ...RPC, ...PASSPHRASE });
+  const { createVaultClient, isIntegrationEnv, RealVaultClient } = await withEnv({
+    ...CONTRACT,
+    ...RPC,
+    ...PASSPHRASE,
+  });
   const signTransaction = vi.fn(async (xdr: string) => `signed:${xdr}`);
 
   const client = createVaultClient({ address: "GUSER", signTransaction });
@@ -53,7 +62,11 @@ test("all three vars set ⇒ the real client, carrying the connected address and
 });
 
 test("a disconnected wallet still gets a real read-only client (reads need no signer)", async () => {
-  const { createVaultClient, RealVaultClient } = await withEnv({ ...CONTRACT, ...RPC, ...PASSPHRASE });
+  const { createVaultClient, RealVaultClient } = await withEnv({
+    ...CONTRACT,
+    ...RPC,
+    ...PASSPHRASE,
+  });
 
   expect(createVaultClient({ address: null })).toBeInstanceOf(RealVaultClient);
 });

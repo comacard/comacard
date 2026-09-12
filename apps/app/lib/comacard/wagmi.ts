@@ -1,5 +1,5 @@
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import type { AppKitNetwork } from "@reown/appkit/networks";
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 // Imported so the `declare module "wagmi"` augmentation below has a resolved module to attach to;
 // TypeScript cannot augment a module the file never loads.
 import type { Config } from "wagmi";

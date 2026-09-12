@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { apiEnabled } from "../lib/api/config";
-import { apiGet } from "../lib/api/client";
-import type { FeedEntry } from "../lib/api/types";
 import { itemFromEntry } from "../lib/activity/map";
-import { getActivity, type ActivityItem } from "../lib/vault/data";
-import { useWallet } from "./useWallet";
+import { apiGet } from "../lib/api/client";
+import { apiEnabled } from "../lib/api/config";
+import type { FeedEntry } from "../lib/api/types";
+import { type ActivityItem, getActivity } from "../lib/vault/data";
 import { useVault } from "./useVault";
+import { useWallet } from "./useWallet";
 
 /** The wire→row mapping is pure and lives in `lib/activity/map.ts`; re-exported for consumers. */
 export { itemFromEntry, relativeTime } from "../lib/activity/map";

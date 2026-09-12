@@ -1,17 +1,18 @@
 "use client";
-import { useState } from "react";
 import type { Currency } from "@sorosense/vault-client";
-import { Button, Card, CountUp, Skeleton } from "../../../components/ui";
+import { useState } from "react";
 import { BucketToggle } from "../../../components/bucket/BucketToggle";
 import { GrowthCard } from "../../../components/earn/GrowthCard";
 import { Simulator } from "../../../components/simulator/Simulator";
+import { Button, Card, CountUp, Skeleton } from "../../../components/ui";
 import { useApyResolver } from "../../../hooks/useApy";
 import { useEarnings } from "../../../hooks/useEarnings";
 import { useNav } from "../../../hooks/useNav";
 import { useRedirectDesktopToHome } from "../../../hooks/useRedirectDesktopToHome";
 import { bucketLabel, isActiveBucketCurrency } from "../../../lib/vault/data";
 
-const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const usd = (n: number) =>
+  `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function EarnPage() {
   const nav = useNav();
@@ -36,6 +37,7 @@ export default function EarnPage() {
           <Skeleton className="h-4 w-20" />
           <div className="mt-4 flex h-[118px] items-end gap-1.5">
             {[50, 70, 55, 76, 88, 62, 90, 80, 40].map((hgt, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length literal array, the index is the identity
               <Skeleton key={i} className="flex-1 rounded-t-md" style={{ height: `${hgt}%` }} />
             ))}
           </div>
@@ -68,7 +70,9 @@ export default function EarnPage() {
           </div>
         </div>
         <Button onClick={() => nav.forward("/deposit")}>Start earning</Button>
-        <p className="my-3 text-center text-[13px] text-muted">No lockup, move to your wallet anytime</p>
+        <p className="my-3 text-center text-[13px] text-muted">
+          No lockup, move to your wallet anytime
+        </p>
         <Simulator currency={currency} apy={apyOf(currency)} onCurrencyChange={setCurrency} />
       </div>
     );
@@ -77,7 +81,13 @@ export default function EarnPage() {
   const views = [
     // `view.apy` is the value-weighted blend of the same per-bucket rates (useBuckets already resolves
     // them through useApy), so the "All buckets" row and each bucket row agree by construction.
-    { name: "All buckets", currency: undefined, earned: view.earnedUsd, balance: view.balanceUsd, apy: view.apy },
+    {
+      name: "All buckets",
+      currency: undefined,
+      earned: view.earnedUsd,
+      balance: view.balanceUsd,
+      apy: view.apy,
+    },
     ...view.buckets
       .filter((b) => isActiveBucketCurrency(b.currency))
       .map((b) => ({
@@ -99,15 +109,27 @@ export default function EarnPage() {
     <div className="stagger">
       <div className="py-[30px] text-center">
         <div className="text-[15px] font-medium text-muted">Total earned</div>
-        <CountUp animateOnMount value={v.earned} format={usd} className="mt-2 block text-[54px] font-semibold leading-none tracking-[-.02em] [font-variant-numeric:tabular-nums]" />
+        <CountUp
+          animateOnMount
+          value={v.earned}
+          format={usd}
+          className="mt-2 block text-[54px] font-semibold leading-none tracking-[-.02em] [font-variant-numeric:tabular-nums]"
+        />
         <div className="mt-3 text-[13.5px] text-muted [font-variant-numeric:tabular-nums]">
-          <CountUp animateOnMount value={v.balance} format={usd} /> balance · {v.apy.toFixed(2)}% APY
+          <CountUp animateOnMount value={v.balance} format={usd} /> balance · {v.apy.toFixed(2)}%
+          APY
         </div>
-        <BucketToggle views={views} index={index} onCycle={() => setI((n) => (n + 1) % views.length)} />
+        <BucketToggle
+          views={views}
+          index={index}
+          onCycle={() => setI((n) => (n + 1) % views.length)}
+        />
       </div>
       <div className="mb-5 flex gap-3">
         <Button onClick={() => nav.forward("/deposit")}>Deposit</Button>
-        <Button variant="glass" onClick={() => nav.forward("/withdraw")}>Withdraw</Button>
+        <Button variant="glass" onClick={() => nav.forward("/withdraw")}>
+          Withdraw
+        </Button>
       </div>
       <GrowthCard chart={view.chart} monthly={view.monthly} now={now} />
     </div>

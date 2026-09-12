@@ -1,22 +1,22 @@
 "use client";
 import { useMemo, useState } from "react";
-import { useBuckets } from "../../hooks/useBuckets";
-import { useEarnings, type ChartPoint } from "../../hooks/useEarnings";
-import { usePanel } from "../../hooks/usePanel";
-import { formatCurrency, UNIT } from "../../lib/vault/units";
-import { netApyOf, feeLabel } from "../../lib/vault/fee";
-import { Button, Card, CountUp, Segmented, Skeleton } from "../ui";
 import { useActivity } from "../../hooks/useActivity";
 import { useApyResolver } from "../../hooks/useApy";
+import { useBuckets } from "../../hooks/useBuckets";
+import { type ChartPoint, useEarnings } from "../../hooks/useEarnings";
+import { usePanel } from "../../hooks/usePanel";
 import { usePendingExit } from "../../hooks/usePendingExit";
-import { BucketRow } from "../bucket/BucketRow";
+import { feeLabel, netApyOf } from "../../lib/vault/fee";
+import { formatCurrency, UNIT } from "../../lib/vault/units";
 import { ActivityList } from "../activity/ActivityList";
+import { BucketRow } from "../bucket/BucketRow";
+import { ActivityDrawer } from "../desktop/ActivityDrawer";
 import { FreezeBar } from "../desktop/FreezeBar";
 import { GrowthChart, SimulationAmountStepper, useGrowthSimulation } from "../desktop/GrowthChart";
-import { SafeExitDialog } from "../desktop/SafeExitDialog";
 import { LockCollateralDrawer } from "../desktop/LockCollateralDrawer";
+import { SafeExitDialog } from "../desktop/SafeExitDialog";
 import { WithdrawDrawer } from "../desktop/WithdrawDrawer";
-import { ActivityDrawer } from "../desktop/ActivityDrawer";
+import { Button, Card, CountUp, Segmented, Skeleton } from "../ui";
 import { ValueChart } from "./ValueChart";
 
 const RANGES = ["Day", "Week", "Month", "Year"] as const;
@@ -47,7 +47,11 @@ const RANGE_MS: Record<Range, number | "all"> = {
  * value we actually hold, never as an invented curve. Points outside the window are excluded (their
  * value survives as the line's level, not as a foreign timestamp).
  */
-export function rangeSeries(chart: readonly ChartPoint[], range: Range, fallbackUsd: number): number[] {
+export function rangeSeries(
+  chart: readonly ChartPoint[],
+  range: Range,
+  fallbackUsd: number,
+): number[] {
   const ms = RANGE_MS[range];
   const now = chart[chart.length - 1]?.ts ?? 0;
   const inWindow = ms === "all" ? [...chart] : chart.filter((p) => p.ts >= now - ms);
@@ -55,15 +59,28 @@ export function rangeSeries(chart: readonly ChartPoint[], range: Range, fallback
 
   // Nothing moved inside this window — or there is no history at all (a fresh vault, a server that just
   // booted). Draw the level, flat. `ValueChart` needs two points to draw a line.
-  const level = inWindow[inWindow.length - 1]?.valueUsd ?? chart[chart.length - 1]?.valueUsd ?? fallbackUsd;
+  const level =
+    inWindow[inWindow.length - 1]?.valueUsd ?? chart[chart.length - 1]?.valueUsd ?? fallbackUsd;
   return [level, level];
 }
 
-const money = (v: number) => `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (v: number) =>
+  `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function CoinStackIcon({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-ink-2" aria-hidden="true">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-ink-2"
+      aria-hidden="true"
+    >
       <ellipse cx="12" cy="6" rx="7" ry="3" />
       <path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6" />
       <path d="M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5" />
@@ -121,7 +138,8 @@ export function DesktopOverview() {
         isAll: false as const,
         valueText: formatCurrency(b.value, b.currency),
         valueNum: Number(b.value) / Number(UNIT),
-        fmt: (n: number) => `${sym}${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        fmt: (n: number) =>
+          `${sym}${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         earnedUsd: earned,
         apy: b.apy,
         sub: ` · ${label}`,
@@ -137,7 +155,10 @@ export function DesktopOverview() {
   const earnedThisMonth = lastMonth ? lastMonth.earnedUsd : 0;
 
   // Value-over-time series for the chart — the real timeline, clipped to the range.
-  const series = useMemo(() => rangeSeries(view.chart, range, totalUsd), [view.chart, range, totalUsd]);
+  const series = useMemo(
+    () => rangeSeries(view.chart, range, totalUsd),
+    [view.chart, range, totalUsd],
+  );
 
   const headlineNum = mode === "Total" ? sel.valueNum : sel.earnedUsd;
   const headlineFmt = mode === "Total" ? sel.fmt : money;
@@ -147,179 +168,243 @@ export function DesktopOverview() {
   return (
     <>
       <div className="stagger">
-      {pend && <FreezeBar onReview={() => open("safe-exit")} />}
+        {pend && <FreezeBar onReview={() => open("safe-exit")} />}
 
-      <section className="mb-4 grid overflow-hidden rounded-card border border-white bg-card [box-shadow:0_1px_2px_rgba(17,19,22,.03),0_14px_34px_-22px_rgba(17,19,22,.16)] lg:grid-cols-[minmax(285px,0.82fr)_minmax(0,1.18fr)] xl:grid-cols-[minmax(330px,0.78fr)_1.3fr]" aria-label="Your value">
-      {/* LEFT */}
-      <div className="flex min-w-0 flex-col px-7 py-6">
-        <div className="mb-[18px] flex items-center justify-between gap-3">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-faint">Your value</span>
-          <Segmented
-            options={MODES}
-            value={mode}
-            onChange={setMode}
-            label="Value or earned"
-            variant="currency"
-            fluid={false}
-            className="shrink-0"
-          />
-        </div>
-
-        {loading ? (
-          <>
-            <Skeleton className="mt-1 h-[46px] w-[210px] rounded-lg" />
-            <Skeleton className="mt-4 h-[18px] w-[160px]" />
-            <div className="mt-[22px] flex items-center justify-between py-[10px]">
-              <Skeleton className="h-4 w-[110px]" />
-              <Skeleton className="h-4 w-[80px]" />
+        <section
+          className="mb-4 grid overflow-hidden rounded-card border border-white bg-card [box-shadow:0_1px_2px_rgba(17,19,22,.03),0_14px_34px_-22px_rgba(17,19,22,.16)] lg:grid-cols-[minmax(285px,0.82fr)_minmax(0,1.18fr)] xl:grid-cols-[minmax(330px,0.78fr)_1.3fr]"
+          aria-label="Your value"
+        >
+          {/* LEFT */}
+          <div className="flex min-w-0 flex-col px-7 py-6">
+            <div className="mb-[18px] flex items-center justify-between gap-3">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-faint">
+                Your value
+              </span>
+              <Segmented
+                options={MODES}
+                value={mode}
+                onChange={setMode}
+                label="Value or earned"
+                variant="currency"
+                fluid={false}
+                className="shrink-0"
+              />
             </div>
-          </>
-        ) : (
-          <>
-            <div className="flex flex-wrap items-center gap-3">
-              <CountUp value={headlineNum} format={headlineFmt} className="text-[clamp(38px,3.4vw,50px)] font-semibold leading-none tracking-[-.025em] [font-variant-numeric:tabular-nums]" />
-              {/* The gain pill appears only when there IS a gain. A green "+$0.00" under an up-arrow
+
+            {loading ? (
+              <>
+                <Skeleton className="mt-1 h-[46px] w-[210px] rounded-lg" />
+                <Skeleton className="mt-4 h-[18px] w-[160px]" />
+                <div className="mt-[22px] flex items-center justify-between py-[10px]">
+                  <Skeleton className="h-4 w-[110px]" />
+                  <Skeleton className="h-4 w-[80px]" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <CountUp
+                    value={headlineNum}
+                    format={headlineFmt}
+                    className="text-[clamp(38px,3.4vw,50px)] font-semibold leading-none tracking-[-.025em] [font-variant-numeric:tabular-nums]"
+                  />
+                  {/* The gain pill appears only when there IS a gain. A green "+$0.00" under an up-arrow
                   reads as growth that happened; until the vault accrues, nothing has. */}
-              {mode === "Total" && sel.earnedUsd > 0 && (
-                <span className="inline-flex h-6 items-center gap-1 rounded-full bg-[rgba(22,163,74,.12)] px-[9px] text-[12.5px] font-semibold text-pos [font-variant-numeric:tabular-nums]">
-                  <svg viewBox="0 0 24 24" className="w-[13px] fill-none stroke-current [stroke-width:2]" aria-hidden><path d="M7 17 17 7M9 7h8v8" /></svg>
-                  +{money(sel.earnedUsd)}
-                </span>
+                  {mode === "Total" && sel.earnedUsd > 0 && (
+                    <span className="inline-flex h-6 items-center gap-1 rounded-full bg-[rgba(22,163,74,.12)] px-[9px] text-[12.5px] font-semibold text-pos [font-variant-numeric:tabular-nums]">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-[13px] fill-none stroke-current [stroke-width:2]"
+                        aria-hidden
+                      >
+                        <path d="M7 17 17 7M9 7h8v8" />
+                      </svg>
+                      +{money(sel.earnedUsd)}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setBucketIndex((n) => (n + 1) % selectable.length)}
+                    aria-label="Switch bucket"
+                    className="grid h-[30px] w-[30px] place-items-center rounded-[9px] text-faint transition-colors hover:bg-pill hover:text-ink"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-[19px] w-[19px] fill-none stroke-current [stroke-width:2.2] [stroke-linecap:round] [stroke-linejoin:round]"
+                      aria-hidden
+                    >
+                      <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="mt-3 text-[13.5px] [font-variant-numeric:tabular-nums]">
+                  <span className={hasDeposit ? "text-pos" : "hidden"}>
+                    {sel.apy.toFixed(2)}% APY
+                  </span>
+                  <span className={hasDeposit ? "text-muted" : "hidden"}>{sel.sub}</span>
+                  {!hasDeposit && (
+                    <span className="font-semibold text-muted">Deposit to start earning</span>
+                  )}
+                  {hasDeposit && sel.isAll && <span className="text-faint"> ≈ USD</span>}
+                </div>
+                {hasDeposit && (
+                  <div className="mt-0.5 text-[12px] text-faint [font-variant-numeric:tabular-nums]">
+                    {netApyOf(sel.apy).toFixed(2)}% after {feeLabel} performance fee
+                  </div>
+                )}
+                {/* biome-ignore lint/a11y/useSemanticElements: role=group on a styled container; fieldset brings layout and legend semantics this is not */}
+                <div className="mt-[22px] flex flex-col" role="group" aria-label="Breakdown">
+                  <div className="flex items-baseline justify-between gap-[14px] py-[10px]">
+                    <span className="text-[13px] text-muted">Earned this month</span>
+                    <span
+                      className={`text-[14.5px] font-semibold tracking-[-.01em] [font-variant-numeric:tabular-nums] ${hasDeposit ? "text-pos" : "text-muted"}`}
+                    >
+                      ~{money(earnedThisMonth)}
+                      <span className="ml-0.5 text-xs font-medium text-faint"> USD</span>
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="mt-auto flex gap-2.5 pt-6">
+              <Button className="flex-1" onClick={() => open("deposit")}>
+                Deposit
+              </Button>
+              <Button variant="glass" className="flex-1" onClick={() => open("withdraw")}>
+                Withdraw
+              </Button>
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div className="flex min-w-0 flex-col gap-2 px-[26px] pb-[18px] pt-5">
+            <Segmented
+              options={RANGES}
+              value={range}
+              onChange={setRange}
+              label="Range"
+              variant="period"
+              fluid={false}
+              className="self-end"
+            />
+            <div className="relative min-h-[210px] flex-1">
+              {loading ? (
+                <Skeleton className="absolute inset-0 rounded-xl" />
+              ) : (
+                <ValueChart data={series} />
               )}
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {/* Buckets */}
+          <Card className="flex min-h-[266px] flex-col px-5 py-[18px]" aria-label="Buckets">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[13px] font-semibold text-muted">Buckets</h2>
+            </div>
+            {loading ? (
+              <div className="flex flex-col gap-4 py-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-center gap-[13px]">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="mt-2 h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : buckets.length === 0 ? (
+              <EmptyBucketsState />
+            ) : (
+              <div className="fade-in">
+                {buckets.map((b, i) => (
+                  <BucketRow key={b.currency} bucket={b} first={i === 0} divider={false} />
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Growth — monthly earnings bar chart (this year) */}
+          <Card className="flex min-h-[266px] flex-col px-5 py-[18px]" aria-label="Growth">
+            <div
+              className={
+                loading || view.hasDeposit
+                  ? "mb-6 flex items-center justify-between"
+                  : "mb-2 flex items-center justify-between gap-3"
+              }
+            >
+              <h2 className="text-[13px] font-semibold text-muted">
+                {loading || view.hasDeposit ? "Growth" : "Simulate earnings"}
+              </h2>
+              {!loading && !view.hasDeposit && (
+                <SimulationAmountStepper
+                  amount={simulation.amount}
+                  currency={simulation.currency}
+                  step={simulation.step}
+                />
+              )}
+            </div>
+            {loading ? (
+              <div className="mt-2 flex h-[132px] items-end gap-[5px]">
+                {[45, 68, 52, 74, 88, 63, 92, 82, 34].map((hgt, i) => (
+                  <Skeleton
+                    // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length literal array, the index is the identity
+                    key={i}
+                    className="flex-1 rounded-t-[4px] rounded-b-[2px]"
+                    style={{ height: `${hgt}%` }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <GrowthChart
+                monthly={view.monthly}
+                hasDeposit={view.hasDeposit}
+                simulation={simulation}
+              />
+            )}
+          </Card>
+
+          {/* Agent */}
+          <Card
+            className="flex min-h-[266px] flex-col px-5 py-[18px] lg:col-span-2 xl:col-span-1"
+            aria-label="Agent"
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[13px] font-semibold text-muted">Agent</h2>
               <button
                 type="button"
-                onClick={() => setBucketIndex((n) => (n + 1) % selectable.length)}
-                aria-label="Switch bucket"
-                className="grid h-[30px] w-[30px] place-items-center rounded-[9px] text-faint transition-colors hover:bg-pill hover:text-ink"
+                onClick={() => open("activity")}
+                className="text-[12.5px] font-medium text-muted transition-colors hover:text-ink"
               >
-                <svg viewBox="0 0 24 24" className="h-[19px] w-[19px] fill-none stroke-current [stroke-width:2.2] [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden><path d="M8 9l4-4 4 4M8 15l4 4 4-4" /></svg>
+                View all
               </button>
             </div>
-
-            <div className="mt-3 text-[13.5px] [font-variant-numeric:tabular-nums]">
-              <span className={hasDeposit ? "text-pos" : "hidden"}>{sel.apy.toFixed(2)}% APY</span>
-              <span className={hasDeposit ? "text-muted" : "hidden"}>{sel.sub}</span>
-              {!hasDeposit && <span className="font-semibold text-muted">Deposit to start earning</span>}
-              {hasDeposit && sel.isAll && <span className="text-faint"> ≈ USD</span>}
-            </div>
-            {hasDeposit && (
-              <div className="mt-0.5 text-[12px] text-faint [font-variant-numeric:tabular-nums]">
-                {netApyOf(sel.apy).toFixed(2)}% after {feeLabel} performance fee
-              </div>
-            )}
-
-            <div className="mt-[22px] flex flex-col" aria-label="Breakdown">
-              <div className="flex items-baseline justify-between gap-[14px] py-[10px]">
-                <span className="text-[13px] text-muted">Earned this month</span>
-                <span className={`text-[14.5px] font-semibold tracking-[-.01em] [font-variant-numeric:tabular-nums] ${hasDeposit ? "text-pos" : "text-muted"}`}>
-                  ~{money(earnedThisMonth)}
-                  <span className="ml-0.5 text-xs font-medium text-faint"> USD</span>
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-
-        <div className="mt-auto flex gap-2.5 pt-6">
-          <Button className="flex-1" onClick={() => open("deposit")}>Deposit</Button>
-          <Button variant="glass" className="flex-1" onClick={() => open("withdraw")}>Withdraw</Button>
+            <ActivityList
+              items={agentActivity.slice(0, 3)}
+              loading={activityLoading}
+              onReview={() => open("safe-exit")}
+              reviewed={!pend}
+              divider={false}
+              emptyTitle="No agent activity yet"
+              emptyDescription="Deposit first; automated moves will show here."
+            />
+          </Card>
         </div>
-      </div>
-
-      {/* RIGHT */}
-      <div className="flex min-w-0 flex-col gap-2 px-[26px] pb-[18px] pt-5">
-        <Segmented
-          options={RANGES}
-          value={range}
-          onChange={setRange}
-          label="Range"
-          variant="period"
-          fluid={false}
-          className="self-end"
-        />
-        <div className="relative min-h-[210px] flex-1">
-          {loading ? <Skeleton className="absolute inset-0 rounded-xl" /> : <ValueChart data={series} />}
-        </div>
-      </div>
-    </section>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        {/* Buckets */}
-        <Card className="flex min-h-[266px] flex-col px-5 py-[18px]" aria-label="Buckets">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[13px] font-semibold text-muted">Buckets</h2>
-          </div>
-          {loading ? (
-            <div className="flex flex-col gap-4 py-2">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="flex items-center gap-[13px]">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="mt-2 h-3 w-16" />
-                  </div>
-                  <Skeleton className="h-4 w-16" />
-                </div>
-              ))}
-            </div>
-          ) : buckets.length === 0 ? (
-            <EmptyBucketsState />
-          ) : (
-            <div className="fade-in">{buckets.map((b, i) => <BucketRow key={b.currency} bucket={b} first={i === 0} divider={false} />)}</div>
-          )}
-        </Card>
-
-        {/* Growth — monthly earnings bar chart (this year) */}
-        <Card className="flex min-h-[266px] flex-col px-5 py-[18px]" aria-label="Growth">
-          <div className={loading || view.hasDeposit ? "mb-6 flex items-center justify-between" : "mb-2 flex items-center justify-between gap-3"}>
-            <h2 className="text-[13px] font-semibold text-muted">
-              {loading || view.hasDeposit ? "Growth" : "Simulate earnings"}
-            </h2>
-            {!loading && !view.hasDeposit && (
-              <SimulationAmountStepper amount={simulation.amount} currency={simulation.currency} step={simulation.step} />
-            )}
-          </div>
-          {loading ? (
-            <div className="mt-2 flex h-[132px] items-end gap-[5px]">
-              {[45, 68, 52, 74, 88, 63, 92, 82, 34].map((hgt, i) => (
-                <Skeleton key={i} className="flex-1 rounded-t-[4px] rounded-b-[2px]" style={{ height: `${hgt}%` }} />
-              ))}
-            </div>
-          ) : (
-            <GrowthChart monthly={view.monthly} hasDeposit={view.hasDeposit} simulation={simulation} />
-          )}
-        </Card>
-
-        {/* Agent */}
-        <Card className="flex min-h-[266px] flex-col px-5 py-[18px] lg:col-span-2 xl:col-span-1" aria-label="Agent">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[13px] font-semibold text-muted">Agent</h2>
-            <button
-              type="button"
-              onClick={() => open("activity")}
-              className="text-[12.5px] font-medium text-muted transition-colors hover:text-ink"
-            >
-              View all
-            </button>
-          </div>
-          <ActivityList
-            items={agentActivity.slice(0, 3)}
-            loading={activityLoading}
-            onReview={() => open("safe-exit")}
-            reviewed={!pend}
-            divider={false}
-            emptyTitle="No agent activity yet"
-            emptyDescription="Deposit first; automated moves will show here."
-          />
-        </Card>
-      </div>
       </div>
 
       <SafeExitDialog open={panel === "safe-exit"} onClose={close} />
 
       <LockCollateralDrawer open={panel === "deposit"} onClose={close} />
       <WithdrawDrawer open={panel === "withdraw"} onClose={close} />
-      <ActivityDrawer open={panel === "activity"} onClose={close} onReview={() => open("safe-exit")} />
+      <ActivityDrawer
+        open={panel === "activity"}
+        onClose={close}
+        onReview={() => open("safe-exit")}
+      />
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { createPublicClient, http, type Address } from "viem";
+import { type Address, createPublicClient, http } from "viem";
 import {
   CREDIT_LINE,
   creditLineAbi,
@@ -84,23 +84,63 @@ export function useCollateral(): {
       const cc = createPublicClient({ transport: http(CREDITCOIN_RPC) });
       const sep = createPublicClient({ transport: http(SEPOLIA_RPC) });
 
-      const [tokens, totalValue, account, nativeLocked, nativeBalance, nativePrice] = await Promise.all([
-        cc.readContract({ address: line, abi: creditLineAbi, functionName: "listedTokens" }),
-        cc.readContract({ address: line, abi: creditLineAbi, functionName: "collateralValueOf", args: [who] }),
-        cc.readContract({ address: line, abi: creditLineAbi, functionName: "accountOf", args: [who] }),
-        sep.readContract({ address: vault, abi: sourceVaultAbi, functionName: "balanceOf", args: [who] }),
-        sep.getBalance({ address: who }),
-        cc.readContract({ address: line, abi: creditLineAbi, functionName: "collateralPrice" }),
-      ]);
+      const [tokens, totalValue, account, nativeLocked, nativeBalance, nativePrice] =
+        await Promise.all([
+          cc.readContract({ address: line, abi: creditLineAbi, functionName: "listedTokens" }),
+          cc.readContract({
+            address: line,
+            abi: creditLineAbi,
+            functionName: "collateralValueOf",
+            args: [who],
+          }),
+          cc.readContract({
+            address: line,
+            abi: creditLineAbi,
+            functionName: "accountOf",
+            args: [who],
+          }),
+          sep.readContract({
+            address: vault,
+            abi: sourceVaultAbi,
+            functionName: "balanceOf",
+            args: [who],
+          }),
+          sep.getBalance({ address: who }),
+          cc.readContract({ address: line, abi: creditLineAbi, functionName: "collateralPrice" }),
+        ]);
       const perToken = await Promise.all(
         tokens.map(async (token) => {
           const [config, proved, locked, available, symbol, name, faucetLimit] = await Promise.all([
-            cc.readContract({ address: line, abi: creditLineAbi, functionName: "tokenConfig", args: [token] }),
-            cc.readContract({ address: line, abi: creditLineAbi, functionName: "tokenCollateral", args: [who, token] }),
-            sep.readContract({ address: vault, abi: sourceVaultAbi, functionName: "tokenBalanceOf", args: [who, token] }),
-            sep.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [who] }),
-            sep.readContract({ address: token, abi: erc20Abi, functionName: "symbol" }).catch(() => "TOKEN"),
-            sep.readContract({ address: token, abi: erc20Abi, functionName: "name" }).catch(() => ""),
+            cc.readContract({
+              address: line,
+              abi: creditLineAbi,
+              functionName: "tokenConfig",
+              args: [token],
+            }),
+            cc.readContract({
+              address: line,
+              abi: creditLineAbi,
+              functionName: "tokenCollateral",
+              args: [who, token],
+            }),
+            sep.readContract({
+              address: vault,
+              abi: sourceVaultAbi,
+              functionName: "tokenBalanceOf",
+              args: [who, token],
+            }),
+            sep.readContract({
+              address: token,
+              abi: erc20Abi,
+              functionName: "balanceOf",
+              args: [who],
+            }),
+            sep
+              .readContract({ address: token, abi: erc20Abi, functionName: "symbol" })
+              .catch(() => "TOKEN"),
+            sep
+              .readContract({ address: token, abi: erc20Abi, functionName: "name" })
+              .catch(() => ""),
             // Asked rather than assumed. Every token listed on this deployment happens to be a
             // TestToken, but that is a fact about today's listing, not about the interface, and a
             // mint button on a token with no faucet would revert in the user's wallet.

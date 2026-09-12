@@ -131,7 +131,10 @@ describe("zero-state — no earnings yet", () => {
   });
 
   test("one cent of earnings is enough to bring the real chart back", () => {
-    const some = [{ label: "2026-06", earnedUsd: 0 }, { label: "2026-07", earnedUsd: 0.01 }];
+    const some = [
+      { label: "2026-06", earnedUsd: 0 },
+      { label: "2026-07", earnedUsd: 0.01 },
+    ];
     render(<GrowthCard chart={chart} monthly={some} now={NOW} />);
 
     expect(screen.queryByTestId("growth-zero")).toBeNull();

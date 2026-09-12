@@ -5,7 +5,9 @@ import { KycSheet } from "../KycSheet";
 const URL = "https://verify.didit.me/session/abc123";
 
 test("renders nothing until it is open and has a session", () => {
-  const { rerender } = render(<KycSheet open={false} url={URL} onClose={vi.fn()} onPoll={vi.fn()} />);
+  const { rerender } = render(
+    <KycSheet open={false} url={URL} onClose={vi.fn()} onPoll={vi.fn()} />,
+  );
   expect(screen.queryByRole("dialog")).toBeNull();
 
   rerender(<KycSheet open url={null} onClose={vi.fn()} onPoll={vi.fn()} />);
@@ -28,9 +30,9 @@ test("embeds the session and delegates the camera to it", () => {
 
 test("offers a way out for a browser that will not embed", () => {
   render(<KycSheet open url={URL} onClose={vi.fn()} onPoll={vi.fn()} />);
-  const escape = screen.getByRole("link", { name: /open in a new tab/i });
-  expect(escape).toHaveAttribute("href", URL);
-  expect(escape).toHaveAttribute("target", "_blank");
+  const newTab = screen.getByRole("link", { name: /open in a new tab/i });
+  expect(newTab).toHaveAttribute("href", URL);
+  expect(newTab).toHaveAttribute("target", "_blank");
 });
 
 test("closes on the button and on Escape", async () => {
@@ -50,7 +52,9 @@ test("polls while open, and stops once closed", () => {
   const onPoll = vi.fn();
   // Didit reports the verdict by webhook to our own backend, never through the iframe, so polling
   // our account is the only signal that verification finished.
-  const { rerender, unmount } = render(<KycSheet open url={URL} onClose={vi.fn()} onPoll={onPoll} />);
+  const { rerender, unmount } = render(
+    <KycSheet open url={URL} onClose={vi.fn()} onPoll={onPoll} />,
+  );
 
   vi.advanceTimersByTime(12_000);
   expect(onPoll.mock.calls.length).toBeGreaterThanOrEqual(2);
@@ -91,5 +95,7 @@ test("the escape hatch is always offered, because a blocked frame cannot be dete
   // Brave's shields refuse the cross-origin frame on a localhost page, and a cross-origin frame
   // cannot be inspected. Revealing the fallback only "on failure" would mean never revealing it.
   render(<KycSheet open url={URL} onClose={vi.fn()} onPoll={vi.fn()} />);
-  expect(screen.getByRole("link", { name: /not loading\? open in a new tab/i })).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: /not loading\? open in a new tab/i }),
+  ).toBeInTheDocument();
 });

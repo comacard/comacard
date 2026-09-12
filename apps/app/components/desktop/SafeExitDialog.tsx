@@ -1,7 +1,7 @@
 "use client";
-import { Dialog } from "../ui/Dialog";
+import { ExitApprovalBody, useExitApproval } from "../proposal/ExitApprovalBody";
 import { Toast } from "../ui";
-import { useExitApproval, ExitApprovalBody } from "../proposal/ExitApprovalBody";
+import { Dialog } from "../ui/Dialog";
 
 /** Desktop safe-exit approval — the same body/logic as mobile ExitApproval, in a centered Dialog with
  *  side-by-side buttons. Toast lives outside the Dialog so it survives the approve-close. */
@@ -10,7 +10,13 @@ export function SafeExitDialog({ open, onClose }: { open: boolean; onClose: () =
   return (
     <>
       <Dialog open={open} onClose={onClose} label="Approve safe exit">
-        <ExitApprovalBody pend={pend} busy={busy} variant="dialog" onApprove={onApprove} onDecline={onDecline} />
+        <ExitApprovalBody
+          pend={pend}
+          busy={busy}
+          variant="dialog"
+          onApprove={onApprove}
+          onDecline={onDecline}
+        />
       </Dialog>
       <Toast open={!!toast} message={toast ?? ""} />
     </>

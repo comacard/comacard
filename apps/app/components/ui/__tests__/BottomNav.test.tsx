@@ -1,5 +1,5 @@
-import type { ComponentProps } from "react";
 import { render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { BottomNav } from "../BottomNav";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/earn" }));

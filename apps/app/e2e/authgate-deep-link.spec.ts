@@ -26,13 +26,17 @@ test("a hard load of a gated route keeps a stored session on that route", async 
   await connectWallet(page); // stores soro.wallet in this context
 
   await page.goto("/home");
-  expect(await bouncedToLanding(page), "hard load of /home bounced to landing (STE-43)").toBe(false);
+  expect(await bouncedToLanding(page), "hard load of /home bounced to landing (STE-43)").toBe(
+    false,
+  );
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("navigation")).toBeVisible(); // the app shell, not the landing
 
   // A deeper gated route survives a hard load too.
   await page.goto("/account");
-  expect(await bouncedToLanding(page), "hard load of /account bounced to landing (STE-43)").toBe(false);
+  expect(await bouncedToLanding(page), "hard load of /account bounced to landing (STE-43)").toBe(
+    false,
+  );
   await expect(page).toHaveURL(/\/account$/);
 });
 

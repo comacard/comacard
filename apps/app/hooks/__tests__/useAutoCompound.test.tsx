@@ -1,6 +1,6 @@
+import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
 import { VaultProvider } from "../../providers/VaultProvider";
 import { useAutoCompound } from "../useAutoCompound";
 
@@ -16,7 +16,9 @@ function Probe({ onError }: { onError?: (m: string) => void } = {}) {
     <>
       <span data-testid="state">{loading ? "loading" : String(enabled)}</span>
       <span data-testid="pending">{String(pending)}</span>
-      <button onClick={() => void toggle()}>toggle</button>
+      <button type="button" onClick={() => void toggle()}>
+        toggle
+      </button>
     </>
   );
 }
@@ -107,7 +109,9 @@ test("a declined signature leaves the switch in its prior position and surfaces 
 
   await user.click(screen.getByRole("button", { name: "toggle" }));
 
-  await waitFor(() => expect(onError).toHaveBeenCalledWith("Signature cancelled. Nothing changed."));
+  await waitFor(() =>
+    expect(onError).toHaveBeenCalledWith("Signature cancelled. Nothing changed."),
+  );
   expect(screen.getByTestId("state").textContent).toBe("true"); // never moved
   await expect(client.autoCompoundEnabled(ADDRESS)).resolves.toBe(true); // nothing written
 });
@@ -155,7 +159,12 @@ test("a double-press fires exactly one transaction and the switch is pending in 
   useWallet.mockReturnValue({
     address: ADDRESS,
     isConnected: true,
-    signTransaction: vi.fn(() => new Promise<string>((resolve) => { release = resolve; })),
+    signTransaction: vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          release = resolve;
+        }),
+    ),
   });
   const client = new MockVaultClient();
   const setAutoCompound = vi.spyOn(client, "setAutoCompound");
@@ -188,7 +197,9 @@ test("a submitted-but-rejected transaction does not move the switch", async () =
 
   await user.click(screen.getByRole("button", { name: "toggle" }));
 
-  await waitFor(() => expect(onError).toHaveBeenCalledWith("Could not save that. Nothing changed."));
+  await waitFor(() =>
+    expect(onError).toHaveBeenCalledWith("Could not save that. Nothing changed."),
+  );
   expect(screen.getByTestId("state").textContent).toBe("true");
 });
 

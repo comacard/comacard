@@ -1,8 +1,8 @@
+import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../providers/VaultProvider";
 import { ToastProvider } from "../../../providers/ToastProvider";
+import { VaultProvider } from "../../../providers/VaultProvider";
 import { AccountMenu } from "../AccountMenu";
 
 const push = vi.fn();
@@ -12,7 +12,9 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/home",
   useSearchParams: () => new URLSearchParams(""),
 }));
-vi.mock("../../../hooks/usePanel", () => ({ usePanel: () => ({ panel: null, open: openPanel, close: vi.fn() }) }));
+vi.mock("../../../hooks/usePanel", () => ({
+  usePanel: () => ({ panel: null, open: openPanel, close: vi.fn() }),
+}));
 const useWallet = vi.fn();
 vi.mock("../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }));
 /**
@@ -39,24 +41,37 @@ vi.mock("../../../hooks/useWalletAssets", () => ({
   useWalletAssets: () => ({ assets: [], totalUsd: null, loading: false }),
 }));
 
-
 const ADDRESS = "GABCDEF12345678K3X9";
 const signTransaction = vi.fn(async (xdr: string) => xdr);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useWallet.mockReturnValue({ address: ADDRESS, walletName: "Freighter", disconnect: vi.fn(), signTransaction });
+  useWallet.mockReturnValue({
+    address: ADDRESS,
+    walletName: "Freighter",
+    disconnect: vi.fn(),
+    signTransaction,
+  });
 });
 
 function open(client = new MockVaultClient()) {
-  render(<VaultProvider client={client}><ToastProvider><AccountMenu /></ToastProvider></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <ToastProvider>
+        <AccountMenu />
+      </ToastProvider>
+    </VaultProvider>,
+  );
   const user = userEvent.setup();
   // jsdom exposes `navigator.clipboard` as a read-only getter in this version — Object.assign
   // throws, so Object.defineProperty is the permitted adaptation of test *setup* (not
   // assertions), matching the precedent in account/__tests__/account.test.tsx. Must run AFTER
   // userEvent.setup(): user-event installs its own navigator.clipboard stub during setup(),
   // which would otherwise clobber this mock.
-  Object.defineProperty(navigator, "clipboard", { value: { writeText: vi.fn().mockResolvedValue(undefined) }, configurable: true });
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    configurable: true,
+  });
   return user;
 }
 

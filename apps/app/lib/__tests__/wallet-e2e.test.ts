@@ -1,5 +1,12 @@
 import { beforeEach, expect, test } from "vitest";
-import { E2E_ADDRESS, E2E_WALLET_NAME, connect, disconnect, getAddress, signTransaction } from "../wallet-e2e";
+import {
+  connect,
+  disconnect,
+  E2E_ADDRESS,
+  E2E_WALLET_NAME,
+  getAddress,
+  signTransaction,
+} from "../wallet-e2e";
 
 beforeEach(async () => {
   await disconnect();

@@ -61,7 +61,7 @@ export function buildEarningsFixture(
 ): { chart: ChartPoint[]; monthly: MonthlyEarned[] } {
   // Month boundaries, oldest→newest. `starts[MONTHS - 1]` is the start of the current month.
   const starts = Array.from({ length: MONTHS }, (_, i) => monthStart(now, MONTHS - 1 - i));
-  const ends = starts.map((s, i) => starts[i + 1] ?? now);
+  const ends = starts.map((_s, i) => starts[i + 1] ?? now);
 
   // The current month is prorated by how much of it has elapsed — "This month" is a partial month.
   const currentStart = starts[MONTHS - 1]!;

@@ -7,12 +7,13 @@
  * different in-memory instances, so a Home sourced over HTTP would render blank. The real-mode half is
  * in `useBuckets.api.test.tsx`.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+
 import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../providers/VaultProvider";
-import { seedVault } from "../../lib/vault/seed";
+import { render, screen, waitFor } from "@testing-library/react";
 import { getBucketMeta, getFxRateToUsd } from "../../lib/vault/data";
+import { seedVault } from "../../lib/vault/seed";
 import { UNIT } from "../../lib/vault/units";
+import { VaultProvider } from "../../providers/VaultProvider";
 import { useBuckets } from "../useBuckets";
 
 const useWallet = vi.fn();
@@ -25,7 +26,11 @@ function Probe() {
     <ul>
       <li>count:{buckets.length}</li>
       <li>total:{Math.round(totalUsd)}</li>
-      {buckets.map((b) => <li key={b.currency}>{b.currency}:{b.frozen ? "frozen" : "active"}</li>)}
+      {buckets.map((b) => (
+        <li key={b.currency}>
+          {b.currency}:{b.frozen ? "frozen" : "active"}
+        </li>
+      ))}
     </ul>
   );
 }
@@ -49,7 +54,11 @@ test("useBuckets lists funded buckets with frozen flag and a blended total", asy
   useWallet.mockReturnValue({ address: "GUSER" });
   const client = new MockVaultClient();
   await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByText("count:2")).toBeInTheDocument());
   expect(screen.getByText("EUR:frozen")).toBeInTheDocument();
   expect(screen.getByText("USD:active")).toBeInTheDocument();
@@ -61,7 +70,11 @@ test("useBuckets refetches once the provider's background seed completes (no pre
   // Deliberately do NOT call seedVault here — VaultProvider seeds it asynchronously
   // on mount. This reproduces the seed-completion race: useBuckets must refetch
   // once the background seed finishes, not just read balances once on mount.
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByText("count:2")).toBeInTheDocument());
 });
 
@@ -71,7 +84,11 @@ test("API off: every field is the seam's + BUCKET_META's + the fixture FX, and n
   useWallet.mockReturnValue({ address: "GUSER" });
   const client = new MockVaultClient();
   await seedVault(client, "GUSER");
-  render(<VaultProvider client={client}><FullProbe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <FullProbe />
+    </VaultProvider>,
+  );
 
   await waitFor(() => expect(screen.getByTestId("row-USD")).toBeInTheDocument());
 

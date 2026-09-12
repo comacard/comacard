@@ -68,7 +68,9 @@ function buildUrl(path: string, query?: QueryParams): string {
 }
 
 /** Decode a response body as JSON. A body that is not JSON is a failure to report, not to throw. */
-async function readJson(response: Response): Promise<{ decoded: true; body: unknown } | { decoded: false }> {
+async function readJson(
+  response: Response,
+): Promise<{ decoded: true; body: unknown } | { decoded: false }> {
   try {
     return { decoded: true, body: (await response.json()) as unknown };
   } catch {
@@ -82,20 +84,31 @@ async function readJson(response: Response): Promise<{ decoded: true; body: unkn
  * `{ needsChangeTrust, … }` with no `error` at all. Anything undecodable falls back to the status line
  * rather than being guessed at.
  */
-function decodeError(status: number, statusText: string, decoded: { decoded: true; body: unknown } | { decoded: false }): ApiFailure {
+function decodeError(
+  status: number,
+  statusText: string,
+  decoded: { decoded: true; body: unknown } | { decoded: false },
+): ApiFailure {
   if (!decoded.decoded) {
     return fail("http", `HTTP ${status}${statusText ? ` ${statusText}` : ""}`, { status });
   }
   const body = decoded.body;
   const shaped = (body as Partial<ApiErrorBody> | null)?.error;
   if (shaped && typeof shaped.message === "string") {
-    return fail(typeof shaped.code === "string" ? shaped.code : "http", shaped.message, { status, body });
+    return fail(typeof shaped.code === "string" ? shaped.code : "http", shaped.message, {
+      status,
+      body,
+    });
   }
   return fail("http", `HTTP ${status}${statusText ? ` ${statusText}` : ""}`, { status, body });
 }
 
 /** One request, shared by GET and POST: env gate → timeout → fetch → decode. Never throws. */
-async function request<T>(path: string, query: QueryParams | undefined, init: RequestInit): Promise<ApiResult<T>> {
+async function request<T>(
+  path: string,
+  query: QueryParams | undefined,
+  init: RequestInit,
+): Promise<ApiResult<T>> {
   // The offline guarantee: with no base URL configured we do not touch `fetch` at all.
   if (!apiEnabled()) {
     return fail("disabled", "backend API is not configured (NEXT_PUBLIC_API_URL is unset)");

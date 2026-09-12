@@ -1,6 +1,6 @@
+import { MockVaultClient } from "@sorosense/vault-client";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient } from "@sorosense/vault-client";
 import { VaultProvider } from "../../../providers/VaultProvider";
 import { ActivityDrawer } from "../ActivityDrawer";
 
@@ -9,7 +9,11 @@ vi.mock("../../../hooks/useWallet", () => ({ useWallet: () => useWallet() }));
 
 function setup(onReview = vi.fn()) {
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
-  render(<VaultProvider client={new MockVaultClient()}><ActivityDrawer open onClose={() => {}} onReview={onReview} /></VaultProvider>);
+  render(
+    <VaultProvider client={new MockVaultClient()}>
+      <ActivityDrawer open onClose={() => {}} onReview={onReview} />
+    </VaultProvider>,
+  );
   return userEvent.setup();
 }
 
@@ -27,5 +31,9 @@ test("tabs filter the list by cat; Yours hides agent rows, Agent hides user rows
   expect(screen.getByText("Moved to better yield")).toBeInTheDocument();
   expect(screen.queryByText("Withdraw")).toBeNull();
 
-  expect(screen.queryByText(/\b(risk|score|sentinel|rebalanced|froze|compound|sign mandate|proposed exit)\b/i)).toBeNull();
+  expect(
+    screen.queryByText(
+      /\b(risk|score|sentinel|rebalanced|froze|compound|sign mandate|proposed exit)\b/i,
+    ),
+  ).toBeNull();
 });

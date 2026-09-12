@@ -168,7 +168,10 @@ test("only the requested row goes quiet; the others stay live", async () => {
   // Held open so the in-flight state can be observed rather than raced past.
   let release: () => void = () => {};
   mint.mockImplementationOnce(
-    () => new Promise<string>((resolve) => { release = () => resolve("0xhash"); }),
+    () =>
+      new Promise<string>((resolve) => {
+        release = () => resolve("0xhash");
+      }),
   );
   render(<FaucetSection />);
 
@@ -197,7 +200,9 @@ test("waits for the receipt, refetches the balance, then shows the tick", async 
   // And the row's balance comes from the collateral query, so landing has to invalidate it or the
   // number underneath the button stays stale until a reload.
   expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["comacard", "collateral"] });
-  await waitFor(() => expect(screen.getByRole("button", { name: /received/i })).toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /received/i })).toBeInTheDocument(),
+  );
 });
 
 test("a failed request returns the button to Request rather than sticking on a tick", async () => {

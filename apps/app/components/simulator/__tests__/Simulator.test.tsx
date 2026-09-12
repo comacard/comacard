@@ -1,7 +1,7 @@
+import type { Currency } from "@sorosense/vault-client";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import type { Currency } from "@sorosense/vault-client";
 import { getBucketMeta } from "../../../lib/vault/data";
 import { Simulator } from "../Simulator";
 
@@ -13,7 +13,11 @@ import { Simulator } from "../Simulator";
 function Harness() {
   const [currency, setCurrency] = useState<Currency>("USD");
   return (
-    <Simulator currency={currency} apy={getBucketMeta(currency).apy} onCurrencyChange={setCurrency} />
+    <Simulator
+      currency={currency}
+      apy={getBucketMeta(currency).apy}
+      onCurrencyChange={setCurrency}
+    />
   );
 }
 

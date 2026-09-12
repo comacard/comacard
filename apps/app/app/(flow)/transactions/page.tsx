@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Card, SubHeader } from "../../../components/ui";
 import { ActivityList } from "../../../components/activity/ActivityList";
+import { Card, SubHeader } from "../../../components/ui";
 import { useTransactions } from "../../../hooks/useTransactions";
 
 /**

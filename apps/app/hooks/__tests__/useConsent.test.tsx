@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
 import { MockVaultClient, mockSigner } from "@sorosense/vault-client";
+import { render, screen, waitFor } from "@testing-library/react";
 import { VaultProvider } from "../../providers/VaultProvider";
 import { useConsent } from "../useConsent";
 
@@ -15,13 +15,21 @@ test("reads consent from the seam", async () => {
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
   const client = new MockVaultClient();
   await client.setPolicyConsent("GUSER").signAndSubmit(mockSigner("depositor", "GUSER"));
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByTestId("state").textContent).toBe("true"));
 });
 
 test("a fresh user has not consented", async () => {
   useWallet.mockReturnValue({ address: "GUSER", isConnected: true });
-  render(<VaultProvider client={new MockVaultClient()}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={new MockVaultClient()}>
+      <Probe />
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByTestId("state").textContent).toBe("false"));
 });
 
@@ -33,7 +41,11 @@ test("fail-closed — a rejected read renders Off, never an optimistic On", asyn
   const client = new MockVaultClient();
   const error = new Error("network down");
   vi.spyOn(client, "hasConsent").mockRejectedValue(error);
-  render(<VaultProvider client={client}><Probe /></VaultProvider>);
+  render(
+    <VaultProvider client={client}>
+      <Probe />
+    </VaultProvider>,
+  );
   await waitFor(() => expect(screen.getByTestId("state").textContent).toBe("false"));
   expect(consoleError).toHaveBeenCalledWith(expect.stringContaining("hasConsent"), error);
   consoleError.mockRestore();

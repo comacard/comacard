@@ -14,7 +14,7 @@
  */
 
 /** Bucket denomination. One bucket per currency the depositor actually funded — never split/converted. */
-export type Currency = 'USD' | 'EUR' | 'MXN';
+export type Currency = "USD" | "EUR" | "MXN";
 
 /** Stellar account address (G... or C... contract address). */
 export type Address = string;
@@ -48,10 +48,10 @@ export const SHARE_PRICE_SCALE = 1_000_000_000n;
 export const DEFAULT_YIELD_RATE_BPS = 1000;
 
 /** A pool is either accepting flows or frozen by the keeper (Sentinel). */
-export type PoolStatus = 'active' | 'frozen';
+export type PoolStatus = "active" | "frozen";
 
 /** Who must sign a given transaction. Depositors sign their own funds; the keeper signs guard ops. */
-export type SignerRole = 'depositor' | 'keeper';
+export type SignerRole = "depositor" | "keeper";
 
 /** A signer capable of authorizing a prepared transaction for its role. */
 export interface Signer {

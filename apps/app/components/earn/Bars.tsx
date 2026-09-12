@@ -23,6 +23,7 @@ export function Bars({ values, className = "" }: { values: number[]; className?:
     >
       {values.map((v, i) => (
         <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length literal array, the index is the identity
           key={i}
           data-testid="bar"
           style={{ height: `${8 + (max > 0 ? v / max : 0) * 104}px` }}

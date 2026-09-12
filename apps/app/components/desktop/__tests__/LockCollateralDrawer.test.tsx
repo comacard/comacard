@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { CollateralAsset } from "../../../hooks/useCollateral";
 import { LockCollateralDrawer } from "../LockCollateralDrawer";
@@ -13,7 +13,13 @@ const collateral = vi.fn();
 vi.mock("../../../hooks/useCollateral", () => ({ useCollateral: () => collateral() }));
 
 vi.mock("../../../hooks/useRemoteCollateral", () => ({
-  useRemoteCollateral: () => ({ assets: [], totalValue: 0n, loading: false, error: false, configured: true }),
+  useRemoteCollateral: () => ({
+    assets: [],
+    totalValue: 0n,
+    loading: false,
+    error: false,
+    configured: true,
+  }),
 }));
 
 const creditLine = vi.fn();

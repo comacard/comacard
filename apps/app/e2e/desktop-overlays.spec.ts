@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 import { keeper } from "./support/bridge";
 import { connectWallet, depositViaDrawer, expectDesktopHome, shot } from "./support/journey";
 
-test("desktop overlays: deposit drawer, withdraw, account dropdown, activity filter, safe-exit approve", async ({ page }) => {
+test("desktop overlays: deposit drawer, withdraw, account dropdown, activity filter, safe-exit approve", async ({
+  page,
+}) => {
   await connectWallet(page);
   await expectDesktopHome(page);
 

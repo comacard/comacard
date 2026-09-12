@@ -30,10 +30,15 @@ export function CountUp({
     const to = value;
     const reduce =
       process.env.NODE_ENV === "test" ||
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (from === to || reduce || typeof requestAnimationFrame === "undefined" || typeof performance === "undefined") {
+      (typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (
+      from === to ||
+      reduce ||
+      typeof requestAnimationFrame === "undefined" ||
+      typeof performance === "undefined"
+    ) {
       setDisplay(to);
       fromRef.current = to;
       return;
@@ -42,7 +47,7 @@ export function CountUp({
     const dur = 600;
     const tick = (t: number) => {
       const p = Math.max(0, Math.min(1, (t - start) / dur));
-      const eased = 1 - Math.pow(1 - p, 3);
+      const eased = 1 - (1 - p) ** 3;
       setDisplay(from + (to - from) * eased);
       if (p < 1) rafRef.current = requestAnimationFrame(tick);
       else fromRef.current = to;

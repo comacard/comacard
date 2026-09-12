@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Dropdown } from "../ui/Dropdown";
-import { Switch } from "../ui";
-import { FaucetSection } from "../account/FaucetSection";
-import { Identicon } from "../account/Identicon";
-import { LogoutSheet } from "../account/LogoutSheet";
-import { useWallet } from "../../hooks/useWallet";
 import { useAutoCompound } from "../../hooks/useAutoCompound";
 import { useNav } from "../../hooks/useNav";
 import { usePanel } from "../../hooks/usePanel";
 import { useToast } from "../../hooks/useToast";
+import { useWallet } from "../../hooks/useWallet";
+import { FaucetSection } from "../account/FaucetSection";
+import { Identicon } from "../account/Identicon";
+import { LogoutSheet } from "../account/LogoutSheet";
+import { Switch } from "../ui";
+import { Dropdown } from "../ui/Dropdown";
 
 const truncate = (address: string) => `${address.slice(0, 4)}...${address.slice(-4)}`;
 
@@ -66,19 +66,32 @@ export function AccountMenu() {
                 onClick={copy}
                 className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-2 transition-colors hover:bg-pill"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <rect x="9" y="9" width="11" height="11" rx="2" />
                   <path d="M5 15V5a2 2 0 0 1 2-2h10" />
                 </svg>
               </button>
             </div>
-            <span className="mt-1 block text-[13px] font-medium text-muted">Connected via {walletName ?? "your wallet"}</span>
+            <span className="mt-1 block text-[13px] font-medium text-muted">
+              Connected via {walletName ?? "your wallet"}
+            </span>
           </div>
         </div>
 
         <div className="px-2 pb-1 pt-1.5">
           <h2 className="mb-2 px-1 text-[12px] font-semibold text-muted">General</h2>
           <button
+            type="button"
             role="menuitem"
             onClick={() => {
               setOpen(false);
@@ -86,19 +99,51 @@ export function AccountMenu() {
             }}
             className="flex w-full items-center gap-[13px] rounded-xl px-3 py-2.5 text-left hover:bg-pill"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-2">
+            <svg
+              aria-hidden="true"
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="shrink-0 text-ink-2"
+            >
               <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
             </svg>
             <span className="grow">
               <span className="block text-sm font-semibold">Activity</span>
               <span className="block text-xs text-muted">Deposits, spending and repayments</span>
             </span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="text-muted">
+            <svg
+              aria-hidden="true"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              className="text-muted"
+            >
               <path d="M9 6l6 6-6 6" />
             </svg>
           </button>
           <div className="flex w-full items-center gap-[13px] rounded-xl px-3 py-2.5">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-2">
+            <svg
+              aria-hidden="true"
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="shrink-0 text-ink-2"
+            >
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
               <path d="M3 3v5h5" />
               <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
@@ -106,10 +151,17 @@ export function AccountMenu() {
             </svg>
             <span className="grow">
               <span className="block text-sm font-semibold">Auto reinvest rewards</span>
-              <span className="block text-xs text-muted">Yield rewards flow back into your pool</span>
+              <span className="block text-xs text-muted">
+                Yield rewards flow back into your pool
+              </span>
             </span>
             <span data-testid="auto-compound-state" data-state={enabled ? "on" : "off"}>
-              <Switch checked={enabled} label="Auto reinvest rewards" readOnly={loading || pending} onChange={() => void toggle()} />
+              <Switch
+                checked={enabled}
+                label="Auto reinvest rewards"
+                readOnly={loading || pending}
+                onChange={() => void toggle()}
+              />
             </span>
           </div>
         </div>
@@ -117,8 +169,24 @@ export function AccountMenu() {
         <FaucetSection compact />
 
         <div className="mx-2 my-1.5 h-px bg-line" />
-        <button role="menuitem" onClick={() => setConfirming(true)} className="flex w-full items-center gap-[13px] rounded-xl px-3 py-2.5 text-left font-semibold text-neg hover:bg-pill">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => setConfirming(true)}
+          className="flex w-full items-center gap-[13px] rounded-xl px-3 py-2.5 text-left font-semibold text-neg hover:bg-pill"
+        >
+          <svg
+            aria-hidden="true"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0"
+          >
             <path d="M14 3H5v18h9M10 8l4 4-4 4M14 12H6" />
           </svg>
           Log out

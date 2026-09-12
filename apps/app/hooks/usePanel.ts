@@ -1,10 +1,13 @@
 "use client";
-import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback } from "react";
 
 export type Panel = "deposit" | "withdraw" | "activity" | "safe-exit";
 const PANELS: readonly Panel[] = ["deposit", "withdraw", "activity", "safe-exit"];
-const LEGACY_PANEL: Record<string, Panel> = { "add-funds": "deposit", "move-to-wallet": "withdraw" };
+const LEGACY_PANEL: Record<string, Panel> = {
+  "add-funds": "deposit",
+  "move-to-wallet": "withdraw",
+};
 
 /**
  * URL-backed desktop overlay state. The `?panel=` search param is the single source of truth, so
@@ -12,12 +15,20 @@ const LEGACY_PANEL: Record<string, Panel> = { "add-funds": "deposit", "move-to-w
  * replaces (a dismissed overlay leaves no history entry). Desktop-only consumers; mobile keeps
  * `nav.forward(route)`.
  */
-export function usePanel(): { panel: Panel | null; open: (name: Panel) => void; close: () => void } {
+export function usePanel(): {
+  panel: Panel | null;
+  open: (name: Panel) => void;
+  close: () => void;
+} {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const raw = params.get("panel");
-  const panel = PANELS.includes(raw as Panel) ? (raw as Panel) : raw ? (LEGACY_PANEL[raw] ?? null) : null;
+  const panel = PANELS.includes(raw as Panel)
+    ? (raw as Panel)
+    : raw
+      ? (LEGACY_PANEL[raw] ?? null)
+      : null;
 
   const open = useCallback(
     (name: Panel) => {

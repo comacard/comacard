@@ -7,12 +7,12 @@ import { CollateralList } from "../../components/card/CollateralList";
 import { IncomingDeposits } from "../../components/card/IncomingDeposits";
 import { KycSheet } from "../../components/card/KycSheet";
 import { Button, CopyButton, SubHeader, Toast, TransactionStatus } from "../../components/ui";
-import { groupAccountNumber } from "../../lib/comacard/format";
 import { useCardAccount } from "../../hooks/useCardAccount";
-import { useCreditLine } from "../../hooks/useCreditLine";
 import { useCollateral } from "../../hooks/useCollateral";
-import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
+import { useCreditLine } from "../../hooks/useCreditLine";
 import { useKycStart } from "../../hooks/useKycStart";
+import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
+import { groupAccountNumber } from "../../lib/comacard/format";
 
 /**
  * The card screen: one card in a beUI folder, and the single next step for whoever is looking at it.
@@ -49,15 +49,20 @@ export default function CardPage() {
 
 function CardScreen() {
   const { account, error, loading, refresh } = useCardAccount();
-  const { verify, url: kycUrl, close: closeKyc, starting, error: kycError, clearError } = useKycStart();
+  const {
+    verify,
+    url: kycUrl,
+    close: closeKyc,
+    starting,
+    error: kycError,
+    clearError,
+  } = useKycStart();
   // Null unless a draw, repay or lock is in flight. Nothing on this screen starts one yet; the
   // pill is wired so the moment a spend control lands it reports without further plumbing.
   const { txStatus, hash, error: txError } = useCreditLine();
   // Native plus every listed ERC20, read off the chain rather than from a hardcoded list.
   const { assets: collateral } = useCollateral();
   const { assets: remoteCollateral } = useRemoteCollateral();
-
-
 
   // Didit runs in its own tab and reports the verdict through a webhook, so the answer never comes
   // back to the call that opened it. Re-reading whenever this tab regains focus is what turns a
@@ -73,7 +78,6 @@ function CardScreen() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [refresh]);
-
 
   const step = describe({ account, error, loading, verify, starting });
 
@@ -183,7 +187,9 @@ function describe({
   if (!account) {
     return {
       title: "Card status unavailable",
-      body: error ?? "We could not reach the card backend, so we cannot say whether your card is active.",
+      body:
+        error ??
+        "We could not reach the card backend, so we cannot say whether your card is active.",
     };
   }
 
@@ -194,7 +200,11 @@ function describe({
       body: started
         ? "Your verification is still being reviewed. This page updates itself when the result arrives."
         : "A card can only be issued to a verified person. Verification takes a few minutes and happens with our identity provider.",
-      action: { label: started ? "Continue verification" : "Verify identity", onClick: verify, busy: starting },
+      action: {
+        label: started ? "Continue verification" : "Verify identity",
+        onClick: verify,
+        busy: starting,
+      },
     };
   }
 

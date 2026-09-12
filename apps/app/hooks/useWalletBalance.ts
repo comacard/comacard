@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { balanceEnabled, readWalletBalance } from "../lib/wallet/balance";
 import { getFixtureWalletBalance, type StablecoinSym } from "../lib/vault/data";
+import { balanceEnabled, readWalletBalance } from "../lib/wallet/balance";
 import { useWallet } from "./useWallet";
 
 /**
@@ -53,7 +53,12 @@ export function useWalletBalance(sym: StablecoinSym | null): WalletBalanceView {
   const { address } = useWallet();
   const live = sym !== null && balanceEnabled(sym) && Boolean(address);
 
-  const [state, setState] = useState<LiveState>({ loading: false, amount: 0n, trustline: true, unfunded: false });
+  const [state, setState] = useState<LiveState>({
+    loading: false,
+    amount: 0n,
+    trustline: true,
+    unfunded: false,
+  });
   const [nonce, setNonce] = useState(0);
   // What the last completed read saw — a refresh polls until the number moves off it.
   const lastAmount = useRef(0n);

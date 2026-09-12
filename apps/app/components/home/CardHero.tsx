@@ -1,6 +1,6 @@
 "use client";
-import { CountUp } from "../ui";
 import type { ComacardAccount } from "../../lib/comacard/api";
+import { CountUp } from "../ui";
 
 /**
  * Home's headline figure: what the card can actually spend.

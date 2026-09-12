@@ -1,8 +1,8 @@
+import { MockVaultClient } from "@sorosense/vault-client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MockVaultClient } from "@sorosense/vault-client";
-import { VaultProvider } from "../../../providers/VaultProvider";
 import { ToastProvider } from "../../../providers/ToastProvider";
+import { VaultProvider } from "../../../providers/VaultProvider";
 import { DepositKeypad } from "../DepositKeypad";
 
 const USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
@@ -45,7 +45,11 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 function route(handlers: { horizon: () => Response }) {
   fetchMock.mockImplementation((url: string) =>
-    Promise.resolve(String(url).includes("/accounts/") ? handlers.horizon() : new Response("not found", { status: 404 })),
+    Promise.resolve(
+      String(url).includes("/accounts/")
+        ? handlers.horizon()
+        : new Response("not found", { status: 404 }),
+    ),
   );
 }
 

@@ -1,6 +1,6 @@
-import { MockVaultClient, mockSigner, type Currency } from "@sorosense/vault-client";
-import { UNIT } from "./units";
+import { type Currency, type MockVaultClient, mockSigner } from "@sorosense/vault-client";
 import { recordDeposit, resetContributions } from "./contributions";
+import { UNIT } from "./units";
 
 /** Stable pool ids per currency for the seeded funded state. */
 export const SEED_POOLS: Record<Currency, string> = {
@@ -36,7 +36,7 @@ export async function seedVault(client: MockVaultClient, address: string): Promi
   recordDeposit("EUR", eurContribution);
   await client.allocate(SEED_POOLS.USD, "USD", 1024n * UNIT).signAndSubmit(keep);
   await client.allocate(SEED_POOLS.EUR, "EUR", 920n * UNIT).signAndSubmit(keep);
-  client.simulateYield("USD", 92n * UNIT);  // ~ +$92 earned
+  client.simulateYield("USD", 92n * UNIT); // ~ +$92 earned
   client.simulateYield("EUR", 84n * UNIT);
   await client.freeze(SEED_POOLS.EUR).signAndSubmit(keep);
   // Propose the safe exit the depositor will approve in U15 (keeper-signed, dev-only).

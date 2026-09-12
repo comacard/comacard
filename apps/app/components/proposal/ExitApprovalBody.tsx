@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Button, Card } from "../ui";
 import { usePendingExit } from "../../hooks/usePendingExit";
 import { useVault } from "../../hooks/useVault";
 import { useWallet } from "../../hooks/useWallet";
 import { depositorSigner } from "../../lib/vault/signer";
-import { formatCurrency } from "../../lib/vault/units";
 import { TX_REJECTED_MESSAGE } from "../../lib/vault/tx";
+import { formatCurrency } from "../../lib/vault/units";
 import { toWalletError, USER_CLOSED_MODAL } from "../../lib/wallet-error";
+import { Button, Card } from "../ui";
 
 /**
  * The safe-exit approval state machine, lifted VERBATIM from ExitApproval so the mobile BottomSheet
@@ -33,7 +33,9 @@ export function useExitApproval(onClose: () => void) {
     inFlight.current = true;
     setBusy(true);
     try {
-      const { success } = await client.approveExit(address, pend.proposal.id).signAndSubmit(depositorSigner(address, signTransaction));
+      const { success } = await client
+        .approveExit(address, pend.proposal.id)
+        .signAndSubmit(depositorSigner(address, signTransaction));
       // The seam resolves a rejected transaction as `success: false` rather than throwing. Saying
       // "Exit approved" on that would tell the user their funds moved when they did not — the
       // proposal is still pending and the pool is still paused (R5, KTD4).
@@ -90,7 +92,19 @@ export function ExitApprovalBody({
           <Card className="bg-white p-3.5">
             <div className="flex items-center gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-warn-soft text-warn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5v14M15 5v14" /></svg>
+                <svg
+                  aria-hidden="true"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.25}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 5v14M15 5v14" />
+                </svg>
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-[11.5px] text-muted">From</div>
@@ -99,28 +113,63 @@ export function ExitApprovalBody({
               <div className="font-semibold">{formatCurrency(pend.amount, pend.currency)}</div>
             </div>
             <div className="my-1 grid place-items-center text-faint">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+              <svg
+                aria-hidden="true"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 5v14M6 13l6 6 6-6" />
+              </svg>
             </div>
             <div className="flex items-center gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#e8f5ee] text-pos">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round"><path d="M23 6 13.5 16.5 8.5 11.5 1 19" /><path d="M17 6h6v6" /></svg>
+                <svg
+                  aria-hidden="true"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.25}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M23 6 13.5 16.5 8.5 11.5 1 19" />
+                  <path d="M17 6h6v6" />
+                </svg>
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-[11.5px] text-muted">To</div>
                 <div className="font-semibold">{pend.toMeta?.name ?? "Safe pool"}</div>
               </div>
-              {pend.toMeta && <div className="font-semibold text-pos">{pend.toMeta.apy.toFixed(2)}% APY</div>}
+              {pend.toMeta && (
+                <div className="font-semibold text-pos">{pend.toMeta.apy.toFixed(2)}% APY</div>
+              )}
             </div>
           </Card>
           {variant === "sheet" ? (
             <>
-              <Button className="mt-[18px]" onClick={onApprove} disabled={busy}>Approve and sign in wallet</Button>
-              <Button variant="glass" className="mt-2.5" onClick={onDecline} disabled={busy}>Keep it paused</Button>
+              <Button className="mt-[18px]" onClick={onApprove} disabled={busy}>
+                Approve and sign in wallet
+              </Button>
+              <Button variant="glass" className="mt-2.5" onClick={onDecline} disabled={busy}>
+                Keep it paused
+              </Button>
             </>
           ) : (
             <div className="mt-[18px] flex gap-2.5">
-              <Button variant="glass" className="flex-1" onClick={onDecline} disabled={busy}>Keep paused</Button>
-              <Button className="flex-1" onClick={onApprove} disabled={busy}>Approve</Button>
+              <Button variant="glass" className="flex-1" onClick={onDecline} disabled={busy}>
+                Keep paused
+              </Button>
+              <Button className="flex-1" onClick={onApprove} disabled={busy}>
+                Approve
+              </Button>
             </div>
           )}
         </>

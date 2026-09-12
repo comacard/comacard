@@ -1,4 +1,9 @@
-import { recordDeposit, recordWithdraw, getContributions, resetContributions } from "../contributions";
+import {
+  getContributions,
+  recordDeposit,
+  recordWithdraw,
+  resetContributions,
+} from "../contributions";
 import { UNIT } from "../units";
 
 // "Total earned" = value − net contributions. These net contributions are what make

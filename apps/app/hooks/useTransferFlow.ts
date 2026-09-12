@@ -1,8 +1,8 @@
 "use client";
-import { useCallback, useRef, useState } from "react";
 import type { TxResult } from "@sorosense/vault-client";
-import { toWalletError, USER_CLOSED_MODAL } from "../lib/wallet-error";
+import { useCallback, useRef, useState } from "react";
 import { TX_REJECTED_MESSAGE } from "../lib/vault/tx";
+import { toWalletError, USER_CLOSED_MODAL } from "../lib/wallet-error";
 
 export type TransferPhase = "idle" | "sending" | "success" | "error";
 

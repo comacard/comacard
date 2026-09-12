@@ -1,5 +1,13 @@
-import { STABLECOINS, stablecoinBySym, stablecoinByCurrency, getBucketMeta, getActivity, getFxRateToUsd, getFixtureWalletBalance } from "../data";
-import { getPoolMeta } from "../data";
+import {
+  getActivity,
+  getBucketMeta,
+  getFixtureWalletBalance,
+  getFxRateToUsd,
+  getPoolMeta,
+  STABLECOINS,
+  stablecoinByCurrency,
+  stablecoinBySym,
+} from "../data";
 
 test("only fundable stablecoins are listed (R19), one per currency", () => {
   expect(STABLECOINS.map((s) => s.sym)).toEqual(["USDC", "EURC", "CETES"]);

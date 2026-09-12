@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { comacardApiEnabled, getAccount, type ComacardAccount } from "../lib/comacard/api";
+import { type ComacardAccount, comacardApiEnabled, getAccount } from "../lib/comacard/api";
 import { useWallet } from "./useWallet";
 
 /**
