@@ -10,7 +10,7 @@ import { KycSheet } from "../../../components/card/KycSheet";
 import { SpentTotal } from "../../../components/card/SpentTotal";
 import { CardHero } from "../../../components/home/CardHero";
 import { DesktopOverview } from "../../../components/home/DesktopOverview";
-import { Button, Card, Skeleton, Toast } from "../../../components/ui";
+import { Button, Card, Skeleton, Spinner, Toast } from "../../../components/ui";
 import { useCardAccount } from "../../../hooks/useCardAccount";
 import { useCollateral } from "../../../hooks/useCollateral";
 import { useCreditLine } from "../../../hooks/useCreditLine";
@@ -32,7 +32,7 @@ function MobileHome() {
   // limit, so leaving them out would show a headline backed by more than the rows below it.
   const { assets: remoteCollateral } = useRemoteCollateral();
   // What the card owes, if anything. Zero means the cycle is closed.
-  const { drawn, available } = useCreditLine();
+  const { drawn, available, loading: creditLoading } = useCreditLine();
   const {
     verify,
     url: kycUrl,
@@ -100,13 +100,15 @@ function MobileHome() {
             ) : null}
 
             <div className="mb-[22px] flex gap-2.5">
+              {/* Disabled while the limit is unknown, but not silently: four seconds of a greyed
+                  button with no explanation reads as a refusal rather than a read in flight. */}
               <Button
                 variant={owes ? "glass" : "ink"}
                 className="flex-1"
                 onClick={() => nav.forward("/spend")}
-                disabled={(available ?? 0n) === 0n}
+                disabled={creditLoading || (available ?? 0n) === 0n}
               >
-                Spend
+                {creditLoading ? <Spinner /> : "Spend"}
               </Button>
               <Button variant="glass" className="flex-1" onClick={() => nav.forward("/deposit")}>
                 Deposit

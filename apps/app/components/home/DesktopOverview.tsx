@@ -20,7 +20,7 @@ import { IncomingDeposits } from "../card/IncomingDeposits";
 import { KycSheet } from "../card/KycSheet";
 import { ActivityDrawer } from "../desktop/ActivityDrawer";
 import { LockCollateralDrawer } from "../desktop/LockCollateralDrawer";
-import { Button, Card, CountUp, PageHeader, Section, type Stat, StatStrip } from "../ui";
+import { Button, Card, CountUp, PageHeader, Section, Spinner, type Stat, StatStrip } from "../ui";
 
 /**
  * The desktop Overview.
@@ -109,12 +109,15 @@ function overviewStats({
 function CardActions({
   owes,
   canSpend,
+  checking,
   onSpend,
   onRepay,
   onDeposit,
 }: {
   owes: boolean;
   canSpend: boolean;
+  /** The limit has not been read yet. Disabled, but not as a refusal. */
+  checking: boolean;
   onSpend: () => void;
   onRepay: () => void;
   onDeposit: () => void;
@@ -132,9 +135,9 @@ function CardActions({
           variant={owes ? "glass" : "ink"}
           className="flex-1"
           onClick={onSpend}
-          disabled={!canSpend}
+          disabled={checking || !canSpend}
         >
-          Spend
+          {checking ? <Spinner /> : "Spend"}
         </Button>
         <Button size="md" variant="glass" className="flex-1" onClick={onDeposit}>
           Deposit
@@ -150,7 +153,7 @@ export function DesktopOverview() {
   const { account, loading: accountLoading, refresh } = useCardAccount();
   const { assets: collateral } = useCollateral();
   const { assets: remoteCollateral } = useRemoteCollateral();
-  const { limit, drawn, available } = useCreditLine();
+  const { limit, drawn, available, loading: creditLoading } = useCreditLine();
   const { borrowed, loading: historyLoading, error: historyError } = useCreditHistory();
   const { assets } = useWalletAssets();
   const { loading: txLoading, items: transactions } = useTransactions();
@@ -205,6 +208,7 @@ export function DesktopOverview() {
               <CardActions
                 owes={owes}
                 canSpend={(available ?? 0n) > 0n}
+                checking={creditLoading}
                 onSpend={() => nav.forward("/spend")}
                 onRepay={() => nav.forward("/pay")}
                 onDeposit={() => open("deposit")}

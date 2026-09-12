@@ -265,6 +265,16 @@ export function useCreditLine() {
     drawnAt: account.data?.drawnAt,
     account: account.data,
     lockedCollateral: locked.data,
+    /**
+     * True while the credit line has not answered yet.
+     *
+     * The Creditcoin RPC takes about four seconds a call, measured, against 1.2s for the indexer and
+     * 0.7s for Sepolia. For that whole window `available` is undefined, and every screen that wrote
+     * `(available ?? 0n) === 0n` rendered a greyed-out Spend button — a definite "you have nothing"
+     * for a figure nothing had read yet. Same rule as everywhere else today: an unresolved read is
+     * not a zero.
+     */
+    loading: limit.isLoading || available.isLoading || account.isLoading,
     reads: { limit, available, score, locked, account },
     lock,
     lockToken,

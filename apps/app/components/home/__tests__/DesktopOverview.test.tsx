@@ -98,7 +98,7 @@ const VERIFIED = {
 beforeEach(() => {
   vi.clearAllMocks();
   cardAccount.mockReturnValue(VERIFIED);
-  creditLine.mockReturnValue({ drawn: 0n, available: 33n });
+  creditLine.mockReturnValue({ drawn: 0n, available: 33n, loading: false });
   creditHistory.mockReturnValue({
     events: [],
     borrowed: 0n,
@@ -147,7 +147,7 @@ test("Spend and Deposit are both offered, and Spend goes to the full page", asyn
 
 test("an open balance leads with Repay without hiding Deposit", async () => {
   const user = userEvent.setup();
-  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n });
+  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n, loading: false });
   render(<DesktopOverview />);
 
   // The figure lives in the strip; the card holds the control alone, so the balance is stated once.
@@ -191,7 +191,7 @@ test("an unverified holder is offered verification instead of the actions", asyn
 });
 
 test("a dead indexer reports no spending as unknown, not as none", () => {
-  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n });
+  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n, loading: false });
   creditHistory.mockReturnValue({
     events: [],
     borrowed: 0n,
@@ -206,4 +206,18 @@ test("a dead indexer reports no spending as unknown, not as none", () => {
   // statements that cannot both hold. The balance is the one that came from a live read.
   expect(screen.getByText("1 tCTC")).toBeInTheDocument();
   expect(screen.queryByText("0 tCTC")).toBeNull();
+});
+
+test("a limit still being read disables Spend as a wait, not as a refusal", () => {
+  // The Creditcoin RPC takes about four seconds a call. For that whole window `available` is
+  // undefined, and `(available ?? 0n) === 0n` rendered a flat greyed button — which says "you have
+  // nothing to spend" about a figure nothing had read yet.
+  creditLine.mockReturnValue({ drawn: 0n, available: undefined, loading: true });
+  render(<DesktopOverview />);
+
+  const spend = screen.getByRole("button", { name: "" });
+  expect(spend).toBeDisabled();
+  // The label is gone because a spinner is in its place; the point is that it does not read "Spend"
+  // beside a dead control.
+  expect(screen.queryByRole("button", { name: "Spend" })).toBeNull();
 });
