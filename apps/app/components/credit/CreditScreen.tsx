@@ -6,7 +6,7 @@ import { useCreditLine } from "../../hooks/useCreditLine";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { useNav } from "../../hooks/useNav";
 import { Bars } from "../earn/Bars";
-import { Button, Card, CountUp, Segmented, Skeleton } from "../ui";
+import { Button, Card, CountUp, PageHeader, Segmented, Skeleton } from "../ui";
 
 /**
  * What the card has earned, which is a record rather than a yield.
@@ -111,8 +111,15 @@ export function CreditScreen() {
           rather than hidden when nothing is owed: a control that vanishes teaches nobody that it
           is the second half. */}
       <div className="flex gap-3">
-        <Button onClick={() => nav.forward("/spend")}>Spend</Button>
-        <Button variant="glass" disabled={!owes} onClick={() => nav.forward("/pay")}>
+        <Button size={isDesktop ? "md" : "lg"} onClick={() => nav.forward("/spend")}>
+          Spend
+        </Button>
+        <Button
+          size={isDesktop ? "md" : "lg"}
+          variant="glass"
+          disabled={!owes}
+          onClick={() => nav.forward("/pay")}
+        >
           Repay
         </Button>
       </div>
@@ -120,46 +127,58 @@ export function CreditScreen() {
   );
 
   return (
-    <div className="stagger lg:grid lg:grid-cols-[minmax(320px,0.85fr)_minmax(0,1.15fr)] lg:items-start lg:gap-4">
+    <div className="stagger">
+      {/* The same spine as Overview: a 400px rail beside the record, so moving between the two
+          desktop screens does not move the columns under the reader. */}
       {isDesktop ? (
-        <Card className="flex min-w-0 flex-col px-7 py-6">{head}</Card>
-      ) : (
-        <div className="mb-5">{head}</div>
-      )}
+        <PageHeader
+          title="Credit"
+          description="What the card is allowed, and the record that earns it."
+          className="mb-5"
+        />
+      ) : null}
 
-      <Card className="p-5">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[13px] font-semibold text-muted">Spend</h2>
-          <span className="text-[12.5px] text-muted tabular-nums">
-            {cyclesClosed} {cyclesClosed === 1 ? "cycle" : "cycles"} closed
-          </span>
-        </div>
-
-        {hasHistory ? (
-          <>
-            <Bars values={series} className="mt-4" />
-            <div className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px] text-muted tabular-nums">
-              <span>{ctc(borrowed)} tCTC borrowed</span>
-              <span>{ctc(repaid)} tCTC repaid</span>
-            </div>
-          </>
+      <div className="lg:grid lg:grid-cols-[400px_minmax(0,1fr)] lg:items-start lg:gap-6">
+        {isDesktop ? (
+          <Card className="flex min-w-0 flex-col px-6 pb-6 pt-1">{head}</Card>
         ) : (
-          /* Empty rather than filled with an example. A chart of invented borrowing on the one
-             screen whose subject is a truthful record would undo the point of the screen. */
-          <div className="py-7 text-center">
-            <p className="text-[13.5px] font-semibold text-ink">Nothing spent yet</p>
-          </div>
+          <div className="mb-5">{head}</div>
         )}
 
-        <Segmented
-          className="mt-4"
-          options={RANGES}
-          value={range}
-          onChange={setRange}
-          label="Period"
-          variant="period"
-        />
-      </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[13px] font-semibold text-muted">Spend</h2>
+            <span className="text-[12.5px] text-muted tabular-nums">
+              {cyclesClosed} {cyclesClosed === 1 ? "cycle" : "cycles"} closed
+            </span>
+          </div>
+
+          {hasHistory ? (
+            <>
+              <Bars values={series} className="mt-4" />
+              <div className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px] text-muted tabular-nums">
+                <span>{ctc(borrowed)} tCTC borrowed</span>
+                <span>{ctc(repaid)} tCTC repaid</span>
+              </div>
+            </>
+          ) : (
+            /* Empty rather than filled with an example. A chart of invented borrowing on the one
+             screen whose subject is a truthful record would undo the point of the screen. */
+            <div className="py-7 text-center">
+              <p className="text-[13.5px] font-semibold text-ink">Nothing spent yet</p>
+            </div>
+          )}
+
+          <Segmented
+            className="mt-4"
+            options={RANGES}
+            value={range}
+            onChange={setRange}
+            label="Period"
+            variant="period"
+          />
+        </Card>
+      </div>
     </div>
   );
 }

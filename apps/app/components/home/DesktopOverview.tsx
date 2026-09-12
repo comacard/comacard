@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { formatUnits } from "viem";
 import { useCardAccount } from "../../hooks/useCardAccount";
 import { useCollateral } from "../../hooks/useCollateral";
+import { useCreditHistory } from "../../hooks/useCreditHistory";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { useKycStart } from "../../hooks/useKycStart";
 import { useNav } from "../../hooks/useNav";
@@ -10,39 +11,147 @@ import { usePanel } from "../../hooks/usePanel";
 import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { useTransactions } from "../../hooks/useTransactions";
 import { useWalletAssets } from "../../hooks/useWalletAssets";
+import type { ComacardAccount } from "../../lib/comacard/api";
 import { ActivityList } from "../activity/ActivityList";
 import { CardFolderPanel } from "../card/CardFolderPanel";
 import { CollateralList } from "../card/CollateralList";
 import { IncomingDeposits } from "../card/IncomingDeposits";
 import { KycSheet } from "../card/KycSheet";
-import { SpentTotal } from "../card/SpentTotal";
 import { ActivityDrawer } from "../desktop/ActivityDrawer";
 import { LockCollateralDrawer } from "../desktop/LockCollateralDrawer";
-import { Button, Card, CountUp, Skeleton } from "../ui";
-import { CardHero } from "./CardHero";
+import { Button, Card, CountUp, PageHeader, Section, type Stat, StatStrip } from "../ui";
 
 /**
- * The desktop Overview, rebuilt from the mobile Home.
+ * The desktop Overview.
  *
- * It was a SoroSense dashboard: bucket rows, an APY growth chart, an agent feed, a headline reading
- * a wallet total in dollars. None of those exist in this product, so it reported a different one.
+ * Every figure comes from the hooks the phone uses, and most of the blocks are literally the same
+ * files. What is desktop-specific is only the arrangement, and this is the second pass at it: the
+ * first was the phone's single column split in two, which measured badly enough to be worth
+ * recording. At 1440px the content ran 1368px wide (95% of the viewport), the two columns came out
+ * 598px and 372px tall so the shorter one held all the data, "Repay" rendered as a 481×56 pill for
+ * a five-letter label, and the card artwork — the one object on screen with a fixed size — sat in
+ * 517px of container with 177px of air around it. docs/desktop-layout-research.md has the readings
+ * and the seventeen sites they were compared against.
  *
- * Every figure here now comes from the same hooks Home uses, and the components are literally the
- * same files. Two surfaces cannot drift apart if there is only one implementation between them, and
- * they were already a day apart before this.
+ * Three things changed as a result.
  *
- * The layout is the only thing desktop-specific: two columns instead of one, because a phone's
- * vertical stack on a 1440px screen is a column of whitespace. The order within them follows the
- * phone exactly — card, then what backs it, then what it has done.
+ * **The summary comes first.** A screen whose whole subject is what you can spend, what you are
+ * allowed, what you owe and what you have used led with none of those in a place the eye lands. Two
+ * of them were not on the screen at all, and "do I owe anything" was answered by whether a box
+ * existed. `StatStrip` is now the first thing under the title, which is what every dashboard
+ * measured does. It also absorbs the phone's `CardHero` and `SpentTotal` — same hooks, same
+ * numbers, one row instead of a headline in one column and a card in the other.
+ *
+ * **The rail is sized to the card.** `400px` rather than a fraction, because its contents have a
+ * natural width (a 340px card image) and a fluid column just pads it. Stripe, coinbase and privacy
+ * all name their column widths in pixels for the same reason.
+ *
+ * **It sticks.** The rail is roughly a third of the right-hand stack's height, and left to scroll it
+ * spends most of the page as blank space beside the rows that explain it. `items-start` is what
+ * allows that: a stretched grid item is as tall as its row and has nothing to stick within.
  */
+
+const ctc = (value: bigint | null | undefined): string | null =>
+  value === null || value === undefined
+    ? null
+    : `${Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: 4 })} tCTC`;
+
+/**
+ * The four figures, built outside the component so the arrangement below stays readable.
+ *
+ * `spendable` comes off the backend rather than being derived from `available` here: it is the
+ * minimum of available credit and whatever else gates the card, and re-deriving that in the client
+ * is how a screen promises credit the card will refuse. It is the same field the phone's hero reads.
+ */
+function overviewStats({
+  account,
+  limit,
+  drawn,
+  borrowed,
+  historyLoading,
+}: {
+  account: ComacardAccount | null;
+  limit: bigint | undefined;
+  drawn: bigint | undefined;
+  borrowed: bigint;
+  historyLoading: boolean;
+}): Stat[] {
+  const unissued = account !== null && !account.kyc.verified;
+  const spendable = account?.card.spendableCtc;
+  const owes = (drawn ?? 0n) > 0n;
+  return [
+    {
+      label: "Available to spend",
+      value: unissued || spendable === undefined ? null : `${spendable} tCTC`,
+      hint: unissued ? "Card not issued yet" : undefined,
+    },
+    { label: "Credit limit", value: ctc(limit) },
+    {
+      label: "Balance",
+      value: ctc(drawn),
+      tone: owes ? "neg" : "ink",
+      hint: owes ? "Repay in full to close the cycle" : undefined,
+    },
+    // What has ever come out of the card, counted from Draw events and never from the wallet: tCTC
+    // that arrived from a faucet was never spent here.
+    { label: "Spent from your card", value: historyLoading ? null : ctc(borrowed) },
+  ];
+}
+
+/**
+ * What the card can do, at desktop button size.
+ *
+ * Settling leads when there is something to settle — only a repayment that clears the balance closes
+ * a cycle — but it never replaces the other two. The figure it refers to is in the strip above, so
+ * this is the control alone rather than a panel restating the balance.
+ */
+function CardActions({
+  owes,
+  canSpend,
+  onSpend,
+  onRepay,
+  onDeposit,
+}: {
+  owes: boolean;
+  canSpend: boolean;
+  onSpend: () => void;
+  onRepay: () => void;
+  onDeposit: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      {owes ? (
+        <Button size="md" onClick={onRepay}>
+          Repay balance
+        </Button>
+      ) : null}
+      <div className="flex gap-2.5">
+        <Button
+          size="md"
+          variant={owes ? "glass" : "ink"}
+          className="flex-1"
+          onClick={onSpend}
+          disabled={!canSpend}
+        >
+          Spend
+        </Button>
+        <Button size="md" variant="glass" className="flex-1" onClick={onDeposit}>
+          Deposit
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function DesktopOverview() {
   const nav = useNav();
   const { panel, open, close } = usePanel();
-  const { account, refresh } = useCardAccount();
+  const { account, loading: accountLoading, refresh } = useCardAccount();
   const { assets: collateral } = useCollateral();
   const { assets: remoteCollateral } = useRemoteCollateral();
-  const { drawn, available } = useCreditLine();
-  const { loading, assets } = useWalletAssets();
+  const { limit, drawn, available } = useCreditLine();
+  const { borrowed, loading: historyLoading } = useCreditHistory();
+  const { assets } = useWalletAssets();
   const { loading: txLoading, items: transactions } = useTransactions();
   const { verify, url: kycUrl, close: closeKyc, starting } = useKycStart();
 
@@ -55,125 +164,105 @@ export function DesktopOverview() {
 
   const needsVerification = account !== null && !account.kyc.verified;
   const owes = (drawn ?? 0n) > 0n;
-  const owedLabel = Number(formatUnits(drawn ?? 0n, 18)).toLocaleString("en-US", {
-    maximumFractionDigits: 4,
-  });
-  const preview = transactions.slice(0, 6);
-  const hasMore = transactions.length > 6;
+  const preview = transactions.slice(0, 8);
+  const hasMore = transactions.length > 8;
+
+  const stats = overviewStats({ account, limit, drawn, borrowed, historyLoading });
 
   return (
     <>
-      <div className="stagger grid items-start gap-4 lg:grid-cols-[minmax(320px,0.85fr)_minmax(0,1.15fr)] lg:gap-5">
-        {/* The card and what it can do.
-            It sticks below the bar because it is the shorter of the two columns by a long way —
-            a verified account with no balance owed leaves it about a third the height of the
-            right-hand stack, and left to scroll it spends most of the page as blank space beside
-            the rows that explain it. `items-start` on the grid is what lets it: a stretched grid
-            item is as tall as the row and has nothing to stick within. */}
-        <Card className="flex min-w-0 flex-col px-7 py-6 lg:sticky lg:top-[84px]">
-          {loading ? (
-            <div className="py-[30px] text-center">
-              <Skeleton className="mx-auto h-4 w-28" />
-              <Skeleton className="mx-auto mt-3 h-[46px] w-[210px] rounded-lg" />
-            </div>
-          ) : (
-            <CardHero account={account} />
-          )}
+      <div className="stagger">
+        <PageHeader
+          title="Overview"
+          description="Your card, what backs it, and everything it has done."
+          className="mb-5"
+        />
 
-          <CardFolderPanel account={account} className="mb-6" />
+        {/* The strip's own first read, not the wallet's: the four figures come from the card
+            account, the credit line and the indexer, and gating them on an unrelated query is how a
+            resolved number ends up behind a skeleton. After that first read each tile decides for
+            itself, and an unknown one prints a dash rather than a zero. */}
+        <StatStrip stats={stats} loading={accountLoading} className="mb-6" />
 
-          {needsVerification ? (
-            <Button onClick={verify} disabled={starting}>
-              {starting ? "Opening…" : "Verify identity"}
-            </Button>
-          ) : (
-            <>
-              {owes ? (
-                <div className="mb-2.5 rounded-[16px] border border-line bg-white px-4 py-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[13px] text-muted">Current balance</span>
-                    <span className="text-[16px] font-semibold tabular-nums">{owedLabel} tCTC</span>
-                  </div>
-                  <Button className="mt-3" onClick={() => nav.forward("/pay")}>
-                    Repay
-                  </Button>
-                </div>
-              ) : null}
+        <div className="grid items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
+          {/* The card itself, and the two things you can do with it. */}
+          <Card className="flex min-w-0 flex-col px-6 pb-6 pt-5 lg:sticky lg:top-[88px]">
+            <CardFolderPanel account={account} className="mb-5" />
 
-              <div className="flex gap-2.5">
-                <Button
-                  variant={owes ? "glass" : "ink"}
-                  className="flex-1"
-                  onClick={() => nav.forward("/spend")}
-                  disabled={(available ?? 0n) === 0n}
-                >
-                  Spend
-                </Button>
-                <Button variant="glass" className="flex-1" onClick={() => open("deposit")}>
-                  Deposit
-                </Button>
-              </div>
-            </>
-          )}
-        </Card>
-
-        {/* What backs the card, and what it has done. */}
-        <div className="flex min-w-0 flex-col gap-4 lg:gap-5">
-          <IncomingDeposits deposits={account?.pendingDeposits ?? []} />
-          {owes ? null : <SpentTotal />}
-          <CollateralList assets={collateral} remote={remoteCollateral} className="mt-0" />
-
-          <section>
-            <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Transactions</h2>
-            <Card className="px-5 pb-2 pt-1">
-              <ActivityList
-                items={preview}
-                loading={txLoading}
-                reviewed
-                emptyTitle="No transactions yet"
-                emptyDescription="Locks, draws and repayments will show here once they are on chain."
+            {needsVerification ? (
+              <Button size="md" onClick={verify} disabled={starting}>
+                {starting ? "Opening…" : "Verify identity"}
+              </Button>
+            ) : (
+              <CardActions
+                owes={owes}
+                canSpend={(available ?? 0n) > 0n}
+                onSpend={() => nav.forward("/spend")}
+                onRepay={() => nav.forward("/pay")}
+                onDeposit={() => open("deposit")}
               />
-              {hasMore && (
-                <button
-                  type="button"
-                  onClick={() => open("activity")}
-                  className="mt-1.5 flex w-full items-center justify-center border-t border-line pb-[3px] pt-[13px] text-[13.5px] font-medium text-muted"
-                >
-                  View all transactions
-                </button>
-              )}
-            </Card>
-          </section>
+            )}
+          </Card>
 
-          {/* Wallet balances sit last and small, as on Account: they pay gas, and they are not
-              what the card spends. */}
-          {assets.length > 0 ? (
-            <section>
-              <h2 className="mx-1 mb-2 text-sm font-medium text-muted">In your wallet</h2>
-              <Card className="px-5 py-1">
-                {assets.map((asset, i) => (
-                  <div
-                    key={asset.token}
-                    className={`flex items-baseline justify-between gap-3 py-3 ${
-                      i === 0 ? "" : "border-t border-line"
-                    }`}
+          {/* What backs the card, and what it has done. */}
+          <div className="flex min-w-0 flex-col gap-6">
+            <IncomingDeposits deposits={account?.pendingDeposits ?? []} />
+            <CollateralList assets={collateral} remote={remoteCollateral} className="mt-0" />
+
+            <Section
+              title="Transactions"
+              action={
+                hasMore ? (
+                  <button
+                    type="button"
+                    onClick={() => open("activity")}
+                    className="text-[13px] font-medium text-muted transition-colors hover:text-ink"
                   >
-                    <span className="text-[13.5px] font-medium">{asset.name}</span>
-                    <span className="text-[13.5px] font-semibold tabular-nums">
-                      <CountUp
-                        animateOnMount
-                        from={0}
-                        value={Number(formatUnits(asset.amount, asset.decimals))}
-                        format={(n) =>
-                          `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${asset.symbol}`
-                        }
-                      />
-                    </span>
-                  </div>
-                ))}
+                    View all
+                  </button>
+                ) : undefined
+              }
+            >
+              <Card className="px-5 py-1">
+                <ActivityList
+                  items={preview}
+                  loading={txLoading}
+                  reviewed
+                  emptyTitle="No transactions yet"
+                  emptyDescription="Locks, draws and repayments will show here once they are on chain."
+                />
               </Card>
-            </section>
-          ) : null}
+            </Section>
+
+            {/* Wallet balances sit last and small, as on Account: they pay gas, and they are not
+                what the card spends. */}
+            {assets.length > 0 ? (
+              <Section title="In your wallet">
+                <Card className="px-5 py-1">
+                  {assets.map((asset, i) => (
+                    <div
+                      key={asset.token}
+                      className={`flex items-baseline justify-between gap-3 py-3 ${
+                        i === 0 ? "" : "border-t border-line"
+                      }`}
+                    >
+                      <span className="text-[13.5px] font-medium">{asset.name}</span>
+                      <span className="text-[13.5px] font-semibold tabular-nums">
+                        <CountUp
+                          animateOnMount
+                          from={0}
+                          value={Number(formatUnits(asset.amount, asset.decimals))}
+                          format={(n) =>
+                            `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${asset.symbol}`
+                          }
+                        />
+                      </span>
+                    </div>
+                  ))}
+                </Card>
+              </Section>
+            ) : null}
+          </div>
         </div>
       </div>
 

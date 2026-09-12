@@ -2,7 +2,7 @@
 import { formatUnits } from "viem";
 import type { CollateralAsset } from "../../hooks/useCollateral";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
-import { AssetIcon, badgeForSymbol, CoinBadge } from "../ui";
+import { AssetIcon, badgeForSymbol, CoinBadge, Section } from "../ui";
 import type { TokenSym } from "../ui/CoinBadge";
 
 /**
@@ -53,8 +53,7 @@ export function CollateralList({
   if (held.length === 0 && heldRemote.length === 0) return null;
 
   return (
-    <section className={className}>
-      <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Backing your limit</h2>
+    <Section title="Backing your limit" className={className}>
       <div className="rounded-[16px] border border-line bg-white px-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
         {held.map((asset, i) => (
           <div
@@ -111,7 +110,7 @@ export function CollateralList({
           );
         })}
       </div>
-    </section>
+    </Section>
   );
 }
 

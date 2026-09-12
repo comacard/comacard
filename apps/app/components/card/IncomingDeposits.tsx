@@ -1,6 +1,6 @@
 "use client";
 import type { PendingDeposit } from "../../lib/comacard/api";
-import { Spinner } from "../ui";
+import { Section, Spinner } from "../ui";
 
 /**
  * Deposits locked on another chain and not yet delivered.
@@ -32,8 +32,7 @@ export function IncomingDeposits({
   if (deposits.length === 0) return null;
 
   return (
-    <section className={className}>
-      <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Incoming</h2>
+    <Section title="Incoming" className={className}>
       <div className="rounded-[16px] border border-line bg-white px-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
         {deposits.map((deposit, i) => (
           <div
@@ -66,6 +65,6 @@ export function IncomingDeposits({
           </div>
         ))}
       </div>
-    </section>
+    </Section>
   );
 }

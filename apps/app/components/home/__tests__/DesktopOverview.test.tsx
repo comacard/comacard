@@ -109,11 +109,30 @@ beforeEach(() => {
   creditLine.mockReturnValue({ drawn: 0n, available: 33n });
 });
 
-test("leads with the card and offers no bucket or yield", () => {
+test("names the page and leads with the four figures, not with a card", () => {
   render(<DesktopOverview />);
 
-  expect(screen.getByText("Spendable")).toBeInTheDocument();
+  // Desktop used to open on a rounded rectangle with no statement of which screen it was, and with
+  // two destinations in the nav bar that is a real question.
+  expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeInTheDocument();
+
+  // The screen's whole subject. Before the strip, two of these were not on the page at all and
+  // "do I owe anything" was answered by whether a box existed.
+  expect(screen.getByText("Available to spend")).toBeInTheDocument();
+  expect(screen.getByText("33.3333 tCTC")).toBeInTheDocument();
+  expect(screen.getByText("Credit limit")).toBeInTheDocument();
+  expect(screen.getByText("Balance")).toBeInTheDocument();
+  expect(screen.getByText("Spent from your card")).toBeInTheDocument();
+
   expect(screen.queryByText(/bucket|APY|Growth|Agent/i)).toBeNull();
+});
+
+test("an unread figure is a dash, never a zero", () => {
+  // `limit` is absent from this mock, as it is on screen before the contract read lands. Printing
+  // 0 tCTC there would state something about the account that nothing has established.
+  render(<DesktopOverview />);
+
+  expect(screen.getByText("—")).toBeInTheDocument();
 });
 
 test("Spend and Deposit are both offered, and Spend goes to the full page", async () => {
@@ -131,10 +150,28 @@ test("an open balance leads with Repay without hiding Deposit", async () => {
   creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n });
   render(<DesktopOverview />);
 
-  expect(screen.getByText("Current balance")).toBeInTheDocument();
+  // The figure lives in the strip; the card holds the control alone, so the balance is stated once.
+  expect(screen.getByText("1 tCTC")).toBeInTheDocument();
+  expect(screen.getByText("Repay in full to close the cycle")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Repay" }));
+  expect(screen.getByRole("button", { name: "Spend" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Repay balance" }));
   expect(push).toHaveBeenCalledWith("/pay");
+});
+
+test("an unissued card reports no spendable figure rather than zero", () => {
+  cardAccount.mockReturnValue({
+    ...VERIFIED,
+    account: {
+      ...VERIFIED.account,
+      kyc: { verified: false, status: "Not Started", sessionId: null },
+    },
+  });
+  render(<DesktopOverview />);
+
+  // 0.0000 tCTC here reads as "your card is empty", which is a claim about money that nothing knows.
+  expect(screen.getByText("Card not issued yet")).toBeInTheDocument();
+  expect(screen.queryByText("33.3333 tCTC")).toBeNull();
 });
 
 test("an unverified holder is offered verification instead of the actions", async () => {

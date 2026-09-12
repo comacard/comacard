@@ -3,7 +3,7 @@ import { usePathname } from "next/navigation";
 import { type ReactNode, type TouchEvent, useRef, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AccountMenu } from "../../components/desktop/AccountMenu";
-import { BottomNav, DesktopNav, TopBlur } from "../../components/ui";
+import { BottomNav, DesktopNav, SHELL, TopBlur } from "../../components/ui";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { useNav } from "../../hooks/useNav";
 
@@ -68,10 +68,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             hooks never run on a phone. */}
         <DesktopNav account={isDesktop ? <AccountMenu /> : undefined} />
 
-        {/* Centered content column. Mobile keeps the exact px-5 pb-[120px] pt-14;
-            desktop widens the column, swaps padding, and drops the bottom-nav gutter.
-            Centering is mx-auto (never transform — U14). Widths from the mockup .appwin. */}
-        <div className="mx-auto w-full max-w-[1200px] px-5 pb-[120px] pt-14 lg:px-9 lg:pb-14 lg:pt-7 xl:max-w-[1440px] 2xl:max-w-[1560px]">
+        {/* Centered content column. Mobile keeps the exact px-5 pb-[120px] pt-14; desktop swaps the
+            padding and drops the bottom-nav gutter. `SHELL` is shared with the navigation bar so the
+            brand cannot stop lining up with the first card under it, and it caps the column at
+            1200px of content — the width every dashboard measured lands on, and 168px narrower than
+            what this ran at before. Centering is mx-auto (never transform — U14). */}
+        <div className={`${SHELL} pb-[120px] pt-14 lg:pb-16 lg:pt-8`}>
           <div
             key={pathname}
             className={
