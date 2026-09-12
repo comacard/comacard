@@ -34,7 +34,7 @@ limit.
 
 ## Live
 
-    https://indexer.dev.hyperindex.xyz/cbbaacc/v1/graphql
+    https://indexer.dev.hyperindex.xyz/24e4861/v1/graphql
 
 Each deployment gets its own URL on the Development plan, and old ones keep
 serving, so this changes whenever `main` moves. Consumers read `INDEXER_URL`.
