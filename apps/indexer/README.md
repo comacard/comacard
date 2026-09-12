@@ -32,6 +32,28 @@ long to sign. Show it as pending rather than as a missing balance.
 what the remote vault holds, `credited` is what Creditcoin counts toward a
 limit.
 
+## Withdrawals in flight
+
+`RemoteWithdrawal` is the mirror, and it has three stages rather than two,
+because a withdrawal is three transactions on two chains:
+
+```graphql
+{
+  RemoteWithdrawal(where: { account: { _eq: "0x…" } }) {
+    amount requestedAt approvedAt withdrawnAt
+    asset { wormholeChainId decimals }
+  }
+}
+```
+
+`requestedAt` — Creditcoin agreed and the credit is already gone.
+`approvedAt` — the guardians signed and the relay let the vault release it.
+`withdrawnAt` — the borrower signed for it. Only here is it in their wallet.
+
+The gap between the last two is not the protocol waiting on anything: the money
+is sitting in the vault and the borrower has not claimed it. A UI that says
+"withdrawn" at `approvedAt` is telling them something untrue.
+
 ## Live
 
     https://indexer.dev.hyperindex.xyz/24e4861/v1/graphql

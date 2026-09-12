@@ -197,6 +197,19 @@ indexer.onEvent({ contract: "WormholeVault", event: "Unlocked" }, async ({ event
     releasable: minus(p.releasable, event.params.amount),
     lastActiveAt: at,
   });
+
+  // The last of the three stages: the borrower has actually taken it.
+  const open = (await context.RemoteWithdrawal.getWhere({ account: { _eq: account } })).filter(
+    (w) => w.asset_id === asset && w.amount === event.params.amount && w.withdrawnAt === undefined,
+  );
+  const oldest = open.sort((a, b) => Number(a.requestedAt - b.requestedAt))[0];
+  if (oldest) {
+    context.RemoteWithdrawal.set({
+      ...oldest,
+      withdrawnAt: at,
+      withdrawTxHash: event.transaction.hash,
+    });
+  }
 });
 
 indexer.onEvent(
@@ -217,3 +230,68 @@ indexer.onEvent(
 
 // A stable id per log, kept for parity with the other handlers.
 void logId;
+
+// ---------------- Going the other way ----------------
+
+/**
+ * A withdrawal is three transactions on two chains, and the row tracks all
+ * three because collapsing them would tell a borrower they have their money
+ * while it is still sitting in a vault waiting for them to sign.
+ */
+indexer.onEvent(
+  { contract: "WormholeCollateralHub", event: "ReleaseRequested" },
+  async ({ event, context }) => {
+    const account = event.params.account.toLowerCase();
+    const asset = event.params.assetId.toLowerCase();
+    const at = BigInt(event.block.timestamp);
+
+    // The hub debits the moment it accepts, so the credit is already gone.
+    const p = await position(context, account, asset, at);
+    context.RemotePosition.set({
+      ...p,
+      credited: minus(p.credited, event.params.amount),
+      lastActiveAt: at,
+    });
+
+    const chainId = (await context.RemoteAsset.get(asset))?.wormholeChainId;
+    context.RemoteWithdrawal.set({
+      id: `${chainId ?? "unknown"}-${event.params.sequence}`,
+      account,
+      asset_id: asset,
+      amount: event.params.amount,
+      sequence: BigInt(event.params.sequence),
+      requestedAt: at,
+      requestTxHash: event.transaction.hash,
+      approvedAt: undefined,
+      approveTxHash: undefined,
+      vaaHash: undefined,
+      withdrawnAt: undefined,
+      withdrawTxHash: undefined,
+    });
+  },
+);
+
+/**
+ * The relay let the vault release it. Matched the same way a credit is matched
+ * back to its deposit: the event carries the token and amount but not the
+ * sequence, so the oldest open request for that account and asset is the one.
+ */
+indexer.onEvent({ contract: "ReleaseRelay", event: "Released" }, async ({ event, context }) => {
+  const chainId = wormholeChainId(event.chainId);
+  const account = event.params.account.toLowerCase();
+  const asset = assetId(chainId, event.params.token).toLowerCase();
+  const at = BigInt(event.block.timestamp);
+
+  const open = (await context.RemoteWithdrawal.getWhere({ account: { _eq: account } })).filter(
+    (w) => w.asset_id === asset && w.amount === event.params.amount && w.approvedAt === undefined,
+  );
+  const oldest = open.sort((a, b) => Number(a.requestedAt - b.requestedAt))[0];
+  if (!oldest) return;
+
+  context.RemoteWithdrawal.set({
+    ...oldest,
+    approvedAt: at,
+    approveTxHash: event.transaction.hash,
+    vaaHash: event.params.vaaHash,
+  });
+});

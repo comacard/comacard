@@ -43,3 +43,17 @@ test("the map holds no chain that has no vault", () => {
     expect(configured).toContain(id);
   }
 });
+
+/** A vault with no relay beside it can take deposits and never give them back. */
+function chainsWithARelay(): number[] {
+  const out: number[] = [];
+  for (const block of config.split(/^ {2}- id: /m).slice(1)) {
+    const id = Number(block.split("\n")[0]);
+    if (block.includes("ReleaseRelay")) out.push(id);
+  }
+  return out;
+}
+
+test("every vault chain also has a release relay", () => {
+  expect(chainsWithARelay().sort()).toEqual(chainsWithAVault().sort());
+});

@@ -224,3 +224,38 @@ type RemotePosition {
   releasable: BigInt!
   lastActiveAt: BigInt!
 }
+
+"""
+One withdrawal, from the moment Creditcoin agrees to it until the borrower has
+the money. Three stages, because they are three transactions on two chains and a
+UI that collapses them tells the user they are done before they are.
+
+`requestedAt` — the borrower asked, and the credit is already gone on Creditcoin.
+`approvedAt`  — the guardians signed and the relay let the vault release it.
+`withdrawnAt` — the borrower took it. Only here is it in their wallet.
+
+Null after the first means still in flight, the same convention RemoteDeposit
+uses. Between approved and withdrawn nothing is waiting on the protocol: the
+money is sitting there and the borrower has not signed for it yet.
+"""
+type RemoteWithdrawal {
+  id: ID! # wormholeChainId-sequence
+  """
+  Indexed so a relay's Released event can find the request it belongs to.
+  """
+  account: String! @index
+  asset: RemoteAsset!
+  amount: BigInt!
+  """
+  Wormhole message sequence from the hub. What a relayer needs to fetch it.
+  """
+  sequence: BigInt!
+
+  requestedAt: BigInt!
+  requestTxHash: String!
+  approvedAt: BigInt
+  approveTxHash: String
+  vaaHash: String
+  withdrawnAt: BigInt
+  withdrawTxHash: String
+}
