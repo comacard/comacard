@@ -1,6 +1,6 @@
 # Comacard indexer.
 #
-# Two chains, two very different sync paths. Sepolia is on Envio's HyperSync so
+# Four chains now. Two very different sync paths. Sepolia is on Envio's HyperSync so
 # it syncs in seconds. Creditcoin CC3 is not, so it reads over plain RPC — which
 # is fine here: the chain produces a block every 15 seconds and these contracts
 # were deployed days ago, so there is almost nothing to catch up on.
@@ -15,6 +15,15 @@ description: Credit lines sized by proved onchain history
 field_selection:
   transaction_fields:
     - hash
+
+# The same vault contract runs on every chain Attestcoin cannot reach, so its
+# events are declared once here and each chain only supplies an address.
+contracts:
+  - name: WormholeVault
+    events:
+      - event: Locked(address indexed account, address indexed token, uint256 amount, uint64 sequence)
+      - event: Unlocked(address indexed account, address indexed token, uint256 amount)
+      - event: ReleaseApproved(address indexed account, address indexed token, uint256 amount)
 
 chains:
   # ---- Ethereum Sepolia: where collateral is locked and stays ----
@@ -64,3 +73,31 @@ chains:
           - event: Delegated(address indexed stakingAccount, uint256 amount)
           - event: PrincipalReturned(uint256 amount)
           - event: RewardsReported(uint256 amount)
+
+      # Deposits that arrived by Wormhole rather than by Attestcoin.
+      - name: WormholeCollateralHub
+        address:
+          - 0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f
+        events:
+          - event: AssetListed(bytes32 indexed assetId, uint16 indexed chainId, bytes32 token, uint8 decimals, uint256 price)
+          - event: AssetPriceChanged(bytes32 indexed assetId, uint256 from, uint256 to)
+          - event: RemoteCollateralCredited(address indexed account, bytes32 indexed assetId, uint256 amount, bytes32 indexed vaaHash)
+
+  # ---- Chains Attestcoin cannot reach. A vault each, all the same contract ----
+  #
+  # The vault publishes at finalized consistency, so the guardians sign roughly
+  # fifteen minutes after a deposit. Until then the deposit shows here as locked
+  # and not credited, which is the truth rather than a gap.
+  - id: 84532
+    start_block: 46713760
+    contracts:
+      - name: WormholeVault
+        address:
+          - 0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf
+
+  - id: 421614
+    start_block: 308027795
+    contracts:
+      - name: WormholeVault
+        address:
+          - 0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30

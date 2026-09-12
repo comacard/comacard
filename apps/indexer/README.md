@@ -1,12 +1,36 @@
 # Indexer
 
-Reads both halves of Comacard into one GraphQL API: the collateral locks on
-Ethereum Sepolia and the credit line itself on Creditcoin.
+Reads every half of Comacard into one GraphQL API: the collateral locks on
+Ethereum Sepolia, the deposits on Base and Arbitrum Sepolia, and the credit line
+itself on Creditcoin.
 
-The two chains sync very differently. Sepolia is on Envio's HyperSync and comes
-down in seconds. Creditcoin CC3 is not, so it reads over plain RPC — which is
-fine here, because the chain produces a block every 15 seconds and these
-contracts are days old.
+The chains sync very differently. Sepolia, Base and Arbitrum are on Envio's
+HyperSync and come down in seconds. Creditcoin CC3 is not, so it reads over
+plain RPC — which is fine here, because the chain produces a block every 15
+seconds and these contracts are days old.
+
+## Deposits in flight
+
+`RemoteDeposit` is the row an app needs while a cross-chain deposit is on its
+way. It is written when the vault locks the funds and completed when Creditcoin
+credits them, and `creditedAt` is null in between:
+
+```graphql
+{
+  RemoteDeposit(where: { account: { _eq: "0x…" } }) {
+    amount sequence lockedAt creditedAt
+    asset { wormholeChainId token decimals price }
+  }
+}
+```
+
+That gap is normally about fifteen minutes. The vaults publish at finalized
+consistency and an L2 finalizes against Ethereum, so the guardians take that
+long to sign. Show it as pending rather than as a missing balance.
+
+`RemotePosition` carries the same distinction as a running total: `locked` is
+what the remote vault holds, `credited` is what Creditcoin counts toward a
+limit.
 
 ## Live
 
