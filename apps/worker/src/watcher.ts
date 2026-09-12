@@ -10,6 +10,21 @@ const VAULT_ABI = [
   "event TokenUnlocked(address indexed account, address indexed token, uint256 amount, uint256 nonce)",
 ];
 
+const ALREADY_PROCESSED = "Query already processed";
+
+/**
+ * The revert string or message, without ethers' transcript of the transaction
+ * that produced it. That transcript carries the entire encoded proof, which is
+ * kilobytes of hex per line and drowns everything else in the log.
+ */
+function reason(error: unknown): string {
+  const e = error as { reason?: unknown; shortMessage?: unknown; message?: unknown };
+  for (const field of [e.reason, e.shortMessage, e.message]) {
+    if (typeof field === "string" && field) return field.split("\n")[0] as string;
+  }
+  return String(error);
+}
+
 interface Pending {
   action: number;
   txHash: string;
@@ -101,7 +116,16 @@ export class Watcher {
       } catch (error) {
         // A failure here is usually "not attested yet" or an already-processed
         // query. Both resolve on a later pass, so the loop keeps going.
-        console.warn(`could not prove ${item.txHash}: ${(error as Error).message}`);
+        const why = reason(error);
+        if (why === ALREADY_PROCESSED) {
+          // The expected outcome of a restart, not a fault: the credit was
+          // already granted. Saying so in one line keeps a healthy boot
+          // readable, which an 8KB ethers dump of the whole proof does not.
+          this.seen.add(key);
+          console.log(`already credited, skipping ${item.txHash}`);
+        } else {
+          console.warn(`could not prove ${item.txHash}: ${why}`);
+        }
       }
     }
     return proved;
