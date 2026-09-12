@@ -150,9 +150,23 @@ the Attestcoin path makes.
 | Collateral vault | Real contract on Sepolia, testnet value |
 | Credit line and draws | Real transactions on Creditcoin CC3 testnet |
 | Cross-chain deposits | Real Wormhole guardian signatures, finalized consistency |
+| Cross-chain withdrawals | Real, and with no operator in the path |
+| Collateral prices | **Operator-fed.** Attestcoin proves transactions, not prices |
+| The Earn screen's vault figures | **An in-memory mock**, not this protocol — see [#9](https://github.com/comacard/comacard/issues/9) |
 
 Token values are testnet values; the cryptography and the state transitions are
 not simulated.
+
+The last two rows are the ones worth reading twice. Everything the credit line
+does — the limit, the collateral, the score, draws and repayments — is on chain
+and checkable. The yield figures on the Earn screen come from a mock client that
+predates this project, and the real staking state lives in `CtcStakingAdapter`
+instead: `deployedPrincipal` and `accruedRewards`, readable on Creditcoin.
+
+Wormhole's **testnet guardian set has one member**, so cross-chain messages here
+carry a single signature rather than the 13-of-19 the name suggests. The same
+contracts inherit 13-of-19 against mainnet. [TRUST.md](contracts/TRUST.md) sets
+out the rest.
 
 ## Layout
 
