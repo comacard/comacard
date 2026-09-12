@@ -259,3 +259,25 @@ type RemoteWithdrawal {
   withdrawnAt: BigInt
   withdrawTxHash: String
 }
+
+"""
+A release the far chain has acted on, before Creditcoin's side of it is indexed.
+
+Chains do not sync in step — Creditcoin reads over plain RPC while the others are
+on HyperSync, so a relay's Released arrives long before the hub's
+ReleaseRequested that it belongs to. Whichever lands second does the matching,
+and this is where the first one waits. Rows here are an implementation detail of
+that; read RemoteWithdrawal.
+"""
+type PendingReleaseStage {
+  id: ID! # account-assetId-amount-stage
+  account: String! @index
+  assetId: String!
+  amount: BigInt!
+  """
+  approved | withdrawn
+  """
+  stage: String!
+  at: BigInt!
+  txHash: String!
+}
