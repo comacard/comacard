@@ -20,6 +20,11 @@ field_selection:
 # events are declared once here and each chain only supplies an address.
 contracts:
   # One per chain, same contract, so its events are declared once here too.
+  #
+  # Every generation is listed per chain, not just the live one. A relay that was
+  # replaced still emitted the releases it handled, and dropping it rewrites
+  # history: the withdrawals it approved go back to reading "in flight", which is
+  # a wrong answer about money rather than a missing one. Append on redeploy.
   - name: ReleaseRelay
     events:
       - event: Released(address indexed account, address indexed token, uint256 amount, bytes32 vaaHash)
@@ -103,6 +108,8 @@ chains:
 
       - name: ReleaseRelay
         address:
+          - 0x4f75738d7738a5735B6Bb83f77225D02F7cB49EB
+          - 0x70DC0F161Cef5C029b75ccEaA9b75445B4c8B8E6
           - 0x4ab591d70462c69792E35d7C61f118BEFd45e62e
 
   - id: 421614
@@ -114,6 +121,8 @@ chains:
 
       - name: ReleaseRelay
         address:
+          - 0xAAf7439Bd2d4353efB121A06A4884577F0E40D5f
+          - 0x1bb43c2efb341cF099E4F016465e624C6F6B892b
           - 0xFcb45153DbA2fAd0864E1e24293C33AB99b507eB
 
   - id: 11155420
@@ -125,6 +134,8 @@ chains:
 
       - name: ReleaseRelay
         address:
+          - 0x9dAf66b75d348D4f90B125a282bBFA608Ecec13C
+          - 0x4659f0d99587D4fA396840d982a4215FcFe8a557
           - 0xE3965709c657748501bB33a55AEFdE7F9622FD5E
 
   - id: 97
@@ -136,6 +147,8 @@ chains:
 
       - name: ReleaseRelay
         address:
+          - 0x6a93d6b1119653AAe3291e24A8FAf615652AdB1B
+          - 0x5844Cf8Bbf41a2e25Ed3F40Ee96E64F31330cA3D
           - 0x740B0c07c3291FECF5e852F86652Ffbb575A2378
 
   - id: 43113
@@ -147,5 +160,7 @@ chains:
 
       - name: ReleaseRelay
         address:
+          - 0x9E3369116948DD10F28B158e650efdd3031b37d2
+          - 0xbD3328Bde4B15CF562938202a586C63aCd92b705
           - 0xDE88C384AC8347F8C8B78C7DDE40432B95F629E1
 
