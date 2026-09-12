@@ -6,6 +6,7 @@ import {
 } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {Governed} from "../governance/Governed.sol";
+import {ICreditLine} from "../interfaces/ICreditLine.sol";
 import {IRemoteCollateral} from "../interfaces/IRemoteCollateral.sol";
 import {IWormhole} from "../interfaces/IWormhole.sol";
 import {CollateralMessage} from "../libraries/CollateralMessage.sol";
@@ -74,6 +75,11 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
 
     uint256 internal constant PRICE_SCALE = 1e18;
 
+    /// @notice How final a release must be before the guardians sign it.
+    /// @dev Finalized, the same as a deposit. A release that a reorg could undo
+    ///      would let collateral leave a vault against a debt that came back.
+    uint8 internal constant CONSISTENCY_FINALIZED = 1;
+
     event VaultPeerChanged(uint16 indexed chainId, bytes32 from, bytes32 to);
     event AssetListed(
         bytes32 indexed assetId,
@@ -87,6 +93,9 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
         address indexed account, bytes32 indexed assetId, uint256 amount, bytes32 indexed vaaHash
     );
     event CreditLineChanged(address indexed from, address indexed to);
+    event ReleaseRequested(
+        address indexed account, bytes32 indexed assetId, uint256 amount, uint64 sequence
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -160,6 +169,66 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
 
         emit RemoteCollateralCredited(account, assetId, amount, vaaData.hash);
         IScoreRefresher(creditLine).refreshScore(account);
+    }
+
+    // --------------------------------------------------------------------
+    // Releasing
+    // --------------------------------------------------------------------
+
+    /// @notice Ask for collateral back on the chain it sits on.
+    /// @dev No operator anywhere in this path. The borrower calls it, the hub
+    ///      checks their debt still stands up without the collateral, and
+    ///      Wormhole carries the answer to the vault holding it.
+    ///
+    ///      This is the leg Attestcoin cannot do yet — writability is still in
+    ///      audit, so collateral proved from Sepolia is released by a human.
+    ///      Anything that arrived by Wormhole goes back the same way.
+    function requestRelease(uint16 chainId, bytes32 token, uint256 amount)
+        external
+        payable
+        whenNotPaused
+        nonReentrant
+        returns (uint64 sequence)
+    {
+        if (amount == 0) revert CreditErrors.ZeroAmount();
+
+        bytes32 assetId = CollateralMessage.assetId(chainId, token);
+        RemoteAsset storage asset = remoteAsset[assetId];
+        if (!asset.listed) revert CreditErrors.AssetNotListed(assetId);
+
+        bytes32 peer = vaultPeer[chainId];
+        if (peer == bytes32(0)) revert CreditErrors.UnknownPeer(chainId, peer);
+
+        uint256 held = collateralOf[msg.sender][assetId];
+        if (amount > held) revert CreditErrors.InsufficientCollateral();
+
+        // Debit first, then ask the credit line what the borrower's limit is
+        // worth without it. The line reads this contract for its remote
+        // collateral, so the check sees the world as it will be, not as it is.
+        collateralOf[msg.sender][assetId] = held - amount;
+
+        uint256 drawn = ICreditLine(creditLine).accountOf(msg.sender).drawn;
+        uint256 remainingLimit = ICreditLine(creditLine).limitOf(msg.sender);
+        if (drawn > remainingLimit) {
+            collateralOf[msg.sender][assetId] = held; // put it back
+            revert CreditErrors.ReleaseWouldStrandDebt(drawn, remainingLimit);
+        }
+
+        uint256 fee = wormhole.messageFee();
+        if (msg.value < fee) revert CreditErrors.InsufficientLiquidity(fee, msg.value);
+
+        sequence = wormhole.publishMessage{value: fee}(
+            0,
+            CollateralMessage.encodeRelease(
+                CollateralMessage.Deposit({
+                    account: msg.sender, token: token, amount: amount, decimals: asset.decimals
+                })
+            ),
+            CONSISTENCY_FINALIZED
+        );
+
+        emit ReleaseRequested(msg.sender, assetId, amount, sequence);
+        IScoreRefresher(creditLine).refreshScore(msg.sender);
     }
 
     // --------------------------------------------------------------------
