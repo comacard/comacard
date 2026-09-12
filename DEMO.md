@@ -187,10 +187,32 @@ that only relays what was signed.
 safety argument: `valueOf` drops the instant the request is accepted, so there
 is no window where the collateral is both backing a limit and on its way out.
 
-**Try it with a debt outstanding and it refuses.** Draw first, then request a
-release large enough to strand it: `ReleaseWouldStrandDebt`. That is worth
-showing deliberately — a withdrawal that succeeds is a feature, a withdrawal
-that knows when to say no is a credit product.
+**Try it with a debt outstanding and it refuses.** The reliable way to show this
+is to draw everything first, so *any* release strands the debt:
+
+```sh
+AVAIL=$(cast call $ASC_CREDIT_LINE_ADDRESS "availableOf(address)(uint256)" \
+  $YOUR_ADDRESS --rpc-url $CC | awk '{print $1}')
+cast send $ASC_CREDIT_LINE_ADDRESS "draw(uint256)" $AVAIL \
+  --rpc-url $CC --private-key $WALLET_PK
+# now request any release at all
+```
+
+It comes back `ReleaseWouldStrandDebt(479.03, 478.82)` — refusing by exactly the
+margin it would have been short. A small release against a large limit will
+*succeed*, which is correct and looks like nothing happening, so draw first.
+
+A withdrawal that succeeds is a feature; one that knows when to say no is a
+credit product.
+
+**Repaying afterwards needs the exact figure.** `repay()` reverts with
+`RepaymentExceedsDebt` if `msg.value` is over the outstanding, so read it first
+rather than rounding up:
+
+```sh
+cast call $ASC_CREDIT_LINE_ADDRESS "accountOf(address)(...)" $YOUR_ADDRESS --rpc-url $CC
+cast send $ASC_CREDIT_LINE_ADDRESS "repay()" --value <exactly that> ...
+```
 
 The honest caveat, and say it before anyone asks: **the Sepolia leg is still
 operator-approved.** Attestcoin writability is in third-party audit, so
@@ -270,5 +292,8 @@ competence; being caught reads as the opposite.
 - *`relay` sits there and nothing happens* — the guardians have not signed yet.
   Fifteen minutes from the deposit, not from when you started waiting. Check
   https://wormholescan.io/#/?network=Testnet for the message.
+- *A repayment reverts* — you sent more than the debt. `repay()` refuses
+  `msg.value` above the outstanding rather than refunding the difference. Read
+  `accountOf(...).drawn` and send exactly that.
 - *The indexer shows an old limit* — it caches per account and refreshes on that
   account's next event. Read `limitOf` from the contract for a live figure.
