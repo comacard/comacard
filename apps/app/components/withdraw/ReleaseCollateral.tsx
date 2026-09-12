@@ -98,6 +98,11 @@ export function ReleaseCollateral({ id }: { id: string }) {
   const { writeContractAsync, data: hash, error, reset } = useWriteContract();
   const [amount, setAmount] = useState("0");
   const [busy, setBusy] = useState(false);
+  // Everything that can fail before the wallet is even asked — switching chains, reading the message
+  // fee, the receipt check afterwards — used to be caught and dropped, because the only error shown
+  // was `useWriteContract`'s. A declined chain switch left the button idle with nothing said, which
+  // is indistinguishable from the click not registering.
+  const [failed, setFailed] = useState<string | null>(null);
   const [requested, setRequested] = useState(false);
   const [claimed, setClaimed] = useState(false);
 
@@ -148,6 +153,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
   const onRequest = async () => {
     if (busy || entered <= 0n || exceeded || !REMOTE_HUB) return;
     setBusy(true);
+    setFailed(null);
     try {
       await switchChainAsync({ chainId: CREDITCOIN_CHAIN_ID });
 
@@ -177,8 +183,8 @@ export function ReleaseCollateral({ id }: { id: string }) {
       setRequested(true);
       refresh();
       refreshWithdrawals();
-    } catch {
-      // Surfaced by `error` below; caught only to stop an unhandled rejection.
+    } catch (cause) {
+      setFailed(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setBusy(false);
     }
@@ -189,6 +195,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
     const vault = asset.vault;
     if (busy || !chainId || !vault || asset.releasable <= 0n) return;
     setBusy(true);
+    setFailed(null);
     try {
       await switchChainAsync({ chainId });
       const who = (await config.connectors[0]?.getAccounts().then((a) => a[0])) as Address;
@@ -233,8 +240,8 @@ export function ReleaseCollateral({ id }: { id: string }) {
       setClaimed(true);
       refresh();
       refreshWithdrawals();
-    } catch {
-      /* surfaced below */
+    } catch (cause) {
+      setFailed(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setBusy(false);
     }
@@ -308,8 +315,12 @@ export function ReleaseCollateral({ id }: { id: string }) {
           </p>
         </div>
 
-        {error ? (
-          <TransactionStatus status="failed" detail={explain(error.message)} className="mt-3" />
+        {error || failed ? (
+          <TransactionStatus
+            status="failed"
+            detail={explain(error?.message ?? failed ?? "")}
+            className="mt-3"
+          />
         ) : null}
 
         <div className="mt-auto">
@@ -354,8 +365,12 @@ export function ReleaseCollateral({ id }: { id: string }) {
         </div>
       ) : null}
 
-      {error ? (
-        <TransactionStatus status="failed" detail={explain(error.message)} className="mb-3" />
+      {error || failed ? (
+        <TransactionStatus
+          status="failed"
+          detail={explain(error?.message ?? failed ?? "")}
+          className="mb-3"
+        />
       ) : null}
 
       <div className="mt-auto">

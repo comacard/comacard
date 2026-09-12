@@ -72,6 +72,11 @@ export function LockRemoteCollateral({ id }: { id: string }) {
 
   const [amount, setAmount] = useState("0");
   const [busy, setBusy] = useState(false);
+  // Everything that can fail before the wallet is even asked — switching chains, reading the message
+  // fee, the receipt check afterwards — used to be caught and dropped, because the only error shown
+  // was `useWriteContract`'s. A declined chain switch left the button idle with nothing said, which
+  // is indistinguishable from the click not registering.
+  const [failed, setFailed] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   const asset: RemoteAsset | null =
@@ -114,6 +119,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   const onLock = async () => {
     if (busy || entered <= 0n || exceeded) return;
     setBusy(true);
+    setFailed(null);
     try {
       await switchChainAsync({ chainId });
 
@@ -207,8 +213,8 @@ export function LockRemoteCollateral({ id }: { id: string }) {
 
       await awaitSuccess(config, sent, chainId, async () => (await heldByVault()) > before);
       setDone(true);
-    } catch {
-      // Surfaced by `error` below; caught only to stop an unhandled rejection.
+    } catch (cause) {
+      setFailed(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setBusy(false);
     }
@@ -288,8 +294,12 @@ export function LockRemoteCollateral({ id }: { id: string }) {
         />
       </div>
 
-      {error ? (
-        <TransactionStatus status="failed" detail={error.message.split("\n")[0]} className="mb-3" />
+      {error || failed ? (
+        <TransactionStatus
+          status="failed"
+          detail={(error?.message ?? failed ?? "").split("\n")[0]}
+          className="mb-3"
+        />
       ) : null}
 
       <div className="mt-auto">
