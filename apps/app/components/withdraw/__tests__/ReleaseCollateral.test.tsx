@@ -147,3 +147,51 @@ test("a debt the collateral barely covers frees nothing at all", () => {
     screen.getByText(/0\.05 ETH of this is backing what you have already spent/),
   ).toBeInTheDocument();
 });
+
+test("the chain wins: an approved release beats an indexer still saying in flight", () => {
+  // Not hypothetical. Two of the three real withdrawals on the live indexer carry `withdrawnAt`
+  // with `approvedAt` still null, because the handler that fills the middle stage was broken for a
+  // while and the rows were never backfilled. Trusting the indexer for the stage would have left a
+  // borrower staring at "on its way" with their money sitting in the vault, claimable.
+  //
+  // This is @FjrREPO's rule in #8, and the ordering here is what implements it: the indexer is for
+  // history, the chain for anything the user is about to act on.
+  remote.mockReturnValue({
+    assets: [{ ...ASSET, releasable: 20n * 10n ** 15n }],
+    loading: false,
+    refresh: vi.fn(),
+  });
+  withdrawals.mockReturnValue({
+    items: [
+      {
+        id: "4-0",
+        assetId: "0xabc",
+        amount: 20n * 10n ** 15n,
+        decimals: 18,
+        wormholeChainId: 4,
+        requestedAt: 1,
+        requestTxHash: "0x1",
+        approvedAt: null,
+        approveTxHash: null,
+      },
+    ],
+    loading: false,
+    error: false,
+    refresh: vi.fn(),
+  });
+  render(<ReleaseCollateral id="0xabc" />);
+
+  expect(screen.getByText("Ready to withdraw")).toBeInTheDocument();
+  expect(screen.queryByText(/on its way/)).toBeNull();
+});
+
+test("an unreachable indexer costs persistence, never a false claim", () => {
+  // The hook throws rather than answering "no withdrawals", so `items` is empty and the screen
+  // falls back to the request form. That is the right degradation: it under-reports a request it
+  // cannot see instead of asserting there is none.
+  withdrawals.mockReturnValue({ items: [], loading: false, error: true, refresh: vi.fn() });
+  render(<ReleaseCollateral id="0xabc" />);
+
+  expect(screen.getByRole("button", { name: /Withdraw ETH/ })).toBeInTheDocument();
+  expect(screen.queryByText(/on its way/)).toBeNull();
+});
