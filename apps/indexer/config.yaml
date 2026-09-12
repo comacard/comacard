@@ -103,7 +103,7 @@ chains:
 
       - name: ReleaseRelay
         address:
-          - 0x70DC0F161Cef5C029b75ccEaA9b75445B4c8B8E6
+          - 0x4ab591d70462c69792E35d7C61f118BEFd45e62e
 
   - id: 421614
     start_block: 308027795
@@ -114,7 +114,7 @@ chains:
 
       - name: ReleaseRelay
         address:
-          - 0x1bb43c2efb341cF099E4F016465e624C6F6B892b
+          - 0xFcb45153DbA2fAd0864E1e24293C33AB99b507eB
 
   - id: 11155420
     start_block: 48704811
@@ -125,7 +125,7 @@ chains:
 
       - name: ReleaseRelay
         address:
-          - 0x4659f0d99587D4fA396840d982a4215FcFe8a557
+          - 0xE3965709c657748501bB33a55AEFdE7F9622FD5E
 
   - id: 97
     start_block: 130590252
@@ -136,7 +136,7 @@ chains:
 
       - name: ReleaseRelay
         address:
-          - 0x5844Cf8Bbf41a2e25Ed3F40Ee96E64F31330cA3D
+          - 0x740B0c07c3291FECF5e852F86652Ffbb575A2378
 
   - id: 43113
     start_block: 58332202
@@ -147,5 +147,5 @@ chains:
 
       - name: ReleaseRelay
         address:
-          - 0xbD3328Bde4B15CF562938202a586C63aCd92b705
+          - 0xDE88C384AC8347F8C8B78C7DDE40432B95F629E1
 

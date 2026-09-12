@@ -26,11 +26,11 @@ signed message.
 | `WormholeVault` | Optimism Sepolia (`11155420`) | [`0xCaBFa324576c655D0276647A7f0aF5e779123e0B`](https://sepolia-optimism.etherscan.io/address/0xCaBFa324576c655D0276647A7f0aF5e779123e0B) |
 | `WormholeVault` | BSC Testnet (`97`) | [`0x9d8B6852705dD7585B3907244d603547a4eA32d6`](https://testnet.bscscan.com/address/0x9d8B6852705dD7585B3907244d603547a4eA32d6) |
 | `WormholeVault` | Avalanche Fuji (`43113`) | [`0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b`](https://testnet.snowtrace.io/address/0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b) |
-| `ReleaseRelay` | Base Sepolia | [`0x70DC0F161Cef5C029b75ccEaA9b75445B4c8B8E6`](https://sepolia.basescan.org/address/0x70DC0F161Cef5C029b75ccEaA9b75445B4c8B8E6) |
-| `ReleaseRelay` | Arbitrum Sepolia | [`0x1bb43c2efb341cF099E4F016465e624C6F6B892b`](https://sepolia.arbiscan.io/address/0x1bb43c2efb341cF099E4F016465e624C6F6B892b) |
-| `ReleaseRelay` | Optimism Sepolia | [`0x4659f0d99587D4fA396840d982a4215FcFe8a557`](https://sepolia-optimism.etherscan.io/address/0x4659f0d99587D4fA396840d982a4215FcFe8a557) |
-| `ReleaseRelay` | BSC Testnet | [`0x5844Cf8Bbf41a2e25Ed3F40Ee96E64F31330cA3D`](https://testnet.bscscan.com/address/0x5844Cf8Bbf41a2e25Ed3F40Ee96E64F31330cA3D) |
-| `ReleaseRelay` | Avalanche Fuji | [`0xbD3328Bde4B15CF562938202a586C63aCd92b705`](https://testnet.snowtrace.io/address/0xbD3328Bde4B15CF562938202a586C63aCd92b705) |
+| `ReleaseRelay` | Base Sepolia | [`0x4ab591d70462c69792E35d7C61f118BEFd45e62e`](https://sepolia.basescan.org/address/0x4ab591d70462c69792E35d7C61f118BEFd45e62e) |
+| `ReleaseRelay` | Arbitrum Sepolia | [`0xFcb45153DbA2fAd0864E1e24293C33AB99b507eB`](https://sepolia.arbiscan.io/address/0xFcb45153DbA2fAd0864E1e24293C33AB99b507eB) |
+| `ReleaseRelay` | Optimism Sepolia | [`0xE3965709c657748501bB33a55AEFdE7F9622FD5E`](https://sepolia-optimism.etherscan.io/address/0xE3965709c657748501bB33a55AEFdE7F9622FD5E) |
+| `ReleaseRelay` | BSC Testnet | [`0x740B0c07c3291FECF5e852F86652Ffbb575A2378`](https://testnet.bscscan.com/address/0x740B0c07c3291FECF5e852F86652Ffbb575A2378) |
+| `ReleaseRelay` | Avalanche Fuji | [`0xDE88C384AC8347F8C8B78C7DDE40432B95F629E1`](https://testnet.snowtrace.io/address/0xDE88C384AC8347F8C8B78C7DDE40432B95F629E1) |
 
 The Creditcoin and Sepolia contracts are UUPS proxies. The vaults are not: one
 is deployed per chain, its job is small, and a proxy on every chain is machinery
