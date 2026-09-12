@@ -10,13 +10,89 @@ export type KycStatus = {
   updatedAt: number | null;
 };
 
-const WEI = 10n ** 18n;
+/** "1.2345" from base units, truncated, with no float in between. */
+export function formatUnits(amount: bigint, decimals: number, places = 4): string {
+  const unit = 10n ** BigInt(decimals);
+  const scale = 10n ** BigInt(places);
+  const whole = amount / unit;
+  const frac = ((amount % unit) * scale) / unit;
+  return `${whole}.${frac.toString().padStart(places, "0")}`;
+}
 
-/** "1.2345" from wei, four decimals, no float in between. */
-export function formatCtc(wei: bigint): string {
-  const whole = wei / WEI;
-  const frac = ((wei % WEI) * 10_000n) / WEI;
-  return `${whole}.${frac.toString().padStart(4, "0")}`;
+export const formatCtc = (wei: bigint): string => formatUnits(wei, 18);
+
+/**
+ * Wormhole chain ids are their own number space, unrelated to EVM chain ids:
+ * 10004 is Base Sepolia and so is 84532. The indexer stores the Wormhole one,
+ * so that is what arrives here.
+ */
+export const REMOTE_CHAINS: Record<number, { name: string; explorer: string }> = {
+  10003: { name: "Arbitrum Sepolia", explorer: "https://sepolia.arbiscan.io" },
+  10004: { name: "Base Sepolia", explorer: "https://sepolia.basescan.org" },
+};
+
+export const NETWORK = {
+  creditcoin: { name: "Creditcoin", explorer: "https://creditcoin-testnet.blockscout.com" },
+  sepolia: { name: "Ethereum Sepolia", explorer: "https://sepolia.etherscan.io" },
+} as const;
+
+export const txUrl = (explorer: string, hash: string) => `${explorer}/tx/${hash}`;
+
+/**
+ * How long the Wormhole guardians take to sign, nominally.
+ *
+ * The vault publishes at finalized consistency and an L2 finalizes against
+ * Ethereum, so this is minutes rather than seconds. One measured delivery took
+ * 1049s. It is a guide for the waiting screen, not a deadline: past it the
+ * deposit is reported as slow, never as failed.
+ */
+export const FINALITY_WAIT_SECONDS = 900;
+
+export type RemoteDepositRow = {
+  id: string;
+  account: string;
+  amount: string;
+  sequence: string;
+  lockedAt: string;
+  lockTxHash: string;
+  creditedAt: string | null;
+  creditTxHash: string | null;
+  asset: { wormholeChainId: number; token: string; decimals: number };
+};
+
+/**
+ * A cross-chain deposit as the card app should read it.
+ *
+ * `credited` is the whole story: until the message is delivered the funds are
+ * locked on the far chain and the limit has not moved, which looks like a
+ * broken deposit unless the screen says otherwise.
+ */
+export function remoteDepositView(row: RemoteDepositRow, now: number) {
+  const chain = REMOTE_CHAINS[row.asset.wormholeChainId];
+  const lockedAt = Number(row.lockedAt);
+  const credited = row.creditedAt !== null;
+  const elapsedSeconds = Math.max(0, now - lockedAt);
+  return {
+    id: row.id,
+    chain: chain?.name ?? `Wormhole chain ${row.asset.wormholeChainId}`,
+    wormholeChainId: row.asset.wormholeChainId,
+    token: row.asset.token,
+    decimals: row.asset.decimals,
+    amount: row.amount,
+    amountFormatted: formatUnits(BigInt(row.amount), row.asset.decimals),
+    sequence: row.sequence,
+    credited,
+    lockedAt,
+    lockTxHash: row.lockTxHash,
+    lockTxUrl: chain ? txUrl(chain.explorer, row.lockTxHash) : null,
+    creditedAt: row.creditedAt === null ? null : Number(row.creditedAt),
+    creditTxHash: row.creditTxHash,
+    creditTxUrl: row.creditTxHash ? txUrl(NETWORK.creditcoin.explorer, row.creditTxHash) : null,
+    elapsedSeconds,
+    waitSeconds: FINALITY_WAIT_SECONDS,
+    /** Still waiting, and longer than usual. Not a failure. */
+    slow: !credited && elapsedSeconds > FINALITY_WAIT_SECONDS,
+  };
 }
 
 export type CardState =

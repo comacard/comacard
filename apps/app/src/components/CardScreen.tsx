@@ -17,6 +17,7 @@ import {
   explorerTx,
   fetchAccount,
   fetchActivity,
+  type PendingDeposit,
   startKyc,
 } from "@/lib/api";
 import { CREDIT_LINE, creditLineAbi } from "@/lib/creditLine";
@@ -99,6 +100,7 @@ function Wallet({ wallet, canSign }: { wallet: string; canSign: boolean }) {
   return (
     <>
       <Card data={account.data} />
+      <Pending deposits={account.data.pendingDeposits ?? []} />
       <Kyc data={account.data} wallet={wallet} />
       <CardDetails data={account.data} />
       {account.data.credit && <Credit data={account.data} />}
@@ -160,6 +162,47 @@ function CardDetails({ data }: { data: Account }) {
         issued {card.issuedAt ? new Date(card.issuedAt * 1000).toLocaleDateString() : ""}
       </span>
     </Row>
+  );
+}
+
+const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
+
+/**
+ * Deposits locked on another chain and not yet delivered.
+ *
+ * Wormhole guardians sign at finalized consistency, so the money leaves the
+ * user's wallet minutes before the limit moves. Without this the screen shows a
+ * deposit that did nothing, which reads as a broken product rather than a
+ * pending one.
+ */
+function Pending({ deposits }: { deposits: PendingDeposit[] }) {
+  if (deposits.length === 0) return null;
+  return (
+    <section className="rounded-3xl bg-amber-100/70 p-4">
+      <p className="text-xs uppercase tracking-widest text-amber-900/70">Incoming</p>
+      <ul className="mt-2 space-y-2">
+        {deposits.map((d) => (
+          <li key={d.id} className="text-sm text-amber-950">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-medium">
+                {d.amountFormatted} from {d.chain}
+              </span>
+              <span className="shrink-0 text-xs opacity-70">{minutes(d.elapsedSeconds)}m ago</span>
+            </div>
+            <p className="mt-0.5 text-xs opacity-80">
+              {d.slow
+                ? "Taking longer than usual. The deposit is safe and still on its way."
+                : `Waiting on finality, usually about ${minutes(d.waitSeconds)} minutes.`}
+            </p>
+            {d.lockTxUrl && (
+              <a href={d.lockTxUrl} target="_blank" rel="noreferrer" className="text-xs underline">
+                View deposit
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -337,24 +380,33 @@ function Activity({ items }: { items: ActivityItem[] }) {
         {items.map((i) => (
           <li key={i.id} className="flex items-center justify-between px-4 py-3 text-sm">
             <div>
-              <p className="capitalize">{i.kind.replace("_", " ")}</p>
-              <p className="text-xs text-ink/50">{when(i.timestamp)}</p>
+              <p className="capitalize">
+                {i.kind.replace(/_/g, " ")}
+                {i.pending && <span className="ml-2 text-xs text-amber-700">pending</span>}
+              </p>
+              <p className="text-xs text-ink/50">
+                {i.chain} · {when(i.timestamp)}
+              </p>
             </div>
             <a
-              href={explorerTx(i.chain, i.txHash)}
+              href={i.txUrl ?? "#"}
               target="_blank"
               rel="noreferrer"
               className="font-code text-xs underline"
             >
-              {i.kind === "default"
-                ? formatEther(BigInt(i.writtenOff ?? "0"))
-                : formatEther(BigInt(i.amount ?? "0"))}
+              {amountOf(i)}
             </a>
           </li>
         ))}
       </ul>
     </section>
   );
+}
+
+/** Remote deposits carry their own decimals, so the API formats those; the rest are CTC. */
+function amountOf(i: ActivityItem): string {
+  if (i.amountFormatted) return i.amountFormatted;
+  return formatEther(BigInt((i.kind === "default" ? i.writtenOff : i.amount) ?? "0"));
 }
 
 function Row({

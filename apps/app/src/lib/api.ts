@@ -34,6 +34,7 @@ export type Account = {
     availableCtc: string;
     drawnCtc: string;
   } | null;
+  pendingDeposits: PendingDeposit[];
   card: {
     active: boolean;
     issued: boolean;
@@ -48,14 +49,34 @@ export type Account = {
   };
 };
 
+export type PendingDeposit = {
+  id: string;
+  chain: string;
+  amountFormatted: string;
+  lockTxUrl: string | null;
+  elapsedSeconds: number;
+  waitSeconds: number;
+  slow: boolean;
+};
+
 export type ActivityItem = {
-  kind: "draw" | "repayment" | "collateral_locked" | "collateral_unlocked" | "default";
-  chain: "creditcoin" | "sepolia";
+  kind:
+    | "draw"
+    | "repayment"
+    | "collateral_locked"
+    | "collateral_unlocked"
+    | "default"
+    | "remote_deposit";
+  /** Display name now, not a slug: "Creditcoin", "Base Sepolia". */
+  chain: string;
   id: string;
   timestamp: string;
   txHash: string;
+  txUrl: string | null;
   amount?: string;
+  amountFormatted?: string;
   writtenOff?: string;
+  pending?: boolean;
 };
 
 async function get<T>(path: string): Promise<T> {

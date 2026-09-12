@@ -205,6 +205,38 @@ export const openapi = {
           spendableCtc: { type: "string" },
         },
       },
+      RemoteDeposit: {
+        type: "object",
+        description:
+          "A deposit locked on another chain. Wormhole guardians sign at finalized consistency, so `credited` stays false for minutes while the funds sit in the far vault and the limit has not moved.",
+        properties: {
+          id: { type: "string", example: "10004-7" },
+          chain: { type: "string", example: "Base Sepolia" },
+          wormholeChainId: {
+            type: "integer",
+            description:
+              "Wormhole's own id, unrelated to the EVM chain id. 10004 Base Sepolia, 10003 Arbitrum Sepolia.",
+          },
+          token: { type: "string", description: "zero address for the native coin" },
+          decimals: { type: "integer" },
+          amount: { type: "string", description: "base units of the asset's own decimals" },
+          amountFormatted: { type: "string", example: "50.0000" },
+          sequence: { type: "string" },
+          credited: { type: "boolean", description: "false means still in flight" },
+          lockedAt: { type: "integer" },
+          lockTxHash: { type: "string" },
+          lockTxUrl: { type: "string", nullable: true },
+          creditedAt: { type: "integer", nullable: true },
+          creditTxHash: { type: "string", nullable: true },
+          creditTxUrl: { type: "string", nullable: true },
+          elapsedSeconds: { type: "integer" },
+          waitSeconds: { type: "integer", description: "nominal guardian signing time" },
+          slow: {
+            type: "boolean",
+            description: "still waiting and past the nominal time; not a failure",
+          },
+        },
+      },
       Account: {
         type: "object",
         properties: {
@@ -215,6 +247,12 @@ export const openapi = {
             properties: { wei: Wei, ctc: { type: "string", example: "9939.9774" } },
           },
           credit: { $ref: "#/components/schemas/Credit" },
+          pendingDeposits: {
+            type: "array",
+            description:
+              "Cross-chain deposits still in flight. Show these as pending: the user has deposited and the limit has not moved yet, which reads as a bug otherwise.",
+            items: { $ref: "#/components/schemas/RemoteDeposit" },
+          },
           card: { $ref: "#/components/schemas/Card" },
         },
       },
@@ -223,9 +261,18 @@ export const openapi = {
         properties: {
           kind: {
             type: "string",
-            enum: ["draw", "repayment", "collateral_locked", "collateral_unlocked", "default"],
+            enum: [
+              "draw",
+              "repayment",
+              "collateral_locked",
+              "collateral_unlocked",
+              "default",
+              "remote_deposit",
+            ],
           },
-          chain: { type: "string", enum: ["creditcoin", "sepolia"] },
+          chain: { type: "string", description: "display name", example: "Base Sepolia" },
+          txUrl: { type: "string", nullable: true, description: "explorer link for this chain" },
+          pending: { type: "boolean", description: "remote_deposit only: not yet delivered" },
           id: { type: "string" },
           timestamp: { type: "string" },
           txHash: { type: "string" },

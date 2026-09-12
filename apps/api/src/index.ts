@@ -1,6 +1,6 @@
 import { issueCard } from "./card";
 import { docsHtml, openapi } from "./openapi";
-import { cardState, formatCtc, isAddress } from "./shape";
+import { cardState, formatCtc, isAddress, NETWORK, remoteDepositView, txUrl } from "./shape";
 import {
   ACCOUNT_FIELDS,
   balanceOf,
@@ -11,6 +11,7 @@ import {
   kycStart,
   kycStatus,
   liveCredit,
+  remoteDeposits,
   stakingAdapterState,
 } from "./sources";
 
@@ -51,7 +52,8 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
     const wallet = req.params.wallet.toLowerCase();
     if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
 
-    const [kyc, { Account }, balance, live] = await Promise.all([
+    const at = now();
+    const [kyc, { Account }, balance, live, remote] = await Promise.all([
       kycStatus(wallet),
       indexer<{ Account: IndexedAccount[] }>(
         `query($id:String!){ Account(where:{id:{_eq:$id}}){ ${ACCOUNT_FIELDS} } }`,
@@ -59,10 +61,11 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
       ),
       balanceOf(wallet),
       liveCredit(wallet),
+      remoteDeposits(wallet),
     ]);
     const account = Account[0] ?? null;
-    const card = cardState(kyc, account, live.available, now());
-    const issued = kyc.verified ? issueCard(wallet, kyc.updatedAt ?? now(), env.cardSecret) : null;
+    const card = cardState(kyc, account, live.available, at);
+    const issued = kyc.verified ? issueCard(wallet, kyc.updatedAt ?? at, env.cardSecret) : null;
 
     return Response.json({
       wallet,
@@ -87,6 +90,11 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
             drawnCtc: formatCtc(BigInt(account.drawn)),
           }
         : null,
+      // Locked on another chain and not yet delivered, so the limit above has
+      // not moved for it. A deposit sits here for minutes, not seconds.
+      pendingDeposits: remote
+        .filter((r) => r.creditedAt === null)
+        .map((r) => remoteDepositView(r, at)),
       card: {
         ...card,
         spendableCtc: formatCtc(BigInt(card.spendable)),
@@ -145,31 +153,67 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
     const wallet = req.params.wallet.toLowerCase();
     if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
 
+    const CC = NETWORK.creditcoin;
+    const SEP = NETWORK.sepolia;
     type Row = { id: string; timestamp: string; txHash: string; blockNumber: string };
-    const data = await indexer<{
-      Draw: (Row & { amount: string; outstandingAfter: string; dueAt: string })[];
-      Repayment: (Row & { amount: string; outstandingAfter: string; settled: boolean })[];
-      CollateralLock: (Row & { amount: string; nonce: string; released: boolean })[];
-      Default: (Row & { writtenOff: string; collateralSeized: string })[];
-    }>(
-      `query($id:String!){
+    const [data, remote] = await Promise.all([
+      indexer<{
+        Draw: (Row & { amount: string; outstandingAfter: string; dueAt: string })[];
+        Repayment: (Row & { amount: string; outstandingAfter: string; settled: boolean })[];
+        CollateralLock: (Row & { amount: string; nonce: string; released: boolean })[];
+        Default: (Row & { writtenOff: string; collateralSeized: string })[];
+      }>(
+        `query($id:String!){
           Draw(where:{account_id:{_eq:$id}},order_by:{timestamp:desc},limit:100){ id timestamp txHash blockNumber amount outstandingAfter dueAt }
           Repayment(where:{account_id:{_eq:$id}},order_by:{timestamp:desc},limit:100){ id timestamp txHash blockNumber amount outstandingAfter settled }
           CollateralLock(where:{account_id:{_eq:$id}},order_by:{timestamp:desc},limit:100){ id timestamp txHash blockNumber amount nonce released }
           Default(where:{account_id:{_eq:$id}},order_by:{timestamp:desc},limit:100){ id timestamp txHash blockNumber writtenOff collateralSeized }
         }`,
-      { id: wallet },
-    );
+        { id: wallet },
+      ),
+      remoteDeposits(wallet),
+    ]);
 
     const items = [
-      ...data.Draw.map((r) => ({ kind: "draw" as const, chain: "creditcoin", ...r })),
-      ...data.Repayment.map((r) => ({ kind: "repayment" as const, chain: "creditcoin", ...r })),
+      ...data.Draw.map((r) => ({
+        kind: "draw" as const,
+        chain: CC.name,
+        ...r,
+        txUrl: txUrl(CC.explorer, r.txHash),
+      })),
+      ...data.Repayment.map((r) => ({
+        kind: "repayment" as const,
+        chain: CC.name,
+        ...r,
+        txUrl: txUrl(CC.explorer, r.txHash),
+      })),
       ...data.CollateralLock.map((r) => ({
         kind: r.released ? ("collateral_unlocked" as const) : ("collateral_locked" as const),
-        chain: "sepolia",
+        chain: SEP.name,
         ...r,
+        txUrl: txUrl(SEP.explorer, r.txHash),
       })),
-      ...data.Default.map((r) => ({ kind: "default" as const, chain: "creditcoin", ...r })),
+      ...data.Default.map((r) => ({
+        kind: "default" as const,
+        chain: CC.name,
+        ...r,
+        txUrl: txUrl(CC.explorer, r.txHash),
+      })),
+      // Cross-chain deposits are dated by the lock, which is when the user
+      // acted; delivery lands minutes later and only flips `pending`.
+      ...remote
+        .map((r) => remoteDepositView(r, now()))
+        .map((v) => ({
+          kind: "remote_deposit" as const,
+          chain: v.chain,
+          id: v.id,
+          timestamp: String(v.lockedAt),
+          txHash: v.lockTxHash,
+          txUrl: v.lockTxUrl,
+          amount: v.amount,
+          amountFormatted: v.amountFormatted,
+          pending: !v.credited,
+        })),
     ].sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 
     return Response.json({ wallet, items });
