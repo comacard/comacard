@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 
 import {CollateralMessage} from "../../src/libraries/CollateralMessage.sol";
+import {TestToken} from "../../src/testnet/TestToken.sol";
 import {CreditErrors} from "../../src/types/CreditTypes.sol";
 import {ReleaseRelay} from "../../src/wormhole/ReleaseRelay.sol";
 import {WormholeCollateralHub} from "../../src/wormhole/WormholeCollateralHub.sol";
@@ -320,6 +321,91 @@ contract WormholeReleaseTest is Test {
         hub.requestRelease(BASE_SEPOLIA, bytes32(0), 1 ether);
         relay.executeRelease(_releaseVaa(0, 1 ether, hubId));
         assertEq(vault.nativeReleasable(alice), 1 ether);
+    }
+
+    /// Two withdrawals in flight at once.
+    ///
+    /// `approveRelease` sets the allowance rather than adding to it, which was
+    /// right when a person was the only caller and is not now. The hub debits on
+    /// every request, so a second approval that overwrites the first leaves the
+    /// borrower short by the difference — paid for on Creditcoin, unclaimable on
+    /// the far chain.
+    function test_twoReleasesInFlightBothRemainClaimable() public {
+        vm.startPrank(alice);
+        hub.requestRelease(BASE_SEPOLIA, bytes32(0), 0.3 ether);
+        hub.requestRelease(BASE_SEPOLIA, bytes32(0), 0.2 ether);
+        vm.stopPrank();
+
+        // Both debited on Creditcoin: 1 ETH of collateral is now 0.5.
+        assertEq(hub.collateralOf(alice, nativeAsset), 0.5 ether);
+
+        relay.executeRelease(_releaseVaa(0, 0.3 ether, hubId));
+        relay.executeRelease(_releaseVaa(1, 0.2 ether, hubId));
+
+        assertEq(vault.nativeReleasable(alice), 0.5 ether);
+
+        uint256 before = alice.balance;
+        vm.prank(alice);
+        vault.unlockNative(0.5 ether);
+        assertEq(alice.balance, before + 0.5 ether);
+    }
+
+    /// The same for an ERC20, since the vault keeps a separate allowance per
+    /// token and the relay has to add to the right one.
+    function test_twoTokenReleasesInFlightBothRemainClaimable() public {
+        TestToken usdc = new TestToken("USD Coin", "USDC", 6);
+        bytes32 token = bytes32(uint256(uint160(address(usdc))));
+
+        vm.startPrank(governance);
+        vault.setSupportedToken(address(usdc), true);
+        hub.listAsset(BASE_SEPOLIA, token, 6, ONE);
+        vm.stopPrank();
+
+        usdc.faucet(1000);
+        assertTrue(usdc.transfer(address(vault), 600e6));
+
+        bytes32 asset = CollateralMessage.assetId(BASE_SEPOLIA, token);
+        hub.receiveFromWormhole(
+            core.buildVaa(
+                BASE_SEPOLIA,
+                peer,
+                1,
+                CollateralMessage.encode(
+                    CollateralMessage.Deposit({
+                        account: alice, token: token, amount: 600e6, decimals: 6
+                    })
+                )
+            )
+        );
+        assertEq(hub.collateralOf(alice, asset), 600e6);
+
+        vm.startPrank(alice);
+        hub.requestRelease(BASE_SEPOLIA, token, 100e6);
+        hub.requestRelease(BASE_SEPOLIA, token, 250e6);
+        vm.stopPrank();
+
+        relay.executeRelease(_tokenReleaseVaa(0, token, 100e6));
+        relay.executeRelease(_tokenReleaseVaa(1, token, 250e6));
+
+        assertEq(vault.tokenReleasable(alice, address(usdc)), 350e6);
+    }
+
+    function _tokenReleaseVaa(uint64 sequence, bytes32 token, uint256 amount)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return remoteCore.buildVaa(
+            CREDITCOIN,
+            hubId,
+            sequence,
+            CollateralMessage.encodeRelease(
+                BASE_SEPOLIA,
+                CollateralMessage.Deposit({
+                    account: alice, token: token, amount: amount, decimals: 6
+                })
+            )
+        );
     }
 
     function test_onlyOwnerRepointsTheHub() public {

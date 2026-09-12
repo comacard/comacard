@@ -221,8 +221,9 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
 
         uint256 drawn = ICreditLine(creditLine).accountOf(msg.sender).drawn;
         uint256 remainingLimit = ICreditLine(creditLine).limitOf(msg.sender);
+        // No need to restore the debit before reverting — the revert undoes it,
+        // and writing it back first reads as though it were load-bearing.
         if (drawn > remainingLimit) {
-            collateralOf[msg.sender][assetId] = held; // put it back
             revert CreditErrors.ReleaseWouldStrandDebt(drawn, remainingLimit);
         }
         return asset.decimals;
