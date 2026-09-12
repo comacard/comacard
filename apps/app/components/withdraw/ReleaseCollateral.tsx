@@ -10,6 +10,7 @@ import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteColl
 import { useRemoteWithdrawals } from "../../hooks/useRemoteWithdrawals";
 import {
   CREDITCOIN_CHAIN_ID,
+  NATIVE_SYMBOL,
   REMOTE_HUB,
   remoteHubAbi,
   wormholeCoreAbi,
@@ -128,7 +129,9 @@ export function ReleaseCollateral({ id }: { id: string }) {
     );
   }
 
-  const symbol = asset.native ? "ETH" : "USDC";
+  // BNB on BSC, AVAX on Fuji. Calling it ETH on the screen that hands money back is the same
+  // mistake as calling it ETH on the one that takes it.
+  const symbol = asset.native ? (NATIVE_SYMBOL[asset.wormholeChainId] ?? "ETH") : "USDC";
   const entered = parseAmount(amount, asset.decimals);
   // Requested and not yet taken. `approvedAt` is what separates "the guardians are signing" from
   // "the money is sitting in the vault waiting for you", and only the second is the borrower's move.

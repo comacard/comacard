@@ -537,6 +537,36 @@ export const WORMHOLE_CHAIN_NAMES: Record<number, string> = {
   10005: "Optimism Sepolia",
 };
 
+/**
+ * What the chain's own coin is called, and how long its messages take.
+ *
+ * Both were hardcoded and both were wrong on two of the five chains. The deposit screen read
+ * `native ? "ETH" : "USDC"`, so locking BNB said "Lock ETH … 0.072136 ETH on BSC Testnet" — wrong
+ * about the asset a person is being asked to part with, on the screen where they part with it. And
+ * every screen promised "about fifteen minutes", which is true for the three L2s and wrong by a
+ * factor of thirty for the two L1s.
+ *
+ * The split is not arbitrary. Base, Arbitrum and Optimism publish at finalized consistency and
+ * finalize against Ethereum, so the guardians wait on Ethereum; BSC and Fuji finalize themselves.
+ * @FjrREPO measured 1173s and 1290s on the L2s against 189s and 202s on the L1s, and said the two
+ * L1 figures are upper bounds that include him running the relay by hand.
+ */
+export const NATIVE_SYMBOL: Record<number, string> = {
+  4: "BNB",
+  6: "AVAX",
+  10002: "ETH",
+  10003: "ETH",
+  10004: "ETH",
+  10005: "ETH",
+};
+
+/** True for the chains that finalize on their own rather than against Ethereum. */
+export const SIGNS_FAST: Record<number, boolean> = { 4: true, 6: true };
+
+/** How long to tell someone a message takes, for the chain it is crossing from. */
+export const crossingTime = (wormholeChainId: number): string =>
+  SIGNS_FAST[wormholeChainId] ? "under a minute" : "about fifteen minutes";
+
 /** Just enough ERC20 to read a token and approve a lock. */
 export const erc20Abi = [
   {

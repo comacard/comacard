@@ -2,6 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { ReleaseCollateral } from "../ReleaseCollateral";
 
 /**
+ * The asset here is BSC's native coin, so every label reads BNB. That is the fix these expectations
+ * carry: the screen used to hardcode `native ? "ETH" : "USDC"` and would have told someone they were
+ * withdrawing ETH from a chain that has none.
+ *
  * A withdrawal is three transactions on two chains, and the screen's whole job is to be honest
  * about which one the borrower is in.
  *
@@ -66,8 +70,8 @@ beforeEach(() => {
 test("offers the request form, capped by what the debt leaves free", () => {
   render(<ReleaseCollateral id="0xabc" />);
 
-  expect(screen.getByRole("button", { name: /Withdraw ETH/ })).toBeInTheDocument();
-  expect(screen.getByText(/0\.05 ETH backing your limit on BSC Testnet/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Withdraw BNB/ })).toBeInTheDocument();
+  expect(screen.getByText(/0\.05 BNB backing your limit on BSC Testnet/)).toBeInTheDocument();
   // Nothing is drawn, so none of it is held back and the screen says nothing about debt. (The
   // keypad's hint is an error message — it renders only once an entry is over the maximum.)
   expect(screen.queryByText(/backing what you have already spent/)).toBeNull();
@@ -94,9 +98,9 @@ test("a request in flight survives a reload, because it is read and not remember
   });
   render(<ReleaseCollateral id="0xabc" />);
 
-  expect(screen.getByText(/0\.02 ETH on its way/)).toBeInTheDocument();
+  expect(screen.getByText(/0\.02 BNB on its way/)).toBeInTheDocument();
   // Not a keypad: there is already a request outstanding for this asset.
-  expect(screen.queryByRole("button", { name: /^Withdraw ETH$/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Withdraw BNB$/ })).toBeNull();
 });
 
 test("an approved release leads with the signature it is waiting on", () => {
@@ -110,7 +114,7 @@ test("an approved release leads with the signature it is waiting on", () => {
   expect(screen.getByText("Ready to withdraw")).toBeInTheDocument();
   // The distinction the whole screen exists for: approved is not withdrawn.
   expect(screen.getByText(/it never sends/)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /Withdraw 0\.02 ETH/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Withdraw 0\.02 BNB/ })).toBeInTheDocument();
 });
 
 test("a chain this wallet holds nothing on gets words, not a keypad", () => {
@@ -133,9 +137,9 @@ test("an open balance holds back what it needs, and names the part that is stuck
   render(<ReleaseCollateral id="0xabc" />);
 
   expect(
-    screen.getByText(/0\.025 ETH of this is backing what you have already spent/),
+    screen.getByText(/0\.025 BNB of this is backing what you have already spent/),
   ).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /Withdraw ETH/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Withdraw BNB/ })).toBeInTheDocument();
 });
 
 test("a debt the collateral barely covers frees nothing at all", () => {
@@ -144,7 +148,7 @@ test("a debt the collateral barely covers frees nothing at all", () => {
   render(<ReleaseCollateral id="0xabc" />);
 
   expect(
-    screen.getByText(/0\.05 ETH of this is backing what you have already spent/),
+    screen.getByText(/0\.05 BNB of this is backing what you have already spent/),
   ).toBeInTheDocument();
 });
 
@@ -192,6 +196,6 @@ test("an unreachable indexer costs persistence, never a false claim", () => {
   withdrawals.mockReturnValue({ items: [], loading: false, error: true, refresh: vi.fn() });
   render(<ReleaseCollateral id="0xabc" />);
 
-  expect(screen.getByRole("button", { name: /Withdraw ETH/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Withdraw BNB/ })).toBeInTheDocument();
   expect(screen.queryByText(/on its way/)).toBeNull();
 });

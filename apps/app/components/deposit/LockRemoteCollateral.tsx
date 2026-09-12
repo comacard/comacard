@@ -6,7 +6,13 @@ import { useConfig, useSwitchChain, useWriteContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteCollateral";
-import { erc20Abi, wormholeCoreAbi, wormholeVaultAbi } from "../../lib/comacard/contracts";
+import {
+  crossingTime,
+  erc20Abi,
+  NATIVE_SYMBOL,
+  wormholeCoreAbi,
+  wormholeVaultAbi,
+} from "../../lib/comacard/contracts";
 import { collateralValue, limitFrom } from "../../lib/comacard/credit";
 import { awaitSuccess } from "../../lib/comacard/tx";
 import {
@@ -27,8 +33,10 @@ import { SubHeader } from "../ui/SubHeader";
  * Same promise as the Sepolia screen — the asset stays where it is and only a message crosses — but
  * three things differ enough to be worth naming.
  *
- * **The wait is about fifteen minutes, not eight.** The vault publishes at *finalized* consistency
- * and an L2 finalizes against Ethereum, so the guardians sign long after the lock confirms. That is
+ * **The wait is minutes, and how many depends on the chain.** The vault publishes at *finalized*
+ * consistency; Base, Arbitrum and Optimism finalize against Ethereum and take about fifteen minutes,
+ * while BSC and Fuji finalize themselves and come back in under one. Either way the guardians sign
+ * long after the lock confirms, which is
  * a deliberate choice on the contract side: this number decides how much someone may borrow, and
  * instant consistency would credit collateral a reorg could take back. Between the lock and the
  * signature the limit does not move, and a screen that says nothing about it reads as broken.
@@ -93,7 +101,9 @@ export function LockRemoteCollateral({ id }: { id: string }) {
     );
   }
 
-  const symbol = asset.native ? "ETH" : "USDC";
+  // The chain's own coin, not ETH: BSC pays in BNB and Fuji in AVAX, and naming the wrong asset
+  // on the screen that asks someone to part with it is the worst place to be wrong.
+  const symbol = asset.native ? (NATIVE_SYMBOL[asset.wormholeChainId] ?? "ETH") : "USDC";
   const entered = parseAmount(amount, asset.decimals);
   const exceeded = entered > asset.available;
   const value = collateralValue(entered, asset.decimals, asset.price);
@@ -213,11 +223,12 @@ export function LockRemoteCollateral({ id }: { id: string }) {
             size="large"
             href={hash && asset.explorer ? `${asset.explorer}/tx/${hash}` : undefined}
           />
-          {/* The one thing this screen exists to say. Without it the next fifteen minutes look
-              like a deposit that did not work. */}
+          {/* The one thing this screen exists to say. Without it the wait that follows looks like a
+              deposit that did not work. */}
           <p className="mt-5 max-w-[280px] text-center text-[13px] leading-snug text-muted">
-            Your {symbol} is locked on {asset.chainName}. It takes about fifteen minutes to be
-            signed across to Creditcoin, and your limit moves then.
+            Your {symbol} is locked on {asset.chainName}. It takes{" "}
+            {crossingTime(asset.wormholeChainId)} to be signed across to Creditcoin, and your limit
+            moves then.
           </p>
         </div>
         <Button
@@ -294,8 +305,8 @@ export function LockRemoteCollateral({ id }: { id: string }) {
           )}
         </Button>
         <p className="mt-2 text-center text-[12px] leading-snug text-muted">
-          Signed across to Creditcoin in about fifteen minutes. Your {symbol} stays on{" "}
-          {asset.chainName}.
+          Signed across to Creditcoin in {crossingTime(asset.wormholeChainId)}. Your {symbol} stays
+          on {asset.chainName}.
         </p>
       </div>
     </div>
