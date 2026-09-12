@@ -1,0 +1,15 @@
+# Build context for the service Dockerfiles. Everything a service needs is
+# source; nothing needs build output, history, or another app's assets.
+node_modules
+**/node_modules
+.git
+.env
+.env.*
+**/.next
+**/dist
+**/.turbo
+*.sqlite
+contracts/out
+contracts/cache
+contracts/lib
+apps/landing/public

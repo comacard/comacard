@@ -46,6 +46,7 @@ is a deploy and two calls.
 | --- | --- | --- |
 | API | https://api-production-1141.up.railway.app | [/docs](https://api-production-1141.up.railway.app/docs) |
 | KYC | https://kyc-production-e05a.up.railway.app | [/docs](https://kyc-production-e05a.up.railway.app/docs) |
+| Worker | no HTTP surface — it polls Sepolia and submits proofs | |
 
 A frontend only ever talks to the API. It is read-only, has CORS open, and
 every number is either read off the chain or off the indexer's copy of it.
