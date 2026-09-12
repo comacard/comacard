@@ -61,7 +61,7 @@ is sitting in the vault and the borrower has not claimed it. A UI that says
 
 ## Live
 
-    https://indexer.dev.hyperindex.xyz/5a5df01/v1/graphql
+    https://indexer.dev.hyperindex.xyz/f7883b8/v1/graphql
 
 Each deployment gets its own URL on the Development plan, and old ones keep
 serving, so this changes whenever `main` moves. Consumers read `INDEXER_URL`.
