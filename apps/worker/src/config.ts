@@ -27,6 +27,13 @@ export const config = {
 
   /** How far back to look on a cold start. */
   lookbackBlocks: Number(process.env.LOOKBACK_BLOCKS ?? 5_000),
+
+  /** The same, for the Wormhole vaults. */
+  relayLookbackBlocks: Number(process.env.RELAY_LOOKBACK_BLOCKS ?? 5_000),
+
+  /** Largest range a public RPC will answer. Base Sepolia refuses anything over
+   *  10,000 with a 413; Creditcoin times out well before that. */
+  logWindowBlocks: Number(process.env.LOG_WINDOW_BLOCKS ?? 9_000),
   pollIntervalMs: Number(process.env.POLL_INTERVAL_MS ?? 20_000),
 } as const;
 
