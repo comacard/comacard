@@ -40,6 +40,8 @@ export async function indexer<T>(
   return body.data;
 }
 
+import type { RemoteDepositRow } from "./shape";
+
 export type IndexedAccount = {
   id: string;
   collateral: string;
@@ -56,6 +58,32 @@ export type IndexedAccount = {
   firstSeenAt: string;
   lastActiveAt: string;
 };
+
+export const REMOTE_DEPOSIT_FIELDS =
+  "id account amount sequence lockedAt lockTxHash creditedAt creditTxHash asset { wormholeChainId token decimals }";
+
+/**
+ * Cross-chain deposits for one wallet, newest first.
+ *
+ * Deliberately isolated from every other read. `RemoteDeposit` only exists on
+ * an indexer deployment newer than the one INDEXER_URL may still point at, and
+ * an unknown field is a query-level error that would otherwise take the whole
+ * card screen down with it. Failing soft means an empty list, which is also
+ * what a wallet with no cross-chain deposits looks like, so the failure is
+ * logged rather than swallowed.
+ */
+export async function remoteDeposits(wallet: string): Promise<RemoteDepositRow[]> {
+  try {
+    const data = await indexer<{ RemoteDeposit: RemoteDepositRow[] }>(
+      `query($id:String!){ RemoteDeposit(where:{account:{_eq:$id}},order_by:{lockedAt:desc},limit:100){ ${REMOTE_DEPOSIT_FIELDS} } }`,
+      { id: wallet },
+    );
+    return data.RemoteDeposit;
+  } catch (err) {
+    console.warn(`remote deposits unavailable: ${(err as Error).message}`);
+    return [];
+  }
+}
 
 export const ACCOUNT_FIELDS =
   "id collateral drawn pendingRelease provenNonce score creditLimit available cycleCount repayCount defaultCount dueAt firstSeenAt lastActiveAt";

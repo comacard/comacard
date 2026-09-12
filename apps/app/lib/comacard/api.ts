@@ -67,12 +67,36 @@ export type CreditState = {
   dueAt: number;
 };
 
+/**
+ * A deposit locked on another chain and not yet delivered to Creditcoin.
+ *
+ * Wormhole guardians sign at finalized consistency and an L2 finalizes against Ethereum, so the
+ * money leaves the wallet minutes before the limit moves. `slow` past the nominal wait means just
+ * that: slow, never failed. Nothing here has gone wrong, it is taking longer than usual.
+ *
+ * Shaped and formatted by `apps/api`, deliberately: the amount is already scaled by the asset's own
+ * decimals and the chain already named, so no screen has to hold a decimals table or a
+ * chain-to-explorer map of its own.
+ */
+export type PendingDeposit = {
+  id: string;
+  /** Display name, not a slug: "Base Sepolia". */
+  chain: string;
+  amountFormatted: string;
+  lockTxUrl: string | null;
+  elapsedSeconds: number;
+  waitSeconds: number;
+  slow: boolean;
+};
+
 export type ComacardAccount = {
   wallet: string;
   kyc: KycState;
   balance: { wei: string; ctc: string };
   credit: CreditState | null;
   card: CardState;
+  /** Absent on an API older than cross-chain deposits, so every read must tolerate undefined. */
+  pendingDeposits?: PendingDeposit[];
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<Result<T>> {

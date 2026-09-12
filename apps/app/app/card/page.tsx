@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { CardFolderPanel } from "../../components/card/CardFolderPanel";
 import { CollateralList } from "../../components/card/CollateralList";
+import { IncomingDeposits } from "../../components/card/IncomingDeposits";
 import { KycSheet } from "../../components/card/KycSheet";
 import { Button, CopyButton, SubHeader, Toast, TransactionStatus } from "../../components/ui";
 import { groupAccountNumber } from "../../lib/comacard/format";
@@ -123,6 +124,8 @@ function CardScreen() {
             <CopyButton value={account.card.accountNumber} label="Copy account number" />
           </div>
         ) : null}
+
+        <IncomingDeposits deposits={account?.pendingDeposits ?? []} className="mt-4" />
 
         <CollateralList assets={collateral} remote={remoteCollateral} />
 

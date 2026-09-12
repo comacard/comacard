@@ -11,6 +11,7 @@ import { useCardAccount } from "../../../hooks/useCardAccount";
 import { useKycStart } from "../../../hooks/useKycStart";
 import { CardFolderPanel } from "../../../components/card/CardFolderPanel";
 import { CollateralList } from "../../../components/card/CollateralList";
+import { IncomingDeposits } from "../../../components/card/IncomingDeposits";
 import { useCollateral } from "../../../hooks/useCollateral";
 import { useRemoteCollateral } from "../../../hooks/useRemoteCollateral";
 import { useCreditLine } from "../../../hooks/useCreditLine";
@@ -99,6 +100,10 @@ function MobileHome() {
           </Button>
         </div>
       )}
+
+      {/* Before the collateral list, because an incoming deposit is the answer to "why has my
+          limit not moved". Seeing the backing first and the explanation second is backwards. */}
+      <IncomingDeposits deposits={account?.pendingDeposits ?? []} className="mb-[22px]" />
 
       {/* What the headline is actually built on, before the wallet. Locking more moves the number
           at the top of this screen; the wallet balance below does not. */}
