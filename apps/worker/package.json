@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .turbo",
     "demo": "bun src/demo.ts",
-    "relay": "bun src/relay.ts"
+    "relay": "bun src/relay.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "@comacard/attestcoin": "workspace:*",

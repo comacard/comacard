@@ -92,6 +92,7 @@ contract WormholeReleaseTest is Test {
             emitter,
             sequence,
             CollateralMessage.encodeRelease(
+                BASE_SEPOLIA,
                 CollateralMessage.Deposit({
                     account: alice, token: bytes32(0), amount: amount, decimals: 18
                 })
@@ -199,6 +200,7 @@ contract WormholeReleaseTest is Test {
             hubId,
             0,
             CollateralMessage.encodeRelease(
+                BASE_SEPOLIA,
                 CollateralMessage.Deposit({
                     account: alice, token: bytes32(0), amount: 1 ether, decimals: 18
                 })
@@ -262,6 +264,7 @@ contract WormholeReleaseTest is Test {
             peer,
             9,
             CollateralMessage.encodeRelease(
+                BASE_SEPOLIA,
                 CollateralMessage.Deposit({
                     account: alice, token: bytes32(0), amount: 1 ether, decimals: 18
                 })
@@ -271,6 +274,52 @@ contract WormholeReleaseTest is Test {
             abi.encodeWithSelector(CollateralMessage.UnsupportedVersion.selector, uint8(2))
         );
         hub.receiveFromWormhole(vaa);
+    }
+
+    /// The one the first version of this contract got wrong.
+    ///
+    /// Every relay trusts the same emitter, so a release that does not name its
+    /// destination is a withdrawal from every vault at once. Worse than it
+    /// sounds: the amount is the same on each chain but the asset is not, so
+    /// 0.2 of a cheap coin becomes 0.2 of an expensive one somewhere else.
+    function test_anotherChainsReleaseIsRefused() public {
+        uint16 otherChain = 6; // Avalanche Fuji
+        MockWormhole otherCore = new MockWormhole(otherChain, 0);
+        WormholeVault otherVault = new WormholeVault(address(otherCore), governance, operator);
+        ReleaseRelay otherRelay = new ReleaseRelay(
+            address(otherCore), address(otherVault), CREDITCOIN, hubId, governance
+        );
+
+        vm.prank(governance);
+        otherVault.setOperator(address(otherRelay));
+
+        // A release addressed to Base Sepolia, offered to the Fuji relay.
+        bytes memory vaa = otherCore.buildVaa(
+            CREDITCOIN,
+            hubId,
+            0,
+            CollateralMessage.encodeRelease(
+                BASE_SEPOLIA,
+                CollateralMessage.Deposit({
+                    account: alice, token: bytes32(0), amount: 1 ether, decimals: 18
+                })
+            )
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ReleaseRelay.WrongChain.selector, otherChain, BASE_SEPOLIA)
+        );
+        otherRelay.executeRelease(vaa);
+
+        // And nothing was approved on the far vault.
+        assertEq(otherVault.nativeReleasable(alice), 0);
+    }
+
+    function test_theRightChainsReleaseStillWorksOnItsOwnRelay() public {
+        vm.prank(alice);
+        hub.requestRelease(BASE_SEPOLIA, bytes32(0), 1 ether);
+        relay.executeRelease(_releaseVaa(0, 1 ether, hubId));
+        assertEq(vault.nativeReleasable(alice), 1 ether);
     }
 
     function test_onlyOwnerRepointsTheHub() public {
