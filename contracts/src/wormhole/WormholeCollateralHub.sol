@@ -193,18 +193,30 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
         if (amount == 0) revert CreditErrors.ZeroAmount();
 
         bytes32 assetId = CollateralMessage.assetId(chainId, token);
+        uint8 decimals = _debit(chainId, assetId, amount);
+        sequence = _publishRelease(token, amount, decimals);
+
+        emit ReleaseRequested(msg.sender, assetId, amount, sequence);
+        IScoreRefresher(creditLine).refreshScore(msg.sender);
+    }
+
+    /// @dev Takes the collateral away and checks the borrower can still carry
+    ///      their debt without it. Split from the publish half because the two
+    ///      together hold more locals than the EVM has stack for once `forge
+    ///      coverage` turns viaIR off.
+    function _debit(uint16 chainId, bytes32 assetId, uint256 amount) private returns (uint8) {
         RemoteAsset storage asset = remoteAsset[assetId];
         if (!asset.listed) revert CreditErrors.AssetNotListed(assetId);
-
-        bytes32 peer = vaultPeer[chainId];
-        if (peer == bytes32(0)) revert CreditErrors.UnknownPeer(chainId, peer);
+        if (vaultPeer[chainId] == bytes32(0)) {
+            revert CreditErrors.UnknownPeer(chainId, bytes32(0));
+        }
 
         uint256 held = collateralOf[msg.sender][assetId];
         if (amount > held) revert CreditErrors.InsufficientCollateral();
 
-        // Debit first, then ask the credit line what the borrower's limit is
-        // worth without it. The line reads this contract for its remote
-        // collateral, so the check sees the world as it will be, not as it is.
+        // Debit first, then ask the credit line what the limit is worth without
+        // it. The line reads this contract for remote collateral, so the check
+        // sees the world as it will be rather than as it is.
         collateralOf[msg.sender][assetId] = held - amount;
 
         uint256 drawn = ICreditLine(creditLine).accountOf(msg.sender).drawn;
@@ -213,22 +225,25 @@ contract WormholeCollateralHub is IRemoteCollateral, Governed, ReentrancyGuardUp
             collateralOf[msg.sender][assetId] = held; // put it back
             revert CreditErrors.ReleaseWouldStrandDebt(drawn, remainingLimit);
         }
+        return asset.decimals;
+    }
 
+    function _publishRelease(bytes32 token, uint256 amount, uint8 decimals)
+        private
+        returns (uint64)
+    {
         uint256 fee = wormhole.messageFee();
         if (msg.value < fee) revert CreditErrors.InsufficientLiquidity(fee, msg.value);
 
-        sequence = wormhole.publishMessage{value: fee}(
+        return wormhole.publishMessage{value: fee}(
             0,
             CollateralMessage.encodeRelease(
                 CollateralMessage.Deposit({
-                    account: msg.sender, token: token, amount: amount, decimals: asset.decimals
+                    account: msg.sender, token: token, amount: amount, decimals: decimals
                 })
             ),
             CONSISTENCY_FINALIZED
         );
-
-        emit ReleaseRequested(msg.sender, assetId, amount, sequence);
-        IScoreRefresher(creditLine).refreshScore(msg.sender);
     }
 
     // --------------------------------------------------------------------
