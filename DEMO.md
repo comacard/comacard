@@ -12,6 +12,7 @@ kill a recording:
 | --- | --- | --- |
 | Attestcoin (Sepolia) | 7–9 min | Creditcoin has to attest the block first |
 | Wormhole, L1 (BSC, Fuji) | under a minute | The chain finalizes on its own |
+| Wormhole release, either way | same as the deposit | Creditcoin publishes at finalized too |
 | Wormhole, L2 (Base, Arbitrum, Optimism) | 15–20 min | The vault publishes at finalized, and an L2 finalizes against Ethereum |
 
 Measured, not estimated: 1173s from Base and 1290s from Arbitrum. If you need a
@@ -153,6 +154,49 @@ Worth naming while it is on screen: assets are keyed by chain *and* address, so
 USDC on Base and USDC on Arbitrum are two different assets. They are held in
 different vaults and a depeg on one says nothing about the other.
 
+### 4d — And it goes home again (optional, the strongest one)
+
+The question a judge is already forming is "so you are holding my money". This
+answers it, and it answers it faster than any other part of the demo because
+Fuji signs in about thirty seconds.
+
+```sh
+cd contracts && source .env
+CC=https://rpc.cc3-testnet.creditcoin.network
+HUB=0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f
+ZERO=0x0000000000000000000000000000000000000000000000000000000000000000
+
+# 1. Ask. Show valueOf before and after — the credit is gone immediately.
+cast call $HUB "valueOf(address)(uint256)" $YOUR_ADDRESS --rpc-url $CC
+cast send $HUB "requestRelease(uint16,bytes32,uint256)" 6 $ZERO 20000000000000000 \
+  --rpc-url $CC --private-key $WALLET_PK
+cast call $HUB "valueOf(address)(uint256)" $YOUR_ADDRESS --rpc-url $CC
+
+# 2. The worker delivers it once the guardians sign. Or by hand:
+cd ../apps/worker && bun run relay watch
+```
+
+Three things to say while it runs, in this order:
+
+**Nobody approved this.** The borrower asked Creditcoin, Creditcoin checked the
+debt still stands up without the collateral, and the guardians carried the
+answer. There is no operator in that path — the vault's operator is a contract
+that only relays what was signed.
+
+**The credit disappears before the money moves.** That ordering is the whole
+safety argument: `valueOf` drops the instant the request is accepted, so there
+is no window where the collateral is both backing a limit and on its way out.
+
+**Try it with a debt outstanding and it refuses.** Draw first, then request a
+release large enough to strand it: `ReleaseWouldStrandDebt`. That is worth
+showing deliberately — a withdrawal that succeeds is a feature, a withdrawal
+that knows when to say no is a credit product.
+
+The honest caveat, and say it before anyone asks: **the Sepolia leg is still
+operator-approved.** Attestcoin writability is in third-party audit, so
+Creditcoin cannot write back to Ethereum yet. Anything that arrived by Wormhole
+goes back without us; anything proved by Attestcoin waits on a person.
+
 ### 5 — The moment (2:00–2:40)
 
 ```sh
@@ -208,6 +252,10 @@ competence; being caught reads as the opposite.
   nothing else — no token bridge, no automatic relayer — so somebody has to hand
   the signed message over. The submit call is permissionless, so a borrower can
   do it themselves, but today it is our worker that does.
+- **A withdrawal is three transactions on two chains**, and the last one is the
+  borrower's. The relay approves; it does not push funds. Saying "withdrawn"
+  when the relay executes would be wrong — the money is sitting in the vault
+  until they sign for it.
 - **Five chains are live, not every chain.** Base, Arbitrum and Optimism
   Sepolia, BSC Testnet and Avalanche Fuji, each with a real deposit through it.
   The contract is chain-agnostic and adding another is a deploy and two calls,
