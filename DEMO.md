@@ -5,12 +5,18 @@ the numbers on screen are the numbers on chain, and a judge can open every hash.
 
 ## The one thing that will ruin the take
 
-**Attestation runs 7–9 minutes behind the source chain.** A lock is not provable
-until Creditcoin has attested its block. If you record linearly you will sit
-watching a spinner for nine minutes, and cut it out badly.
+**Nothing crosses a chain quickly.** Two different waits, both long enough to
+kill a recording:
 
-So: **lock the collateral before you start recording.** Prove it on camera, or
-prove it beforehand and show the result. Either reads fine; waiting does not.
+| Path | Wait | Why |
+| --- | --- | --- |
+| Attestcoin (Sepolia) | 7–9 min | Creditcoin has to attest the block first |
+| Wormhole (Base, Arbitrum) | ~15 min | The vault publishes at finalized, and an L2 finalizes against Ethereum |
+
+So: **lock every piece of collateral before you start recording.** Prove it on
+camera, or prove it beforehand and show the result. Either reads fine; waiting
+does not. The Wormhole deposit especially — start it first, it is the slowest
+thing in the demo.
 
 Check the lag before you begin:
 
@@ -31,8 +37,14 @@ cast send $SOURCE_VAULT_ADDRESS "lock()" --value 0.002ether \
   --rpc-url sepolia --private-key $WALLET_PK
 # note the tx hash and block
 
-# 2. Wait out the attestation while you set up your shot
-cd ../apps/worker && bun src/status.ts   # until lag covers your block
+# 2. Deposit from another chain too — this one is the slowest, so start it early
+cast send 0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf "lockNative()" \
+  --value 0.01ether --rpc-url base_sepolia --private-key $WALLET_PK
+# note the sequence from the Locked event
+
+# 3. Wait out both while you set up your shot
+cd ../apps/worker && bun src/status.ts       # attestation lag
+bun run relay 10004 <sequence>               # blocks until the guardians sign
 ```
 
 Have these open in tabs, ready to switch to:
@@ -43,6 +55,8 @@ Have these open in tabs, ready to switch to:
 | [Creditcoin credit line](https://creditcoin-testnet.blockscout.com/address/0x18052272cC69113DE2b45d2BDB4E1fB287F4E906) | Verified source, every call |
 | `apps/indexer/graphiql.html` | Query it live |
 | `apps/indexer/explorer.html` | The same data as plain tables |
+| [Base Sepolia vault](https://sepolia.basescan.org/address/0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf) | Collateral on a chain Attestcoin cannot see |
+| [Wormholescan](https://wormholescan.io/#/?network=Testnet) | The signed message, mid-flight |
 
 ## The sequence
 
@@ -114,6 +128,26 @@ We ran it: 500 tUSDC took the limit from 8.39 to 427.85 CTC. The line worth
 saying is about decimals — USDC has 6, ETH has 18, and valuing one as the other
 is off by a trillion with no error to warn you.
 
+### 4c — Deposit from any chain (optional, strong)
+
+This is the one that answers "so it only works on Ethereum?". Show the deposit
+you made on Base Sepolia before recording, then show it credited on Creditcoin.
+
+```sh
+cd apps/worker
+bun run relay 10004 <sequence>   # already signed by now; submits and returns a tx
+```
+
+The point to make in one sentence: **the ETH never left Base.** It is sitting in
+a vault there; what crossed was a message the Wormhole guardians signed, exactly
+like the Attestcoin path. Comacard does not operate a bridge and does not mint a
+wrapped asset, because the most-exploited component in the industry is not one
+worth adding to a credit product.
+
+Worth naming while it is on screen: assets are keyed by chain *and* address, so
+USDC on Base and USDC on Arbitrum are two different assets. They are held in
+different vaults and a depeg on one says nothing about the other.
+
 ### 5 — The moment (2:00–2:40)
 
 ```sh
@@ -165,6 +199,14 @@ competence; being caught reads as the opposite.
   in audit, so Creditcoin cannot release funds on Sepolia by itself.
 - **`minCycleDuration` is 60 seconds here, not the one-day default**, so the
   loop fits in a recording.
+- **Cross-chain deposits are relayed by us.** Creditcoin has Wormhole Core and
+  nothing else — no token bridge, no automatic relayer — so somebody has to hand
+  the signed message over. The submit call is permissionless, so a borrower can
+  do it themselves, but today it is our worker that does.
+- **Two chains are live, not every chain.** Base Sepolia and Arbitrum Sepolia
+  have vaults deployed. The contract is chain-agnostic and adding another is a
+  deploy and two calls, but say "two" rather than "any" unless you have deployed
+  the third.
 
 ## If something breaks on camera
 
@@ -172,5 +214,8 @@ competence; being caught reads as the opposite.
   and wait. Nothing is wrong.
 - *A draw reverts* — the pool ran dry. Top it up: `cast send $ASC_CREDIT_LINE_ADDRESS
   "fund()" --value 50ether --rpc-url creditcoin --private-key $WALLET_PK`
+- *`relay` sits there and nothing happens* — the guardians have not signed yet.
+  Fifteen minutes from the deposit, not from when you started waiting. Check
+  https://wormholescan.io/#/?network=Testnet for the message.
 - *The indexer shows an old limit* — it caches per account and refreshes on that
   account's next event. Read `limitOf` from the contract for a live figure.
