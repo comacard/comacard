@@ -1,5 +1,4 @@
 /** Pure shaping of upstream data. No env, no I/O, so it is trivially testable. */
-import type { IndexedAccount } from "./sources";
 
 export type KycStatus = {
   status: string;
@@ -27,8 +26,11 @@ export const formatCtc = (wei: bigint): string => formatUnits(wei, 18);
  * so that is what arrives here.
  */
 export const REMOTE_CHAINS: Record<number, { name: string; explorer: string }> = {
+  4: { name: "BSC Testnet", explorer: "https://testnet.bscscan.com" },
+  6: { name: "Avalanche Fuji", explorer: "https://testnet.snowtrace.io" },
   10003: { name: "Arbitrum Sepolia", explorer: "https://sepolia.arbiscan.io" },
   10004: { name: "Base Sepolia", explorer: "https://sepolia.basescan.org" },
+  10005: { name: "Optimism Sepolia", explorer: "https://sepolia-optimism.etherscan.io" },
 };
 
 export const NETWORK = {
@@ -95,6 +97,44 @@ export function remoteDepositView(row: RemoteDepositRow, now: number) {
   };
 }
 
+export type LiveAccount = {
+  collateral: bigint;
+  drawn: bigint;
+  pendingRelease: bigint;
+  drawnAt: number;
+  dueAt: number;
+  provenNonce: bigint;
+  cycleCount: number;
+  repayCount: number;
+  defaultCount: number;
+};
+
+/**
+ * `accountOf` returns a struct whose members are all value types, so the ABI
+ * encodes it inline: nine words with no offset. Decoded positionally against
+ * CreditAccount in contracts/src/types/CreditTypes.sol, and the word count is
+ * checked first so a changed struct fails loudly here rather than quietly
+ * reading the wrong field as somebody's debt.
+ */
+export function decodeAccount(data: string): LiveAccount {
+  const hex = data.replace(/^0x/, "");
+  if (hex.length !== 9 * 64) {
+    throw new Error(`accountOf: expected 9 words, got ${hex.length / 64}`);
+  }
+  const word = (i: number) => BigInt(`0x${hex.slice(i * 64, (i + 1) * 64)}`);
+  return {
+    collateral: word(0),
+    drawn: word(1),
+    pendingRelease: word(2),
+    drawnAt: Number(word(3)),
+    dueAt: Number(word(4)),
+    provenNonce: word(5),
+    cycleCount: Number(word(6)),
+    repayCount: Number(word(7)),
+    defaultCount: Number(word(8)),
+  };
+}
+
 export type CardState =
   | { active: true; spendable: string }
   | { active: false; spendable: "0"; reason: "kyc_required" | "overdue" };
@@ -106,13 +146,12 @@ export type CardState =
  */
 export function cardState(
   kyc: KycStatus,
-  account: IndexedAccount | null,
+  position: { drawn: bigint; dueAt: number },
   available: bigint,
   now: number,
 ): CardState {
   if (!kyc.verified) return { active: false, spendable: "0", reason: "kyc_required" };
-  const dueAt = Number(account?.dueAt ?? 0);
-  if (account && BigInt(account.drawn) > 0n && dueAt > 0 && now > dueAt) {
+  if (position.drawn > 0n && position.dueAt > 0 && now > position.dueAt) {
     return { active: false, spendable: "0", reason: "overdue" };
   }
   return { active: true, spendable: available.toString() };

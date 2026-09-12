@@ -53,6 +53,23 @@ It holds no privilege. `receiveFromWormhole` trusts the signatures rather than
 the sender, so a borrower who would rather not wait for us can fetch the same
 bytes from Wormholescan and submit them.
 
+## The cross-chain story in one command
+
+```sh
+bun run roundtrip        # Avalanche Fuji, about a minute end to end
+bun run roundtrip 4      # BSC Testnet
+bun run roundtrip 10004  # Base Sepolia, about twenty
+```
+
+Lock on the far chain, wait for the guardians, deliver to Creditcoin, ask for
+some back, wait again, release, withdraw — printing what each contract says at
+every step. Every figure is read off a contract rather than computed here.
+
+It exists because the alternative is a dozen hand-typed `cast` commands, and
+writing those out for the runbook I got two of them wrong: a release too small
+to strand a debt, and a repayment larger than the debt, which the contract
+refuses rather than refunding. Neither failed loudly.
+
 ## Running
 
 ```sh

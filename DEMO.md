@@ -12,6 +12,7 @@ kill a recording:
 | --- | --- | --- |
 | Attestcoin (Sepolia) | 7–9 min | Creditcoin has to attest the block first |
 | Wormhole, L1 (BSC, Fuji) | under a minute | The chain finalizes on its own |
+| Wormhole release, either way | same as the deposit | Creditcoin publishes at finalized too |
 | Wormhole, L2 (Base, Arbitrum, Optimism) | 15–20 min | The vault publishes at finalized, and an L2 finalizes against Ethereum |
 
 Measured, not estimated: 1173s from Base and 1290s from Arbitrum. If you need a
@@ -153,6 +154,74 @@ Worth naming while it is on screen: assets are keyed by chain *and* address, so
 USDC on Base and USDC on Arbitrum are two different assets. They are held in
 different vaults and a depeg on one says nothing about the other.
 
+### 4d — And it goes home again (the strongest one)
+
+One command, the whole cross-chain story, against the live testnets:
+
+```sh
+cd apps/worker
+bun run roundtrip        # Avalanche Fuji, about a minute end to end
+bun run roundtrip 4      # BSC Testnet
+bun run roundtrip 10004  # Base Sepolia, about twenty
+```
+
+It locks on the far chain, waits for the guardians, delivers to Creditcoin, asks
+for some back, waits again, releases, and withdraws — printing what each
+contract says at every step. A real run:
+
+```
+[1] locking 0.02 on Avalanche Fuji
+    wormhole sequence 1 — the asset stays here, only the message crosses
+[3] delivering it to Creditcoin
+    credited 61.5000 CTC (+0.5000 CTC)   limit 485.1443 CTC (+0.4244 CTC)
+[4] asking for 0.01 back — nobody approves this
+    credit gone first: 61.5000 CTC → 61.2500 CTC
+[7] the borrower takes it — the relay approves, it never pushes
+```
+
+**Use Fuji or BSC on camera.** They are L1s and the guardians sign in well under
+a minute; the three L2s finalize against Ethereum and take fifteen to twenty.
+
+Three things to say while it runs, in this order:
+
+**Nobody approved the withdrawal.** The borrower asked Creditcoin, Creditcoin
+checked the debt still stands up without the collateral, and the guardians
+carried the answer. The vault's operator is a contract that only relays what was
+signed.
+
+**The credit disappears before the money moves** — step 4 prints exactly that.
+It is the whole safety argument: there is no window where the collateral is both
+backing a limit and on its way out.
+
+**The coin never left its chain.** The AVAX is still on Fuji; what crossed was a
+message. No bridge, no wrapped asset.
+
+Two things worth showing deliberately if there is time:
+
+**It refuses when a debt would be stranded.** Draw everything first, so any
+release strands it — a small release against a large limit succeeds, which is
+correct and looks like nothing happening:
+
+```sh
+AVAIL=$(cast call $ASC_CREDIT_LINE_ADDRESS "availableOf(address)(uint256)" \
+  $YOUR_ADDRESS --rpc-url $CC | awk '{print $1}')
+cast send $ASC_CREDIT_LINE_ADDRESS "draw(uint256)" $AVAIL --rpc-url $CC --private-key $WALLET_PK
+# then any release at all
+```
+
+It comes back `ReleaseWouldStrandDebt(479.03, 478.82)`, short by exactly the
+margin. A withdrawal that succeeds is a feature; one that knows when to say no
+is a credit product.
+
+**Repaying needs the exact figure.** `repay()` reverts with
+`RepaymentExceedsDebt` if `msg.value` is over the outstanding — it refuses
+rather than refunding. Read `accountOf(...).drawn` and send that.
+
+The caveat to say before anyone asks: **the Sepolia leg is still
+operator-approved.** Attestcoin writability is in third-party audit, so
+Creditcoin cannot write back to Ethereum. Anything that arrived by Wormhole goes
+back without us; anything proved by Attestcoin waits on a person.
+
 ### 5 — The moment (2:00–2:40)
 
 ```sh
@@ -194,6 +263,11 @@ another chart:
 Say these before a judge asks. Being first to name a limitation reads as
 competence; being caught reads as the opposite.
 
+- **Wormhole's testnet guardian set has one member.** Every VAA we deliver
+  carries a single signature, not the 13-of-19 people associate with the name.
+  The same contracts against mainnet Wormhole inherit 13-of-19 unchanged, but on
+  this deployment the cross-chain leg rests on one key. Say the number before
+  someone parses a VAA and finds it.
 - **The collateral price is operator-fed.** Attestcoin proves transactions, not
   prices, and Creditcoin has no feed. It sits behind its own role, and that is
   the bound on the damage — not an oracle.
@@ -208,6 +282,10 @@ competence; being caught reads as the opposite.
   nothing else — no token bridge, no automatic relayer — so somebody has to hand
   the signed message over. The submit call is permissionless, so a borrower can
   do it themselves, but today it is our worker that does.
+- **A withdrawal is three transactions on two chains**, and the last one is the
+  borrower's. The relay approves; it does not push funds. Saying "withdrawn"
+  when the relay executes would be wrong — the money is sitting in the vault
+  until they sign for it.
 - **Five chains are live, not every chain.** Base, Arbitrum and Optimism
   Sepolia, BSC Testnet and Avalanche Fuji, each with a real deposit through it.
   The contract is chain-agnostic and adding another is a deploy and two calls,
@@ -222,5 +300,8 @@ competence; being caught reads as the opposite.
 - *`relay` sits there and nothing happens* — the guardians have not signed yet.
   Fifteen minutes from the deposit, not from when you started waiting. Check
   https://wormholescan.io/#/?network=Testnet for the message.
+- *A repayment reverts* — you sent more than the debt. `repay()` refuses
+  `msg.value` above the outstanding rather than refunding the difference. Read
+  `accountOf(...).drawn` and send exactly that.
 - *The indexer shows an old limit* — it caches per account and refreshes on that
   account's next event. Read `limitOf` from the contract for a live figure.

@@ -33,6 +33,12 @@ contract CreditLineHarness is ASCCreditLine {
         _applyTokenCollateral(queryId, encodedTx, isLock);
     }
 
+    /// @notice Put token collateral in place without a proof, for tests about
+    ///         scale rather than about proving.
+    function seedToken(address account, address token, uint256 amount) external {
+        tokenCollateral[account][token] = amount;
+    }
+
     function importHistory(bytes32 queryId, bytes memory encodedTx) external {
         _importHistory(queryId, encodedTx);
     }

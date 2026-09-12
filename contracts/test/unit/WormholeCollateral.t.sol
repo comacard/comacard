@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Test} from "forge-std/Test.sol";
 
 import {CollateralMessage} from "../../src/libraries/CollateralMessage.sol";
@@ -480,5 +481,96 @@ contract WormholeCollateralTest is Test {
         vm.assume(amount > 0);
         hub.receiveFromWormhole(_vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), amount, 18)));
         assertEq(line.collateralValueOf(alice), (uint256(amount) * 1000 * ONE) / ONE);
+    }
+
+    // ----------------------------------------------------------------
+    // The refusals nobody had taken
+    // ----------------------------------------------------------------
+
+    /// Through a proxy, because the implementation disables its own
+    /// initializers in the constructor — calling it directly reverts
+    /// InvalidInitialization long before it reads an argument.
+    function test_initialisingWithNoWormholeOrNoLineIsRefused() public {
+        WormholeCollateralHub impl = new WormholeCollateralHub();
+
+        vm.expectRevert(CreditErrors.ZeroAddress.selector);
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(
+                WormholeCollateralHub.initialize,
+                (address(0), address(line), governance, operator, 3 days)
+            )
+        );
+
+        vm.expectRevert(CreditErrors.ZeroAddress.selector);
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(
+                WormholeCollateralHub.initialize,
+                (address(core), address(0), governance, operator, 3 days)
+            )
+        );
+    }
+
+    /// A chain whose asset is listed but whose vault was never named. The asset
+    /// check passes and this one has to catch it, or a release would be
+    /// published to a chain we do not recognise.
+    function test_releasingToAChainWithNoVaultIsRefused() public {
+        vm.prank(governance);
+        hub.listAsset(ARBITRUM_SEPOLIA, bytes32(0), 18, ONE);
+
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(CreditErrors.UnknownPeer.selector, ARBITRUM_SEPOLIA, bytes32(0))
+        );
+        hub.requestRelease(ARBITRUM_SEPOLIA, bytes32(0), 1);
+    }
+
+    function test_releasingWithoutTheMessageFeeIsRefused() public {
+        MockWormhole paid = new MockWormhole(59, 1e15);
+        WormholeCollateralHub charged =
+            Deployers.collateralHub(address(paid), address(line), governance, operator);
+
+        vm.startPrank(governance);
+        line.setRemoteCollateralHub(address(charged));
+        charged.setVaultPeer(BASE_SEPOLIA, peer);
+        charged.listAsset(BASE_SEPOLIA, bytes32(0), 18, 1000 * ONE);
+        vm.stopPrank();
+
+        charged.receiveFromWormhole(
+            paid.buildVaa(
+                BASE_SEPOLIA,
+                peer,
+                0,
+                CollateralMessage.encode(
+                    CollateralMessage.Deposit({
+                        account: alice, token: bytes32(0), amount: ONE, decimals: 18
+                    })
+                )
+            )
+        );
+
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(CreditErrors.InsufficientLiquidity.selector, 1e15, 0)
+        );
+        charged.requestRelease(BASE_SEPOLIA, bytes32(0), 1);
+    }
+
+    function test_theAssetRegistryHasACeiling() public {
+        vm.startPrank(governance);
+        // Two are listed already, so fill the remaining thirty.
+        for (uint16 i = 0; i < 30; ++i) {
+            hub.listAsset(20_000 + i, bytes32(0), 18, ONE);
+        }
+        vm.expectRevert(abi.encodeWithSelector(CreditErrors.DecimalsOutOfRange.selector, 18));
+        hub.listAsset(30_000, bytes32(0), 18, ONE);
+        vm.stopPrank();
+    }
+
+    function test_pointingTheHubAtNoCreditLineIsRefused() public {
+        vm.prank(governance);
+        vm.expectRevert(CreditErrors.ZeroAddress.selector);
+        hub.setCreditLine(address(0));
     }
 }

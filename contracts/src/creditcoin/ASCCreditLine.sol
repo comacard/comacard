@@ -294,11 +294,16 @@ contract ASCCreditLine is ASCBase, ICreditLine, Governed, ReentrancyGuardUpgrade
     ///      change it, so consumers never have to recompute the maths.
     function _publishScore(address borrower) internal {
         CreditAccount storage account = _accounts[borrower];
+        // One walk, not two. Pricing collateral means looping every listed
+        // token and then every remote asset through an external call, and this
+        // runs after every mutation — at the registry caps the second walk was
+        // costing as much as the rest of a draw put together.
+        uint256 value = _collateralValue(borrower);
         emit ScoreChanged(
             borrower,
             CreditScoring.score(account),
-            CreditScoring.limitFrom(_collateralValue(borrower), account),
-            CreditScoring.availableFrom(_collateralValue(borrower), account)
+            CreditScoring.limitFrom(value, account),
+            CreditScoring.availableFrom(value, account)
         );
     }
 

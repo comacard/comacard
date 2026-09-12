@@ -2,11 +2,9 @@ import { issueCard } from "./card";
 import { docsHtml, openapi } from "./openapi";
 import { cardState, formatCtc, isAddress, NETWORK, remoteDepositView, txUrl } from "./shape";
 import {
-  ACCOUNT_FIELDS,
   balanceOf,
   collateralPrice,
   env,
-  type IndexedAccount,
   indexer,
   kycStart,
   kycStatus,
@@ -53,17 +51,13 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
     if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
 
     const at = now();
-    const [kyc, { Account }, balance, live, remote] = await Promise.all([
+    const [kyc, balance, live, remote] = await Promise.all([
       kycStatus(wallet),
-      indexer<{ Account: IndexedAccount[] }>(
-        `query($id:String!){ Account(where:{id:{_eq:$id}}){ ${ACCOUNT_FIELDS} } }`,
-        { id: wallet },
-      ),
       balanceOf(wallet),
       liveCredit(wallet),
       remoteDeposits(wallet),
     ]);
-    const account = Account[0] ?? null;
+    const { account } = live;
     const card = cardState(kyc, account, live.available, at);
     const issued = kyc.verified ? issueCard(wallet, kyc.updatedAt ?? at, env.cardSecret) : null;
 
@@ -71,25 +65,26 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
       wallet,
       kyc,
       balance: { wei: balance.toString(), ctc: formatCtc(balance) },
-      credit: account
-        ? {
-            score: Number(account.score),
-            // Live off the contract; the indexer's copy lags a repricing.
-            limit: live.limit.toString(),
-            available: live.available.toString(),
-            drawn: account.drawn,
-            collateral: account.collateral,
-            pendingRelease: account.pendingRelease,
-            provenNonce: account.provenNonce,
-            dueAt: Number(account.dueAt),
-            cycleCount: account.cycleCount,
-            repayCount: account.repayCount,
-            defaultCount: account.defaultCount,
-            limitCtc: formatCtc(live.limit),
-            availableCtc: formatCtc(live.available),
-            drawnCtc: formatCtc(BigInt(account.drawn)),
-          }
-        : null,
+      // Every figure read off the contract in one batched call. The indexer's
+      // copy is as of this account's last transaction, and `drawn` in
+      // particular has to be exact: repay() reverts rather than refunds when
+      // sent more than is owed.
+      credit: {
+        score: live.score,
+        limit: live.limit.toString(),
+        available: live.available.toString(),
+        drawn: account.drawn.toString(),
+        collateral: account.collateral.toString(),
+        pendingRelease: account.pendingRelease.toString(),
+        provenNonce: account.provenNonce.toString(),
+        dueAt: account.dueAt,
+        cycleCount: account.cycleCount,
+        repayCount: account.repayCount,
+        defaultCount: account.defaultCount,
+        limitCtc: formatCtc(live.limit),
+        availableCtc: formatCtc(live.available),
+        drawnCtc: formatCtc(account.drawn),
+      },
       // Locked on another chain and not yet delivered, so the limit above has
       // not moved for it. A deposit sits here for minutes, not seconds.
       pendingDeposits: remote
@@ -115,18 +110,11 @@ const routes: Record<string, Handler | Record<string, Handler>> = {
     const wallet = req.params.wallet.toLowerCase();
     if (!isAddress(wallet)) return Response.json({ error: "bad wallet" }, { status: 400 });
 
-    const [kyc, { Account }, live] = await Promise.all([
-      kycStatus(wallet),
-      indexer<{ Account: IndexedAccount[] }>(
-        `query($id:String!){ Account(where:{id:{_eq:$id}}){ ${ACCOUNT_FIELDS} } }`,
-        { id: wallet },
-      ),
-      liveCredit(wallet),
-    ]);
+    const [kyc, live] = await Promise.all([kycStatus(wallet), liveCredit(wallet)]);
     if (!kyc.verified) {
       return Response.json({ error: "no card: identity not verified" }, { status: 404 });
     }
-    const state = cardState(kyc, Account[0] ?? null, live.available, now());
+    const state = cardState(kyc, live.account, live.available, now());
     const card = issueCard(wallet, kyc.updatedAt ?? now(), env.cardSecret);
     return Response.json({
       wallet,

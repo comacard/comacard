@@ -70,9 +70,19 @@ describe("remoteDepositView", () => {
     expect(arb.id).not.toBe(remoteDepositView(row(), LOCKED).id);
   });
 
+  test("every vault chain the worker knows is named here", () => {
+    // Mirrors `vaults` in apps/worker/src/config.ts. A chain missing from the
+    // map still works, but renders as a number with no explorer link.
+    for (const id of [4, 6, 10003, 10004, 10005]) {
+      const v = remoteDepositView(row({ asset: { ...baseUsdc, wormholeChainId: id } }), LOCKED);
+      expect(v.chain).not.toMatch(/^Wormhole chain/);
+      expect(v.lockTxUrl).toContain("https://");
+    }
+  });
+
   test("an unlisted chain degrades to its number, with no link", () => {
-    const v = remoteDepositView(row({ asset: { ...baseUsdc, wormholeChainId: 10007 } }), LOCKED);
-    expect(v.chain).toBe("Wormhole chain 10007");
+    const v = remoteDepositView(row({ asset: { ...baseUsdc, wormholeChainId: 30 } }), LOCKED);
+    expect(v.chain).toBe("Wormhole chain 30");
     expect(v.lockTxUrl).toBeNull();
   });
 

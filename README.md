@@ -87,10 +87,10 @@ service keeps its SQLite state on a volume at `/data`. Both build from the
 
 **Indexer** — both chains in one GraphQL API, hosted on Envio Cloud
 
-    https://indexer.dev.hyperindex.xyz/24e4861/v1/graphql
+    https://indexer.dev.hyperindex.xyz/f7883b8/v1/graphql
 
 Browse it with a schema sidebar and autocomplete, no credentials needed:
-[Apollo Sandbox](https://studio.apollographql.com/sandbox/explorer?endpoint=https%3A%2F%2Findexer.dev.hyperindex.xyz%2F24e4861%2Fv1%2Fgraphql)
+[Apollo Sandbox](https://studio.apollographql.com/sandbox/explorer?endpoint=https%3A%2F%2Findexer.dev.hyperindex.xyz%2Ff7883b8%2Fv1%2Fgraphql)
 
 Sepolia syncs through HyperSync; Creditcoin CC3 is not on the supported list so
 it reads over plain RPC, which the same indexer handles without noticing.
@@ -150,9 +150,23 @@ the Attestcoin path makes.
 | Collateral vault | Real contract on Sepolia, testnet value |
 | Credit line and draws | Real transactions on Creditcoin CC3 testnet |
 | Cross-chain deposits | Real Wormhole guardian signatures, finalized consistency |
+| Cross-chain withdrawals | Real, and with no operator in the path |
+| Collateral prices | **Operator-fed.** Attestcoin proves transactions, not prices |
+| The Earn screen's vault figures | **An in-memory mock**, not this protocol — see [#9](https://github.com/comacard/comacard/issues/9) |
 
 Token values are testnet values; the cryptography and the state transitions are
 not simulated.
+
+The last two rows are the ones worth reading twice. Everything the credit line
+does — the limit, the collateral, the score, draws and repayments — is on chain
+and checkable. The yield figures on the Earn screen come from a mock client that
+predates this project, and the real staking state lives in `CtcStakingAdapter`
+instead: `deployedPrincipal` and `accruedRewards`, readable on Creditcoin.
+
+Wormhole's **testnet guardian set has one member**, so cross-chain messages here
+carry a single signature rather than the 13-of-19 the name suggests. The same
+contracts inherit 13-of-19 against mainnet. [TRUST.md](contracts/TRUST.md) sets
+out the rest.
 
 ## Layout
 

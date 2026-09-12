@@ -10,6 +10,8 @@ import {CollateralMessage} from "../libraries/CollateralMessage.sol";
 interface IWormholeVault {
     function approveRelease(address account, address token, uint256 amount) external;
     function operator() external view returns (address);
+    function nativeReleasable(address account) external view returns (uint256);
+    function tokenReleasable(address account, address token) external view returns (uint256);
 }
 
 /// @title ReleaseRelay
@@ -99,7 +101,18 @@ contract ReleaseRelay is Ownable2Step {
 
         address token = address(uint160(uint256(d.token)));
 
-        VAULT.approveRelease(d.account, token, d.amount);
+        // `approveRelease` sets the allowance rather than adding to it, which
+        // was right when a person was the only caller and is not now. The hub
+        // debits on every request, so two withdrawals in flight at once would
+        // leave the second overwriting the first and the borrower short by the
+        // difference — paid for on Creditcoin, unclaimable here. Adding what is
+        // already approved fixes it without touching the vaults, which are not
+        // upgradeable and are holding collateral.
+        uint256 outstanding = token == address(0)
+            ? VAULT.nativeReleasable(d.account)
+            : VAULT.tokenReleasable(d.account, token);
+
+        VAULT.approveRelease(d.account, token, outstanding + d.amount);
         emit Released(d.account, token, d.amount, vaaData.hash);
     }
 

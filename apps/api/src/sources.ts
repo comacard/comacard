@@ -40,24 +40,7 @@ export async function indexer<T>(
   return body.data;
 }
 
-import type { RemoteDepositRow } from "./shape";
-
-export type IndexedAccount = {
-  id: string;
-  collateral: string;
-  drawn: string;
-  pendingRelease: string;
-  provenNonce: string;
-  score: string;
-  creditLimit: string;
-  available: string;
-  cycleCount: number;
-  repayCount: number;
-  defaultCount: number;
-  dueAt: string;
-  firstSeenAt: string;
-  lastActiveAt: string;
-};
+import { decodeAccount, type RemoteDepositRow } from "./shape";
 
 export const REMOTE_DEPOSIT_FIELDS =
   "id account amount sequence lockedAt lockTxHash creditedAt creditTxHash asset { wormholeChainId token decimals }";
@@ -85,9 +68,6 @@ export async function remoteDeposits(wallet: string): Promise<RemoteDepositRow[]
   }
 }
 
-export const ACCOUNT_FIELDS =
-  "id collateral drawn pendingRelease provenNonce score creditLimit available cycleCount repayCount defaultCount dueAt firstSeenAt lastActiveAt";
-
 // ---------------------------------------------------------------- chain
 
 const SELECTOR = {
@@ -95,6 +75,8 @@ const SELECTOR = {
   totalAssets: "0x01e1d114",
   limitOf: "0x546a2ca4",
   availableOf: "0xd546da90",
+  scoreOf: "0x133af456",
+  accountOf: "0x8086b8ba",
   collateralPrice: "0x5891de72",
 } as const;
 
@@ -118,17 +100,53 @@ const call = async (to: string, selector: string): Promise<bigint> =>
 
 const pad = (address: string) => address.toLowerCase().replace(/^0x/, "").padStart(64, "0");
 
+/** One JSON-RPC round trip for several eth_calls against the same contract. */
+async function batchCall(to: string, datas: string[]): Promise<string[]> {
+  const res = await fetch(env.creditcoinRpc, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(
+      datas.map((data, id) => ({
+        jsonrpc: "2.0",
+        id,
+        method: "eth_call",
+        params: [{ to, data }, "latest"],
+      })),
+    ),
+  });
+  if (!res.ok) throw new Error(`rpc ${res.status}`);
+  const body = (await res.json()) as { id: number; result?: string; error?: { message: string } }[];
+  const out: string[] = [];
+  for (const entry of body) {
+    if (entry.error) throw new Error(`rpc: ${entry.error.message}`);
+    out[entry.id] = entry.result as string;
+  }
+  return out;
+}
+
 /**
- * Limit and available credit straight off the contract. The indexer's copy is
- * as of the account's last transaction; repricing collateral moves every
- * limit at once without an event per account, so only the chain is current.
+ * The whole credit position, straight off the contract.
+ *
+ * Nothing here comes from the indexer any more. Its copy is as of the
+ * account's last transaction, and repricing collateral moves every limit at
+ * once without an event per account, so it lags by design. Debt is the case
+ * that actually bites: `repay()` reverts rather than refunds when sent more
+ * than is owed, so a stale `drawn` fails the one action the product is about.
  */
 export async function liveCredit(wallet: string) {
-  const [limit, available] = await Promise.all([
-    call(env.creditLine, SELECTOR.limitOf + pad(wallet)),
-    call(env.creditLine, SELECTOR.availableOf + pad(wallet)),
+  const w = pad(wallet);
+  const [limit, available, score, account] = await batchCall(env.creditLine, [
+    SELECTOR.limitOf + w,
+    SELECTOR.availableOf + w,
+    SELECTOR.scoreOf + w,
+    SELECTOR.accountOf + w,
   ]);
-  return { limit, available };
+  return {
+    limit: BigInt(limit as string),
+    available: BigInt(available as string),
+    score: Number(BigInt(score as string)),
+    account: decodeAccount(account as string),
+  };
 }
 
 export const collateralPrice = () => call(env.creditLine, SELECTOR.collateralPrice);

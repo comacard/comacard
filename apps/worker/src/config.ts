@@ -50,31 +50,31 @@ export const vaults = {
     name: "Base Sepolia",
     rpc: process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org",
     vault: process.env.BASE_SEPOLIA_VAULT ?? "0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf",
-    relay: process.env.BASE_SEPOLIA_RELAY ?? "0x70DC0F161Cef5C029b75ccEaA9b75445B4c8B8E6",
+    relay: process.env.BASE_SEPOLIA_RELAY ?? "0x4ab591d70462c69792E35d7C61f118BEFd45e62e",
   },
   10003: {
     name: "Arbitrum Sepolia",
     rpc: process.env.ARBITRUM_SEPOLIA_RPC_URL ?? "https://sepolia-rollup.arbitrum.io/rpc",
     vault: process.env.ARBITRUM_SEPOLIA_VAULT ?? "0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30",
-    relay: process.env.ARBITRUM_SEPOLIA_RELAY ?? "0x1bb43c2efb341cF099E4F016465e624C6F6B892b",
+    relay: process.env.ARBITRUM_SEPOLIA_RELAY ?? "0xFcb45153DbA2fAd0864E1e24293C33AB99b507eB",
   },
   10005: {
     name: "Optimism Sepolia",
     rpc: process.env.OPTIMISM_SEPOLIA_RPC_URL ?? "https://sepolia.optimism.io",
     vault: process.env.OPTIMISM_SEPOLIA_VAULT ?? "0xCaBFa324576c655D0276647A7f0aF5e779123e0B",
-    relay: process.env.OPTIMISM_SEPOLIA_RELAY ?? "0x4659f0d99587D4fA396840d982a4215FcFe8a557",
+    relay: process.env.OPTIMISM_SEPOLIA_RELAY ?? "0xE3965709c657748501bB33a55AEFdE7F9622FD5E",
   },
   4: {
     name: "BSC Testnet",
     rpc: process.env.BSC_TESTNET_RPC_URL ?? "https://bsc-testnet-rpc.publicnode.com",
     vault: process.env.BSC_TESTNET_VAULT ?? "0x9d8B6852705dD7585B3907244d603547a4eA32d6",
-    relay: process.env.BSC_TESTNET_RELAY ?? "0x5844Cf8Bbf41a2e25Ed3F40Ee96E64F31330cA3D",
+    relay: process.env.BSC_TESTNET_RELAY ?? "0x740B0c07c3291FECF5e852F86652Ffbb575A2378",
   },
   6: {
     name: "Avalanche Fuji",
     rpc: process.env.AVALANCHE_FUJI_RPC_URL ?? "https://api.avax-test.network/ext/bc/C/rpc",
     vault: process.env.AVALANCHE_FUJI_VAULT ?? "0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b",
-    relay: process.env.AVALANCHE_FUJI_RELAY ?? "0xbD3328Bde4B15CF562938202a586C63aCd92b705",
+    relay: process.env.AVALANCHE_FUJI_RELAY ?? "0xDE88C384AC8347F8C8B78C7DDE40432B95F629E1",
   },
 } as const satisfies Record<number, { name: string; rpc: string; vault: string; relay: string }>;
 

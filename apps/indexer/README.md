@@ -46,6 +46,11 @@ because a withdrawal is three transactions on two chains:
 }
 ```
 
+A relay that gets replaced stays in `config.yaml` alongside the new one. Its
+events still happened, and dropping it sends every withdrawal it completed back
+to reading "in flight" — a wrong answer about money rather than a missing one.
+Three generations have shipped; append rather than replace.
+
 `requestedAt` — Creditcoin agreed and the credit is already gone.
 `approvedAt` — the guardians signed and the relay let the vault release it.
 `withdrawnAt` — the borrower signed for it. Only here is it in their wallet.
@@ -56,7 +61,7 @@ is sitting in the vault and the borrower has not claimed it. A UI that says
 
 ## Live
 
-    https://indexer.dev.hyperindex.xyz/24e4861/v1/graphql
+    https://indexer.dev.hyperindex.xyz/f7883b8/v1/graphql
 
 Each deployment gets its own URL on the Development plan, and old ones keep
 serving, so this changes whenever `main` moves. Consumers read `INDEXER_URL`.
@@ -70,7 +75,18 @@ data looks stale, check for `inactive` commits before suspecting the schema:
 ENVIO_GITHUB_TOKEN=$(gh auth token) bunx envio-cloud login
 bunx envio-cloud indexer commits comacard comacard
 bunx envio-cloud deployment delete comacard <old-commit> comacard --yes
+bunx envio-cloud deployment deploy comacard <commit> comacard --yes
 ```
+
+Two things that cost an afternoon between them:
+
+**A deploy issued straight after deleting a slot reports `started` and does
+nothing.** Every time. Check `indexer commits` for `active` rather than trusting
+the message, and issue the same command again — the second one works.
+
+**The deployment id is not the commit hash.** `2621060` built `24e4861`; they
+happen to look alike and are unrelated. It only comes from `indexer get`, so
+guessing a URL from a commit will always 404.
 
 ```graphql
 { Account { id collateral drawn score creditLimit available } }

@@ -57,3 +57,21 @@ function chainsWithARelay(): number[] {
 test("every vault chain also has a release relay", () => {
   expect(chainsWithARelay().sort()).toEqual(chainsWithAVault().sort());
 });
+
+/**
+ * A relay that was replaced still emitted the releases it handled. Dropping it
+ * from the config does not remove those events from the chain — it removes them
+ * from the index, and the withdrawals they completed go back to reading "in
+ * flight". That is a wrong answer about money rather than a missing one.
+ *
+ * Three generations have shipped today, so the live address alone is never the
+ * whole story.
+ */
+test("each chain lists more than one relay generation", () => {
+  for (const block of config.split(/^ {2}- id: /m).slice(1)) {
+    const relay = block.split("- name: ReleaseRelay")[1];
+    if (!relay) continue;
+    const addresses = [...relay.matchAll(/^\s+- (0x[0-9a-fA-F]{40})$/gm)];
+    expect(addresses.length).toBeGreaterThan(1);
+  }
+});
