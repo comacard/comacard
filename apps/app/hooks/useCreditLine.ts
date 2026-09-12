@@ -31,6 +31,22 @@ import {
  * Reads come off the contract, not the indexer. The indexer's copy is as of the account's last
  * transaction, and repricing collateral moves every limit at once without an event per account.
  */
+/** A write needs a real address. Reads can quietly stay idle when one is missing; a write is
+ *  something the user just asked for, so it fails out loud with the env var that is missing.
+ *
+ *  Module scope, not inside the hook: it closes over nothing from the component, and declaring it
+ *  per render gave every effect that calls it a new identity to depend on. */
+function addressOf(which: "creditLine" | "sourceVault"): `0x${string}` {
+  const value = which === "creditLine" ? CREDIT_LINE : SOURCE_VAULT;
+  if (!value) {
+    throw new Error(
+      `missing env ${which === "creditLine" ? "NEXT_PUBLIC_CREDIT_LINE" : "NEXT_PUBLIC_SOURCE_VAULT"}`,
+    );
+  }
+  return value;
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
 export function useCreditLine() {
   const { address, chainId } = useAccount();
   const config = useConfig();
@@ -92,17 +108,6 @@ export function useCreditLine() {
 
   const { writeContractAsync, data: hash, isPending, error, reset } = useWriteContract();
 
-  /** A write needs a real address. Reads can quietly stay idle when one is missing; a write is
-   *  something the user just asked for, so it fails out loud with the env var that is missing. */
-  function addressOf(which: "creditLine" | "sourceVault"): `0x${string}` {
-    const value = which === "creditLine" ? CREDIT_LINE : SOURCE_VAULT;
-    if (!value) {
-      throw new Error(
-        `missing env ${which === "creditLine" ? "NEXT_PUBLIC_CREDIT_LINE" : "NEXT_PUBLIC_SOURCE_VAULT"}`,
-      );
-    }
-    return value;
-  }
   const receipt = useWaitForTransactionReceipt({ hash });
 
   /** Lock ETH as collateral on Sepolia. Confirms in seconds and counts for nothing until Attestcoin

@@ -480,6 +480,13 @@
   letter-spacing: -0.035em;
 }
 
+.walletCard p {
+  margin: 0;
+  color: #7b807f;
+  font-size: 13px;
+  font-weight: 650;
+}
+
 .connectScreen .tourCopy p {
   margin: 12px auto 0;
   max-width: 318px;
@@ -1029,13 +1036,6 @@
   font-size: 24px;
   line-height: 1.02;
   letter-spacing: -0.035em;
-}
-
-.walletCard p {
-  margin: 0;
-  color: #7b807f;
-  font-size: 13px;
-  font-weight: 650;
 }
 
 .walletBadge {

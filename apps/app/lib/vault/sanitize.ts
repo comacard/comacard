@@ -9,7 +9,7 @@ export function sanitizeAmount(raw: string): string {
   const i = v.indexOf(".");
   if (i !== -1) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "");
   v = v.replace(/^0+(?=\d)/, "");
-  if (v.startsWith(".")) v = "0" + v;
+  if (v.startsWith(".")) v = `0${v}`;
   if (v === "") v = "0";
   return v;
 }

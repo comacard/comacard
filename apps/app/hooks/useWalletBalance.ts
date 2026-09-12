@@ -69,6 +69,7 @@ export function useWalletBalance(sym: StablecoinSym | null): WalletBalanceView {
     if (!live || !sym || !address) return;
 
     let cancelled = false;
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
     void (async () => {
       setState((s) => ({ ...s, loading: true }));
       const before = lastAmount.current;

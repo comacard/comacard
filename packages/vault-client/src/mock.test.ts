@@ -242,7 +242,13 @@ describe("MockVaultClient — simulateFailure (test-only submit rejection)", () 
     const v = new MockVaultClient();
     v.simulateFailure();
     const signed: string[] = [];
-    const signer = { ...depositor, sign: async (xdr: string) => (signed.push(xdr), `sig:${xdr}`) };
+    const signer = {
+      ...depositor,
+      sign: async (xdr: string) => {
+        signed.push(xdr);
+        return `sig:${xdr}`;
+      },
+    };
 
     await v.deposit("alice", "USD", 1_000n).signAndSubmit(signer);
 

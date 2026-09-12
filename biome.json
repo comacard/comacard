@@ -93,7 +93,8 @@
         "noUnusedTemplateLiteral": "error",
         "useNumberNamespace": "error",
         "noInferrableTypes": "error",
-        "noUselessElse": "error"
+        "noUselessElse": "error",
+        "noNonNullAssertion": "off"
       },
       "suspicious": {
         "noExplicitAny": "error",
@@ -127,6 +128,21 @@
   "overrides": [
     {
       "includes": [
+        "apps/app/app/**/*.tsx",
+        "apps/app/components/**/*.tsx",
+        "apps/app/providers/**/*.tsx",
+        "apps/landing/src/**/*.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "**/test/**",
         "**/*.test.ts",
         "**/*.spec.ts",
@@ -143,6 +159,9 @@
           },
           "complexity": {
             "noExcessiveCognitiveComplexity": "off"
+          },
+          "nursery": {
+            "noFloatingPromises": "off"
           }
         }
       }

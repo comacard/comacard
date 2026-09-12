@@ -41,6 +41,7 @@ export function useActivity(): { loading: boolean; items: ActivityItem[] } {
     return () => clearInterval(id);
   }, [address]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
   useEffect(() => {
     let cancelled = false;
     void (async () => {

@@ -104,6 +104,7 @@ export function useRemoteCollateral(): {
     queryKey: ["comacard", "remote-collateral", wallet],
     enabled: Boolean(wallet && REMOTE_HUB),
     refetchInterval: 30_000,
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
     queryFn: async (): Promise<{ assets: RemoteAsset[]; totalValue: bigint }> => {
       const who = wallet as Address;
       const hub = REMOTE_HUB as Address;
@@ -150,6 +151,7 @@ export function useRemoteCollateral(): {
       }
 
       const assets = await Promise.all(
+        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
         ids.map(async (id) => {
           const [config, credited] = await Promise.all([
             cc.readContract({

@@ -49,6 +49,21 @@ export const vaults = {
     rpc: process.env.ARBITRUM_SEPOLIA_RPC_URL ?? "https://sepolia-rollup.arbitrum.io/rpc",
     vault: process.env.ARBITRUM_SEPOLIA_VAULT ?? "0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30",
   },
+  10005: {
+    name: "Optimism Sepolia",
+    rpc: process.env.OPTIMISM_SEPOLIA_RPC_URL ?? "https://sepolia.optimism.io",
+    vault: process.env.OPTIMISM_SEPOLIA_VAULT ?? "0xCaBFa324576c655D0276647A7f0aF5e779123e0B",
+  },
+  4: {
+    name: "BSC Testnet",
+    rpc: process.env.BSC_TESTNET_RPC_URL ?? "https://bsc-testnet-rpc.publicnode.com",
+    vault: process.env.BSC_TESTNET_VAULT ?? "0x9d8B6852705dD7585B3907244d603547a4eA32d6",
+  },
+  6: {
+    name: "Avalanche Fuji",
+    rpc: process.env.AVALANCHE_FUJI_RPC_URL ?? "https://api.avax-test.network/ext/bc/C/rpc",
+    vault: process.env.AVALANCHE_FUJI_VAULT ?? "0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b",
+  },
 } as const satisfies Record<number, { name: string; rpc: string; vault: string }>;
 
 export type WormholeChainId = keyof typeof vaults;

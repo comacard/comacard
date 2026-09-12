@@ -145,8 +145,10 @@ export function useEarnings(): { loading: boolean; view: EarningsView } {
     return () => clearInterval(id);
   }, [address]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
   useEffect(() => {
     let cancelled = false;
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
     void (async () => {
       if (!apiEnabled() || !address) {
         if (!cancelled) setRemote({ loading: false, view: null });

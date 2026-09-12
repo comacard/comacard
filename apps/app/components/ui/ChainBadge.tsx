@@ -48,6 +48,7 @@ export function ChainBadge({
   if (!src) return null;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- tiny static icon; next/image mishandles local SVG
+    // biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it
     <img
       src={src}
       // Decorative: every row that shows this badge already names the chain in its text, and an

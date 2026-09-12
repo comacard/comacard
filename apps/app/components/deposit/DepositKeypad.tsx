@@ -34,9 +34,10 @@ export function DepositKeypad({ sym }: { sym: string }) {
   // `coin` may be undefined for a typo'd deep link — the hook still runs unconditionally.
   const balance = useWalletBalance(coin?.sym ?? null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const pool = await client.activePool(currency);
       const isFrozen = pool ? (await client.poolStatus(pool)) === "frozen" : false;
       if (!cancelled) setFrozen(isFrozen);

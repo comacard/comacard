@@ -18,7 +18,28 @@ import { getOrCreateAccount, logId } from "../shared";
 const WORMHOLE_CHAIN_ID: Record<number, number> = {
   84532: 10_004, // Base Sepolia
   421614: 10_003, // Arbitrum Sepolia
+  11155420: 10_005, // Optimism Sepolia
+  97: 4, // BSC Testnet
+  43113: 6, // Avalanche Fuji
 };
+
+/**
+ * Throws rather than skipping, deliberately.
+ *
+ * A chain listed in config.yaml but missing from the map above is a
+ * configuration mistake, and the previous version returned quietly — so the
+ * indexer reported every chain 100% synced with events processed, and dropped
+ * every deposit from three of them. A loud failure is the cheaper one.
+ */
+function wormholeChainId(evmChainId: number): number {
+  const id = WORMHOLE_CHAIN_ID[evmChainId];
+  if (id === undefined) {
+    throw new Error(
+      `chain ${evmChainId} has a WormholeVault in config.yaml but no Wormhole chain id here`,
+    );
+  }
+  return id;
+}
 
 /**
  * The contract's own asset identity, recomputed here.
@@ -137,8 +158,7 @@ indexer.onEvent(
 // ---------------- The remote chains: what was locked ----------------
 
 indexer.onEvent({ contract: "WormholeVault", event: "Locked" }, async ({ event, context }) => {
-  const chainId = WORMHOLE_CHAIN_ID[event.chainId];
-  if (chainId === undefined) return;
+  const chainId = wormholeChainId(event.chainId);
 
   const account = event.params.account.toLowerCase();
   const asset = assetId(chainId, event.params.token).toLowerCase();
@@ -164,8 +184,7 @@ indexer.onEvent({ contract: "WormholeVault", event: "Locked" }, async ({ event, 
 });
 
 indexer.onEvent({ contract: "WormholeVault", event: "Unlocked" }, async ({ event, context }) => {
-  const chainId = WORMHOLE_CHAIN_ID[event.chainId];
-  if (chainId === undefined) return;
+  const chainId = wormholeChainId(event.chainId);
 
   const account = event.params.account.toLowerCase();
   const asset = assetId(chainId, event.params.token).toLowerCase();
@@ -183,8 +202,7 @@ indexer.onEvent({ contract: "WormholeVault", event: "Unlocked" }, async ({ event
 indexer.onEvent(
   { contract: "WormholeVault", event: "ReleaseApproved" },
   async ({ event, context }) => {
-    const chainId = WORMHOLE_CHAIN_ID[event.chainId];
-    if (chainId === undefined) return;
+    const chainId = wormholeChainId(event.chainId);
 
     const account = event.params.account.toLowerCase();
     const asset = assetId(chainId, event.params.token).toLowerCase();

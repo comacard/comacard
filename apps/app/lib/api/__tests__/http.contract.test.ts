@@ -66,7 +66,6 @@ async function boot(): Promise<Booted | null> {
       import(`${backend}/http/app`),
       import(`${backend}/api/activity`),
       import(`${backend}/earnings/snapshotter`),
-      // biome-ignore lint/suspicious/noExplicitAny: modules from outside this repo
     ])) as any[];
 
     const vault = new MockVaultClient();
