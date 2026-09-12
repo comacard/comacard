@@ -14,6 +14,7 @@ import { useWalletAssets } from "../../hooks/useWalletAssets";
 import type { ComacardAccount } from "../../lib/comacard/api";
 import { ActivityList } from "../activity/ActivityList";
 import { CardFolderPanel } from "../card/CardFolderPanel";
+import { ClaimableCollateral } from "../card/ClaimableCollateral";
 import { CollateralList } from "../card/CollateralList";
 import { IncomingDeposits } from "../card/IncomingDeposits";
 import { KycSheet } from "../card/KycSheet";
@@ -214,6 +215,9 @@ export function DesktopOverview() {
           {/* What backs the card, and what it has done. */}
           <div className="flex min-w-0 flex-col gap-6">
             <IncomingDeposits deposits={account?.pendingDeposits ?? []} />
+            {/* Above what backs the limit, because this is money that has already stopped backing it
+                and is waiting on a signature. */}
+            <ClaimableCollateral assets={remoteCollateral} />
             <CollateralList assets={collateral} remote={remoteCollateral} className="mt-0" />
 
             <Section

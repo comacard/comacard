@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { formatUnits } from "viem";
 import { ActivityList } from "../../../components/activity/ActivityList";
 import { CardFolderPanel } from "../../../components/card/CardFolderPanel";
+import { ClaimableCollateral } from "../../../components/card/ClaimableCollateral";
 import { CollateralList } from "../../../components/card/CollateralList";
 import { IncomingDeposits } from "../../../components/card/IncomingDeposits";
 import { KycSheet } from "../../../components/card/KycSheet";
@@ -118,6 +119,10 @@ function MobileHome() {
           limit not moved". Seeing the backing first and the explanation second is backwards. */}
         <IncomingDeposits deposits={account?.pendingDeposits ?? []} className="mb-[22px]" />
 
+        {/* Money that has already left the limit and is waiting on one signature. A nudge, not a
+            spinner: nothing is pending on the protocol here. */}
+        <ClaimableCollateral assets={remoteCollateral} className="mb-[22px]" />
+
         {/* Taken from the card, above what backs it. Read from Draw events rather than the wallet,
           because tCTC that arrived from anywhere else was never spent on this card.
           Hidden while a balance is open: the two figures are different questions — what is owed
@@ -140,6 +145,7 @@ function MobileHome() {
           />
           {hasMore && (
             <button
+              type="button"
               onClick={() => nav.forward("/transactions")}
               className="mt-1.5 flex w-full items-center justify-center border-t border-line pb-[3px] pt-[13px] text-[13.5px] font-medium text-muted"
             >
