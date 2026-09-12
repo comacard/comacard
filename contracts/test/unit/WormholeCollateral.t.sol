@@ -10,6 +10,7 @@ import {WormholeCollateralHub} from "../../src/wormhole/WormholeCollateralHub.so
 import {WormholeVault} from "../../src/wormhole/WormholeVault.sol";
 import {CreditLineHarness} from "../helpers/CreditLineHarness.sol";
 import {Deployers} from "../helpers/Deployers.sol";
+import {FeeToken} from "../helpers/FeeToken.sol";
 import {MockWormhole} from "../helpers/MockWormhole.sol";
 
 /// @notice Collateral deposited on a chain Attestcoin cannot reach, carried by
@@ -334,6 +335,144 @@ contract WormholeCollateralTest is Test {
         vm.stopPrank();
 
         vm.expectRevert();
+        hub.receiveFromWormhole(vaa);
+    }
+
+    function test_unlockTokenNeedsAnApprovalAndConsumesIt() public {
+        uint256 fee = remoteCore.messageFee();
+        vm.deal(alice, 1 ether);
+
+        vm.startPrank(alice);
+        usdc.faucet(500);
+        usdc.approve(address(vault), 500e6);
+        vault.lockToken{value: fee}(address(usdc), 500e6);
+        vm.stopPrank();
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(WormholeVault.NotReleasable.selector, 0, 100e6));
+        vault.unlockToken(address(usdc), 100e6);
+
+        vm.prank(operator);
+        vault.approveRelease(alice, address(usdc), 100e6);
+
+        uint256 before = usdc.balanceOf(alice);
+        vm.prank(alice);
+        vault.unlockToken(address(usdc), 100e6);
+
+        assertEq(usdc.balanceOf(alice), before + 100e6);
+        assertEq(vault.tokenReleasable(alice, address(usdc)), 0);
+        assertEq(vault.tokenBalanceOf(alice, address(usdc)), 400e6);
+    }
+
+    function test_lockTokenRejectsZero() public {
+        uint256 fee = remoteCore.messageFee();
+        vm.deal(alice, 1 ether);
+
+        vm.prank(alice);
+        vm.expectRevert(WormholeVault.NothingToLock.selector);
+        vault.lockToken{value: fee}(address(usdc), 0);
+    }
+
+    function test_lockTokenRejectsValueBelowTheFee() public {
+        uint256 fee = remoteCore.messageFee();
+        vm.deal(alice, 1 ether);
+
+        vm.startPrank(alice);
+        usdc.faucet(500);
+        usdc.approve(address(vault), 500e6);
+        vm.expectRevert(abi.encodeWithSelector(WormholeVault.FeeNotCovered.selector, fee, fee - 1));
+        vault.lockToken{value: fee - 1}(address(usdc), 500e6);
+        vm.stopPrank();
+    }
+
+    /// A fee-on-transfer token must credit what arrived, not what was asked
+    /// for, or it claims collateral the vault is not holding.
+    function test_lockTokenCreditsWhatArrived() public {
+        // Mints its whole supply to whoever deploys it, and skims 10% on the
+        // way out — so the vault receives 900 of the 1000 asked for.
+        FeeToken fee = new FeeToken();
+        assertTrue(fee.transfer(alice, 1200e18));
+
+        vm.prank(governance);
+        vault.setSupportedToken(address(fee), true);
+
+        uint256 messageFee = remoteCore.messageFee();
+        vm.deal(alice, 1 ether);
+        vm.startPrank(alice);
+        fee.approve(address(vault), 1000e18);
+        vault.lockToken{value: messageFee}(address(fee), 1000e18);
+        vm.stopPrank();
+
+        uint256 arrived = fee.balanceOf(address(vault));
+        assertEq(arrived, 900e18);
+        assertEq(vault.tokenBalanceOf(alice, address(fee)), arrived);
+    }
+
+    function test_onlyOwnerChangesVaultConfiguration() public {
+        vm.startPrank(alice);
+        vm.expectRevert();
+        vault.setSupportedToken(address(usdc), false);
+        vm.expectRevert();
+        vault.setOperator(alice);
+        vm.stopPrank();
+
+        vm.startPrank(governance);
+        vault.setOperator(alice);
+        assertEq(vault.operator(), alice);
+        vault.setSupportedToken(address(usdc), false);
+        assertFalse(vault.supportedToken(address(usdc)));
+        vm.stopPrank();
+    }
+
+    function test_hubRefusesAnAssetListedTwice() public {
+        vm.prank(governance);
+        vm.expectRevert(
+            abi.encodeWithSelector(CreditErrors.AssetAlreadyListed.selector, nativeAsset)
+        );
+        hub.listAsset(BASE_SEPOLIA, bytes32(0), 18, ONE);
+    }
+
+    function test_hubRefusesAZeroPriceAndImpossibleDecimals() public {
+        vm.startPrank(governance);
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        hub.listAsset(ARBITRUM_SEPOLIA, bytes32(uint256(1)), 18, 0);
+        vm.expectRevert(abi.encodeWithSelector(CreditErrors.DecimalsOutOfRange.selector, 37));
+        hub.listAsset(ARBITRUM_SEPOLIA, bytes32(uint256(1)), 37, ONE);
+        vm.stopPrank();
+    }
+
+    function test_repricingAnUnlistedAssetReverts() public {
+        bytes32 unknown = keccak256("nope");
+        vm.prank(operator);
+        vm.expectRevert(abi.encodeWithSelector(CreditErrors.AssetNotListed.selector, unknown));
+        hub.setAssetPrice(unknown, ONE);
+
+        vm.prank(operator);
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
+        hub.setAssetPrice(nativeAsset, 0);
+    }
+
+    /// Zeroing a peer stops a chain without touching what it already credited.
+    function test_droppingAPeerStopsNewDepositsOnly() public {
+        bytes memory first = _vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), ONE, 18));
+        hub.receiveFromWormhole(first);
+        uint256 credited = line.collateralValueOf(alice);
+
+        vm.prank(governance);
+        hub.setVaultPeer(BASE_SEPOLIA, bytes32(0));
+
+        bytes memory second = _vaa(BASE_SEPOLIA, peer, 1, _aliceDeposit(bytes32(0), ONE, 18));
+        vm.expectRevert(
+            abi.encodeWithSelector(CreditErrors.UnknownPeer.selector, BASE_SEPOLIA, peer)
+        );
+        hub.receiveFromWormhole(second);
+
+        assertEq(line.collateralValueOf(alice), credited);
+    }
+
+    function test_zeroAmountDepositIsRefused() public {
+        bytes memory vaa = _vaa(BASE_SEPOLIA, peer, 0, _aliceDeposit(bytes32(0), 0, 18));
+        vm.expectRevert(CreditErrors.ZeroAmount.selector);
         hub.receiveFromWormhole(vaa);
     }
 
