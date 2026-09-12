@@ -1,3 +1,7 @@
+/* eslint-disable @next/next/no-img-element -- tiny static icons that must paint the moment
+   they appear; next/image defers them, and one mishandles a local SVG. The biome-ignore
+   comments below have to sit directly above each tag, so a second next-line directive
+   cannot also be there — hence file scope. */
 /**
  * The chain a token lives on, as a small mark pinned to the token's own icon.
  *
@@ -20,6 +24,9 @@ const FILE: Record<string, string> = {
   sepolia: "/chains/ethereum.png",
   base: "/chains/base.png",
   arbitrum: "/chains/arbitrum.png",
+  optimism: "/chains/optimism.png",
+  bnb: "/chains/bnb.png",
+  avalanche: "/chains/avalanche.png",
   creditcoin: "/chains/creditcoin.png",
 };
 
@@ -29,8 +36,13 @@ export function chainLogo(chainName: string): string | null {
   const name = chainName.toLowerCase();
   if (name.startsWith("base")) return FILE.base as string;
   if (name.startsWith("arbitrum")) return FILE.arbitrum as string;
-  if (name.startsWith("optimism")) return null;
+  if (name.startsWith("optimism")) return FILE.optimism as string;
+  // "BSC Testnet" is what the chain map calls it and BNB is what the mark is of. Fuji is matched on
+  // its own name rather than on "avalanche" alone, since the chain map spells it "Avalanche Fuji".
+  if (name.startsWith("bsc") || name.startsWith("bnb")) return FILE.bnb as string;
+  if (name.startsWith("avalanche") || name.includes("fuji")) return FILE.avalanche as string;
   if (name.includes("creditcoin")) return FILE.creditcoin as string;
+  // Last, because every testnet above is also a "sepolia" and would match this first.
   if (name.includes("sepolia") || name.includes("ethereum")) return FILE.ethereum as string;
   return null;
 }
@@ -47,7 +59,6 @@ export function ChainBadge({
   const src = chainLogo(chainName);
   if (!src) return null;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- tiny static icon; next/image mishandles local SVG
     // biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it
     <img
       src={src}

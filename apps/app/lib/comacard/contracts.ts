@@ -1,5 +1,13 @@
 import type { Address } from "viem";
-import { arbitrumSepolia, baseSepolia, creditcoinTestnet, sepolia } from "./wagmi";
+import {
+  arbitrumSepolia,
+  avalancheFuji,
+  baseSepolia,
+  bscTestnet,
+  creditcoinTestnet,
+  optimismSepolia,
+  sepolia,
+} from "./wagmi";
 
 /**
  * The contract surface the app is allowed to touch, and nothing else.
@@ -47,6 +55,9 @@ export const CREDITCOIN_CHAIN_ID = creditcoinTestnet.id as number;
 export const SEPOLIA_CHAIN_ID = sepolia.id as number;
 export const BASE_SEPOLIA_CHAIN_ID = baseSepolia.id as number;
 export const ARBITRUM_SEPOLIA_CHAIN_ID = arbitrumSepolia.id as number;
+export const OPTIMISM_SEPOLIA_CHAIN_ID = optimismSepolia.id as number;
+export const BSC_TESTNET_CHAIN_ID = bscTestnet.id as number;
+export const AVALANCHE_FUJI_CHAIN_ID = avalancheFuji.id as number;
 
 /**
  * Every chain a `WormholeVault` is deployed on, keyed by Wormhole's own chain id.
@@ -68,6 +79,21 @@ export const WORMHOLE_VAULTS: Record<
     evmChainId: ARBITRUM_SEPOLIA_CHAIN_ID,
     vault: "0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30",
     explorer: "https://sepolia.arbiscan.io",
+  },
+  10005: {
+    evmChainId: OPTIMISM_SEPOLIA_CHAIN_ID,
+    vault: "0xCaBFa324576c655D0276647A7f0aF5e779123e0B",
+    explorer: "https://sepolia-optimism.etherscan.io",
+  },
+  4: {
+    evmChainId: BSC_TESTNET_CHAIN_ID,
+    vault: "0x9d8B6852705dD7585B3907244d603547a4eA32d6",
+    explorer: "https://testnet.bscscan.com",
+  },
+  6: {
+    evmChainId: AVALANCHE_FUJI_CHAIN_ID,
+    vault: "0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b",
+    explorer: "https://testnet.snowtrace.io",
   },
 };
 
@@ -446,11 +472,15 @@ export const remoteHubAbi = [
  * in one place.
  */
 export const WORMHOLE_CHAIN_NAMES: Record<number, string> = {
+  // BSC Testnet and Avalanche Fuji predate Wormhole's 10000-block testnet ids and reuse their
+  // mainnet numbers. This file had Fuji at 10006, extrapolated from the sequence above it — 10006
+  // is Holesky. These five now match `apps/worker/src/config.ts` and the indexer's chain map.
+  4: "BSC Testnet",
+  6: "Avalanche Fuji",
   10002: "Sepolia",
   10003: "Arbitrum Sepolia",
   10004: "Base Sepolia",
   10005: "Optimism Sepolia",
-  10006: "Avalanche Fuji",
 };
 
 /** Just enough ERC20 to read a token and approve a lock. */

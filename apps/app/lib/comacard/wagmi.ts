@@ -90,6 +90,61 @@ export const arbitrumSepolia: AppKitNetwork = {
   testnet: true,
 };
 
+/** Optimism Sepolia. Wormhole 10005. */
+export const optimismSepolia: AppKitNetwork = {
+  id: 11155420,
+  caipNetworkId: "eip155:11155420",
+  chainNamespace: "eip155",
+  name: "Optimism Sepolia",
+  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://optimism-sepolia-rpc.publicnode.com"] },
+    chainDefault: { http: ["https://optimism-sepolia-rpc.publicnode.com"] },
+  },
+  blockExplorers: {
+    default: { name: "Etherscan", url: "https://sepolia-optimism.etherscan.io" },
+  },
+  testnet: true,
+};
+
+/**
+ * BSC Testnet. Wormhole **4**, not 10004-anything.
+ *
+ * Wormhole gave its later testnets ids in the 10000s (Sepolia 10002, Arbitrum 10003, Base 10004,
+ * Optimism 10005) but BSC Testnet and Avalanche Fuji predate that and reuse their mainnet ids, 4
+ * and 6. Guessing the pattern puts Fuji at 10006, which is Holesky — a different chain whose vault
+ * would be read at the wrong address. Both numbers here are the ones `apps/worker/src/config.ts`
+ * and the indexer's chain map use.
+ */
+export const bscTestnet: AppKitNetwork = {
+  id: 97,
+  caipNetworkId: "eip155:97",
+  chainNamespace: "eip155",
+  name: "BSC Testnet",
+  nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://bsc-testnet-rpc.publicnode.com"] },
+    chainDefault: { http: ["https://bsc-testnet-rpc.publicnode.com"] },
+  },
+  blockExplorers: { default: { name: "BscScan", url: "https://testnet.bscscan.com" } },
+  testnet: true,
+};
+
+/** Avalanche Fuji. Wormhole **6** — see the note on `bscTestnet`. */
+export const avalancheFuji: AppKitNetwork = {
+  id: 43113,
+  caipNetworkId: "eip155:43113",
+  chainNamespace: "eip155",
+  name: "Avalanche Fuji",
+  nativeCurrency: { name: "Avalanche", symbol: "AVAX", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://api.avax-test.network/ext/bc/C/rpc"] },
+    chainDefault: { http: ["https://api.avax-test.network/ext/bc/C/rpc"] },
+  },
+  blockExplorers: { default: { name: "Snowtrace", url: "https://testnet.snowtrace.io" } },
+  testnet: true,
+};
+
 /**
  * Sepolia leads, and that ordering is load-bearing rather than alphabetical.
  *
@@ -105,6 +160,9 @@ export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [
   creditcoinTestnet,
   baseSepolia,
   arbitrumSepolia,
+  optimismSepolia,
+  bscTestnet,
+  avalancheFuji,
 ];
 
 export const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID ?? "";

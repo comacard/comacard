@@ -8,7 +8,13 @@ import {
   WORMHOLE_VAULTS,
   wormholeVaultAbi,
 } from "../lib/comacard/contracts";
-import { arbitrumSepolia, baseSepolia } from "../lib/comacard/wagmi";
+import {
+  arbitrumSepolia,
+  avalancheFuji,
+  baseSepolia,
+  bscTestnet,
+  optimismSepolia,
+} from "../lib/comacard/wagmi";
 import { useWallet } from "./useWallet";
 
 /**
@@ -63,11 +69,15 @@ export type RemoteAsset = {
 };
 
 /** Public RPCs for the chains a `WormholeVault` is deployed on, keyed by EVM chain id. */
+const rpcOf = (chain: { rpcUrls: { default: { http: readonly string[] } } }): string =>
+  chain.rpcUrls.default.http[0] as string;
+
 const RPCS: Record<number, string> = {
-  [baseSepolia.id as number]: (baseSepolia.rpcUrls.default.http as readonly string[])[0] as string,
-  [arbitrumSepolia.id as number]: (
-    arbitrumSepolia.rpcUrls.default.http as readonly string[]
-  )[0] as string,
+  [baseSepolia.id as number]: rpcOf(baseSepolia),
+  [arbitrumSepolia.id as number]: rpcOf(arbitrumSepolia),
+  [optimismSepolia.id as number]: rpcOf(optimismSepolia),
+  [bscTestnet.id as number]: rpcOf(bscTestnet),
+  [avalancheFuji.id as number]: rpcOf(avalancheFuji),
 };
 
 const ZERO32 = "0x0000000000000000000000000000000000000000000000000000000000000000";

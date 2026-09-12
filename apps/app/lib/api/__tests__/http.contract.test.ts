@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- see the note at the `as any[]` below. */
 // @vitest-environment node
 /**
  * Contract test: the frontend's declared wire shapes (`types.ts`) against the **real** backend
@@ -66,6 +67,11 @@ async function boot(): Promise<Booted | null> {
       import(`${backend}/http/app`),
       import(`${backend}/api/activity`),
       import(`${backend}/earnings/snapshotter`),
+      // The modules cannot be typed here: the path above is deliberately non-literal so that `tsc`
+      // does not resolve a workspace this repo does not contain, which is the whole point of a
+      // suite that has to cope with the module being absent. ESLint's directive for this is at file
+      // scope, because only one suppressor can sit on the line immediately above. Biome does not
+      // flag it at all — the rule is off in this repo's config — so it takes no comment here.
     ])) as any[];
 
     const vault = new MockVaultClient();

@@ -1,3 +1,7 @@
+/* eslint-disable @next/next/no-img-element -- tiny static icons that must paint the moment
+   they appear; next/image defers them, and one mishandles a local SVG. The biome-ignore
+   comments below have to sit directly above each tag, so a second next-line directive
+   cannot also be there — hence file scope. */
 "use client";
 
 import Image from "next/image";
@@ -240,7 +244,6 @@ function WalletIcon({ kind }: { kind: "metamask" | "walletconnect" | "ledger" | 
 
   return (
     <span className={`${styles.walletFloat} ${styles[`wallet${kind}`]}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- static wallet marks must render immediately when the step appears */}
       {/* biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it */}
       <img src={src} alt="" className={styles.walletIconImage} />
     </span>

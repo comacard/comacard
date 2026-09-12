@@ -1,3 +1,7 @@
+/* eslint-disable @next/next/no-img-element -- tiny static icons that must paint the moment
+   they appear; next/image defers them, and one mishandles a local SVG. The biome-ignore
+   comments below have to sit directly above each tag, so a second next-line directive
+   cannot also be there — hence file scope. */
 import type { Currency } from "@sorosense/vault-client";
 
 /**
@@ -57,7 +61,6 @@ export function CoinBadge({
 }) {
   const key: TokenSym = token ?? (currency ? CURRENCY_TOKEN[currency] : "USDC");
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- tiny static icon; next/image is overkill and mishandles local SVG
     // biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it
     <img
       src={FILE[key]}
