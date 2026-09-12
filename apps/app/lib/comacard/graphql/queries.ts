@@ -151,3 +151,35 @@ query WalletTransactions($wallet: String!, $limit: Int = 30) {
   }
 }
 `;
+
+/**
+ * A withdrawal in flight, and why it needs three timestamps rather than a deposit's two.
+ *
+ * It is three transactions on two chains: Creditcoin agrees and the credit is gone, the guardians
+ * sign and the relay lets the vault release it, and then the borrower signs for it. The gap between
+ * the last two is not the protocol waiting on anything — the money is in the vault and the borrower
+ * has not claimed it — so a screen that collapses them tells someone they are done before they are.
+ *
+ * Reading it rather than keeping the state in the component is what makes a request survive a
+ * reload. Without this, leaving the screen between asking and claiming loses every trace of the
+ * request except a limit that dropped for no visible reason.
+ */
+export const REMOTE_WITHDRAWALS = `
+query RemoteWithdrawals($wallet: String!, $limit: Int = 25) {
+  RemoteWithdrawal(
+    where: { account: { _eq: $wallet }, withdrawnAt: { _is_null: true } }
+    order_by: { requestedAt: desc }
+    limit: $limit
+  ) {
+    id
+    amount
+    sequence
+    requestedAt
+    requestTxHash
+    approvedAt
+    approveTxHash
+    withdrawnAt
+    asset { id wormholeChainId decimals }
+  }
+}
+`;

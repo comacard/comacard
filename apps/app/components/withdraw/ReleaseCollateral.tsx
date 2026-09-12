@@ -7,6 +7,7 @@ import { readContract } from "wagmi/actions";
 import { useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteCollateral";
+import { useRemoteWithdrawals } from "../../hooks/useRemoteWithdrawals";
 import {
   CREDITCOIN_CHAIN_ID,
   REMOTE_HUB,
@@ -87,6 +88,9 @@ export function ReleaseCollateral({ id }: { id: string }) {
   const router = useRouter();
   const config = useConfig();
   const { assets, loading, refresh } = useRemoteCollateral();
+  // A request the borrower has already made. Read rather than remembered, so leaving the screen
+  // between asking and claiming does not erase every trace of it but a limit that dropped.
+  const { items: withdrawals, refresh: refreshWithdrawals } = useRemoteWithdrawals();
   const { totalValue } = useCollateral();
   const { drawn, score } = useCreditLine();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
@@ -126,6 +130,10 @@ export function ReleaseCollateral({ id }: { id: string }) {
 
   const symbol = asset.native ? "ETH" : "USDC";
   const entered = parseAmount(amount, asset.decimals);
+  // Requested and not yet taken. `approvedAt` is what separates "the guardians are signing" from
+  // "the money is sitting in the vault waiting for you", and only the second is the borrower's move.
+  const open = withdrawals.filter((w) => w.assetId.toLowerCase() === asset.id.toLowerCase());
+  const awaitingGuardians = open.find((w) => w.approvedAt === null) ?? null;
 
   // What the debt allows, converted into this asset. Capped by what is actually credited: freeing
   // value says nothing about which asset it can come out of.
@@ -165,6 +173,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
       await awaitSuccess(config, sent, CREDITCOIN_CHAIN_ID);
       setRequested(true);
       refresh();
+      refreshWithdrawals();
     } catch {
       // Surfaced by `error` below; caught only to stop an unhandled rejection.
     } finally {
@@ -220,6 +229,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
       });
       setClaimed(true);
       refresh();
+      refreshWithdrawals();
     } catch {
       /* surfaced below */
     } finally {
@@ -255,12 +265,17 @@ export function ReleaseCollateral({ id }: { id: string }) {
   // Step 2. Said plainly, because between the request and the signature nothing on Home changes
   // except the limit going down, and a screen that stayed silent would read as a withdrawal that
   // did not work.
-  if (requested && asset.releasable <= 0n) {
+  if ((requested || awaitingGuardians !== null) && asset.releasable <= 0n) {
     return (
       <div className="flex min-h-[calc(100dvh-92px)] flex-col">
         <div className="flex flex-1 flex-col items-center justify-center">
           <TransactionStatus status="confirmed" size="large" />
-          <p className="mt-5 max-w-[300px] text-center text-[13px] leading-snug text-muted">
+          {awaitingGuardians ? (
+            <p className="mt-4 text-[15px] font-semibold tabular-nums">
+              {fmt(awaitingGuardians.amount, awaitingGuardians.decimals)} {symbol} on its way
+            </p>
+          ) : null}
+          <p className="mt-3 max-w-[300px] text-center text-[13px] leading-snug text-muted">
             Creditcoin has published the release. The guardians sign it in under a minute on BSC and
             Fuji, and in fifteen to twenty minutes on the L2s. You sign once more to take it — come
             back to this screen and the button will be here.
