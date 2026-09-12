@@ -38,6 +38,25 @@ multi-asset path can be exercised without real funds.
 | tUSDT | 6 | 1 CTC | [`0xc370A0BC9db78d031c076b2fBEcCCb5f3291AB00`](https://sepolia.etherscan.io/address/0xc370A0BC9db78d031c076b2fBEcCCb5f3291AB00) |
 | tWETH | 18 | 1,000 CTC | [`0xC27FCc0A2547298d0ec86f7f70748Cc3CFC18da1`](https://sepolia.etherscan.io/address/0xC27FCc0A2547298d0ec86f7f70748Cc3CFC18da1) |
 
+### Tokens on Creditcoin testnet
+
+| Token | Decimals | Address | What it is |
+| --- | --- | --- | --- |
+| WCTC | 18 | [`0xc60f71E2814E45921e57Ea32a4ee36d5E73d3b29`](https://creditcoin-testnet.blockscout.com/address/0xc60f71E2814E45921e57Ea32a4ee36d5E73d3b29) | Native CTC as an ERC20 |
+| USDT.C | 6 | [`0x0e1d5478d3061923Ed47DdB4146F037Da4E63dAD`](https://creditcoin-testnet.blockscout.com/address/0x0e1d5478d3061923Ed47DdB4146F037Da4E63dAD) | Testnet stand-in |
+
+`WrappedCTC` is a real WETH-style wrapper: every token is backed one to one by
+native CTC held in the contract, and the fuzz test asserts supply never diverges
+from that balance. It is **not** a bridge. On mainnet the WCTC symbol belongs to
+a Wormhole NTT deployment that genuinely moves CTC to Ethereum and BSC; this
+one wraps CTC on the same chain so ERC20-only contracts can hold it.
+
+`BridgedUSDT` is a stand-in and nothing more. Real Creditcoin Bridged USDT
+exists only on mainnet, carried there by NTT; there is no testnet counterpart,
+which is why this exists. Anyone can mint it from `faucet`, and that open mint
+is the plainest signal it is not the bridged asset — a bridged token can only
+come into existence by bridging.
+
 Prices are operator-set testnet figures on a 1 CTC ≈ $1 model, not market
 quotes. The decimals column is the one that matters for correctness: a 6-decimal
 stablecoin valued as if it had 18 would count for a trillionth of itself.
