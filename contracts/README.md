@@ -158,6 +158,12 @@ Prices are operator-set testnet figures on a 1 CTC ≈ $1 model, not market
 quotes. The decimals column is the one that matters for correctness: a 6-decimal
 stablecoin valued as if it had 18 would count for a trillionth of itself.
 
+## What this trusts
+
+[TRUST.md](TRUST.md) sets out who is trusted for what, why the Ethereum leg is
+operator-approved while the Wormhole legs are not, and what Attestcoin can and
+cannot prove. Worth reading before deciding what the demo claims.
+
 ## Layout
 
 ```
