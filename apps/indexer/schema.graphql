@@ -164,12 +164,18 @@ other. The id is the contract's own assetId, keccak256(chainId ++ token).
 """
 type RemoteAsset {
   id: ID! # assetId
-  """Wormhole chain id: 10004 Base Sepolia, 10003 Arbitrum Sepolia."""
+  """
+  Wormhole chain id: 10004 Base Sepolia, 10003 Arbitrum Sepolia.
+  """
   wormholeChainId: Int!
-  """Token address on its own chain, or the zero address for the native coin."""
+  """
+  Token address on its own chain, or the zero address for the native coin.
+  """
   token: String!
   decimals: Int!
-  """Credit-asset wei per one whole unit, 18dp. Operator-fed on testnet."""
+  """
+  Credit-asset wei per one whole unit, 18dp. Operator-fed on testnet.
+  """
   price: BigInt!
   listedAt: BigInt!
   pricedAt: BigInt!
@@ -189,7 +195,9 @@ type RemoteDeposit {
   account: String!
   asset: RemoteAsset!
   amount: BigInt!
-  """Wormhole message sequence. What the relayer needs to fetch the VAA."""
+  """
+  Wormhole message sequence. What the relayer needs to fetch the VAA.
+  """
   sequence: BigInt!
   lockedAt: BigInt!
   lockBlock: BigInt!
