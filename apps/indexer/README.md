@@ -34,10 +34,21 @@ limit.
 
 ## Live
 
-    https://indexer.dev.hyperindex.xyz/5d01570/v1/graphql
+    https://indexer.dev.hyperindex.xyz/cbbaacc/v1/graphql
 
 Each deployment gets its own URL on the Development plan, and old ones keep
 serving, so this changes whenever `main` moves. Consumers read `INDEXER_URL`.
+
+The Development plan also caps an indexer at **three deployments**, and a push
+with no free slot does not build and does not complain — the dashboard shows
+three healthy deployments and settings still say `auto-deploy: true`. If the
+data looks stale, check for `inactive` commits before suspecting the schema:
+
+```sh
+ENVIO_GITHUB_TOKEN=$(gh auth token) bunx envio-cloud login
+bunx envio-cloud indexer commits comacard comacard
+bunx envio-cloud deployment delete comacard <old-commit> comacard --yes
+```
 
 ```graphql
 { Account { id collateral drawn score creditLimit available } }
