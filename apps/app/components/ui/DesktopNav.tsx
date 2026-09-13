@@ -30,9 +30,8 @@ import { SHELL } from "./shell";
 
 const LINKS = [
   { href: "/home", label: "Overview" },
-  // The route stays `/earn`: the bottom nav, the swipe order and the tests all address that path.
   // Only what it shows, and what it is called, became Credit.
-  { href: "/earn", label: "Credit" },
+  { href: "/credit", label: "Credit" },
 ] as const;
 
 function Item({ href, active, children }: { href: string; active: boolean; children: ReactNode }) {

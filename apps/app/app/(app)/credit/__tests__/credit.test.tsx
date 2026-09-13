@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { CreditEvent } from "../../../../hooks/useCreditHistory";
-import EarnPage from "../page";
+import CreditPage from "../page";
 
 /**
  * The middle tab after it stopped reporting APY it never paid.
@@ -55,7 +55,7 @@ beforeEach(() => {
 });
 
 test("leads with the limit, not with a yield", () => {
-  render(<EarnPage />);
+  render(<CreditPage />);
 
   // The score was the headline first and read as a fault: it sits at zero straight after a deposit
   // that plainly worked, because a deposit buys a limit and only repaying earns a score.
@@ -64,7 +64,7 @@ test("leads with the limit, not with a yield", () => {
 });
 
 test("an empty record renders empty", () => {
-  render(<EarnPage />);
+  render(<CreditPage />);
 
   expect(screen.getByText("Nothing spent yet")).toBeInTheDocument();
   // No bars at all rather than a flat row of stubs, which reads as broken.
@@ -80,7 +80,7 @@ test("a real record draws the bars and totals what happened", () => {
     loading: false,
     error: false,
   });
-  render(<EarnPage />);
+  render(<CreditPage />);
 
   expect(screen.getByTestId("bars")).toBeInTheDocument();
   expect(screen.getByText("1 cycle closed")).toBeInTheDocument();
@@ -89,7 +89,7 @@ test("a real record draws the bars and totals what happened", () => {
 
 test("offers the two halves of a cycle, and dims the half that has nothing to do", async () => {
   const user = userEvent.setup();
-  render(<EarnPage />);
+  render(<CreditPage />);
 
   // Nothing owed, so Repay is dimmed rather than hidden: a control that vanishes teaches nobody
   // that it is the second half of what this screen records.
@@ -101,7 +101,7 @@ test("offers the two halves of a cycle, and dims the half that has nothing to do
 test("an open balance makes Repay the live one", async () => {
   const user = userEvent.setup();
   creditLine.mockReturnValue({ score: 42n, limit: 1n, drawn: 5n });
-  render(<EarnPage />);
+  render(<CreditPage />);
 
   await user.click(screen.getByRole("button", { name: "Repay" }));
   expect(push).toHaveBeenCalledWith("/pay");
@@ -113,7 +113,7 @@ test("an unread limit is a dash, never a zero", () => {
   // "0 tCTC" there states that the card is allowed nothing, on the one screen the limit is the
   // subject of.
   creditLine.mockReturnValue({ limit: undefined, drawn: 0n, score: 42n });
-  render(<EarnPage />);
+  render(<CreditPage />);
 
   expect(screen.getByText("—")).toBeInTheDocument();
   // The balance under it is a genuine zero and is entitled to say so. What must not appear is a
@@ -128,7 +128,7 @@ test("the score and the balance are both on the screen", () => {
   // greyed with no figure and no reason, and the score was absent from the screen whose whole
   // subject is how the limit is earned.
   creditLine.mockReturnValue({ limit: 41n * 10n ** 18n, drawn: 13n * 10n ** 18n, score: 42n });
-  render(<EarnPage />);
+  render(<CreditPage />);
 
   expect(screen.getByText(/score 42/)).toBeInTheDocument();
   expect(screen.getByText("13 tCTC")).toBeInTheDocument();

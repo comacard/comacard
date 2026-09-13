@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { binEvents, useCreditHistory } from "../../hooks/useCreditHistory";
 import { cn } from "../../lib/utils";
-import { Bars } from "../earn/Bars";
 import { Card, Segmented } from "../ui";
+import { Bars } from "./Bars";
 
 /**
  * What has come out of the card and what has gone back, over a chosen window.

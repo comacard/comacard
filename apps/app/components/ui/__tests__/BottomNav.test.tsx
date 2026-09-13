@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { BottomNav } from "../BottomNav";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/earn" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/credit" }));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));
 
 test("marks the active tab by pathname", () => {

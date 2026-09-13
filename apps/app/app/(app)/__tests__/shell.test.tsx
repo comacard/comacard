@@ -49,10 +49,10 @@ test("desktop chrome present: the desktop nav renders alongside the mobile botto
 
   // The bar is the point: before it, desktop chrome was a wordmark and an avatar, and Credit had no
   // way to be reached at all. Both navs are landmarks in the DOM at once and CSS picks one per
-  // viewport, so every query here is scoped: both of them link "Credit" to /earn now.
+  // viewport, so every query here is scoped: both of them link "Credit" to /credit now.
   const desktop = within(screen.getByRole("navigation", { name: "Primary" }));
   expect(desktop.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/home");
-  expect(desktop.getByRole("link", { name: "Credit" })).toHaveAttribute("href", "/earn");
+  expect(desktop.getByRole("link", { name: "Credit" })).toHaveAttribute("href", "/credit");
   // Activity is a drawer on desktop by design, so the link addresses the drawer's own URL rather
   // than /transactions, which the (flow) layout would bounce straight back to /home. It sits beside
   // the account menu rather than in the nav landmark, so it is queried outside that scope.
@@ -64,7 +64,7 @@ test("desktop chrome present: the desktop nav renders alongside the mobile botto
 
 test("the desktop nav marks the current route, and only it", () => {
   useWallet.mockReturnValue({ isConnected: true, hydrated: true });
-  pathname = "/earn";
+  pathname = "/credit";
   render(
     <AppLayout>
       <p>credit body</p>
@@ -86,12 +86,12 @@ test("mobile shell swipe moves between the three tab routes", () => {
 
   fireEvent.touchStart(shell, { touches: [{ clientX: 320, clientY: 240 }] });
   fireEvent.touchEnd(shell, { changedTouches: [{ clientX: 180, clientY: 246 }] });
-  expect(push).toHaveBeenCalledWith("/earn");
+  expect(push).toHaveBeenCalledWith("/credit");
 
-  pathname = "/earn";
+  pathname = "/credit";
   rerender(
     <AppLayout>
-      <p>earn body</p>
+      <p>credit body</p>
     </AppLayout>,
   );
   fireEvent.touchStart(shell, { touches: [{ clientX: 120, clientY: 240 }] });

@@ -9,7 +9,7 @@ const TABS = [
     // The route keeps its old name because the swipe order, the desktop bar and every test address
     // that path; only the screen behind it changed, from an APY promise this protocol never paid to
     // the record the card actually builds. The label is what a person reads, so it says Credit.
-    href: "/earn",
+    href: "/credit",
     label: "Credit",
     icon: (
       <>
