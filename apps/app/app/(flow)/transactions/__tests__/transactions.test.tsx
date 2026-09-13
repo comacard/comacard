@@ -56,7 +56,9 @@ test("shows every on-chain row, newest first, with plain-language titles", () =>
   expect(screen.getByText("Payment")).toBeInTheDocument();
   expect(screen.getByText("Spent")).toBeInTheDocument();
   expect(screen.getByText("Deposit confirmed")).toBeInTheDocument();
-  expect(screen.getByText("Security deposit")).toBeInTheDocument();
+  // The filter tab is also called "Deposit", so the row title is matched by its element: a tab is a
+  // button, a row title is not.
+  expect(screen.getByText("Deposit", { selector: "div" })).toBeInTheDocument();
   // No chain names or protocol words in what a person reads.
   expect(screen.queryByText(/attestation|collateral released|creditcoin cc3|sepolia/i)).toBeNull();
 });
@@ -67,10 +69,10 @@ test("Card and Deposit each show only their own rows", async () => {
 
   await user.click(screen.getByRole("button", { name: "Card" }));
   expect(screen.getByText("Spent")).toBeInTheDocument();
-  expect(screen.queryByText("Security deposit")).toBeNull();
+  expect(screen.queryByText("Deposit", { selector: "div" })).toBeNull();
 
   await user.click(screen.getByRole("button", { name: "Deposit" }));
-  expect(screen.getByText("Security deposit")).toBeInTheDocument();
+  expect(screen.getByText("Deposit", { selector: "div" })).toBeInTheDocument();
   expect(screen.queryByText("Spent")).toBeNull();
 });
 
@@ -78,7 +80,7 @@ test("each row opens its own transaction on the right explorer", () => {
   render(<TransactionsPage />);
   // The collateral lock happened on Ethereum, the draw on Creditcoin. A row pointing at the wrong
   // explorer is a dead link, and a dead link in a demo is worse than no link.
-  const lock = screen.getByText("Security deposit").closest("a");
+  const lock = screen.getByText("Deposit", { selector: "div" }).closest("a");
   expect(lock).toHaveAttribute("href", "https://sepolia.etherscan.io/tx/0xlock");
   expect(lock).toHaveAttribute("target", "_blank");
   expect(screen.getByText("Spent").closest("a")).toHaveAttribute(

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ActivityItem } from "../../../lib/comacard/activity";
 import { ActivityList } from "../ActivityList";
 
@@ -34,7 +35,7 @@ test("words each kind for someone who has held a secured credit card", () => {
 
   // No chain names in a title, and no protocol vocabulary anywhere near one.
   expect(screen.getByText("Spent")).toBeInTheDocument();
-  expect(screen.getByText("Security deposit")).toBeInTheDocument();
+  expect(screen.getByText("Deposit")).toBeInTheDocument();
   expect(screen.getByText("Deposit confirmed")).toBeInTheDocument();
   expect(screen.queryByText(/collateral|attestation|drew/i)).toBeNull();
 });
@@ -105,4 +106,45 @@ test("renders a designed empty state when empty copy is provided", () => {
   );
 
   expect(screen.getByText("No transactions yet")).toBeInTheDocument();
+});
+
+test("pageSize shows a page and a Load more that grows it", async () => {
+  const user = userEvent.setup();
+  const items = Array.from({ length: 7 }, (_, i) =>
+    row({ id: i, kind: "drew", detail: `row ${i}` }),
+  );
+  render(<ActivityList items={items} pageSize={3} />);
+
+  expect(screen.getAllByText("Spent")).toHaveLength(3);
+  await user.click(screen.getByRole("button", { name: /Load more/ }));
+  expect(screen.getAllByText("Spent")).toHaveLength(6);
+  // The last page is short, and the button goes once there is nothing left behind it.
+  await user.click(screen.getByRole("button", { name: /Load more/ }));
+  expect(screen.getAllByText("Spent")).toHaveLength(7);
+  expect(screen.queryByRole("button", { name: /Load more/ })).toBeNull();
+});
+
+test("no pageSize means no button, however long the list", () => {
+  render(
+    <ActivityList
+      items={Array.from({ length: 20 }, (_, i) => row({ id: i, kind: "drew", detail: `r${i}` }))}
+    />,
+  );
+
+  expect(screen.queryByRole("button", { name: /Load more/ })).toBeNull();
+  expect(screen.getAllByText("Spent")).toHaveLength(20);
+});
+
+test("a lock reads Deposit, so it is not two different things beside its confirmation", () => {
+  render(
+    <ActivityList
+      items={[
+        row({ id: 1, kind: "proved", detail: "0.0100 BNB now backs your credit limit" }),
+        row({ id: 2, kind: "collateral-locked", detail: "0.0100 BNB put down on BSC Testnet" }),
+      ]}
+    />,
+  );
+
+  expect(screen.getByText("Deposit")).toBeInTheDocument();
+  expect(screen.getByText("Deposit confirmed")).toBeInTheDocument();
 });

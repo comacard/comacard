@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react";
 import type { ActivityItem } from "../../lib/comacard/activity";
 import { Skeleton } from "../ui";
 import { ActivityRow } from "./ActivityRow";
@@ -27,12 +29,36 @@ function dayLabel(at: number, now: number): string {
   });
 }
 
+const LoadMore = ({ onClick }: { onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex w-full items-center justify-center gap-[3px] pb-[3px] pt-[13px] text-[13.5px] font-medium text-muted transition-colors hover:text-ink"
+  >
+    Load more
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  </button>
+);
+
 export function ActivityList({
   items,
   divider = true,
   loading = false,
   grouped = false,
   now,
+  pageSize,
   emptyTitle,
   emptyDescription,
 }: {
@@ -45,11 +71,17 @@ export function ActivityList({
   /** Epoch ms, read after mount by the caller. Required for `grouped`, because deciding "Today"
    *  during render bakes the server's clock into the HTML. */
   now?: number | null;
+  /** Show this many rows and a "Load more" beneath. Unset renders everything, which is what the
+   *  Home previews want — they slice to three before they get here. */
+  pageSize?: number;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
   // Without dividers the rows blend together, so give them a little breathing room instead.
   const wrap = divider ? "" : "flex flex-col gap-1";
+  const [shown, setShown] = useState(pageSize ?? Number.POSITIVE_INFINITY);
+  const visible = pageSize === undefined ? items : items.slice(0, shown);
+  const more = visible.length < items.length;
 
   if (loading) {
     return (
@@ -103,7 +135,7 @@ export function ActivityList({
 
   if (grouped && now != null) {
     const days: { label: string; rows: ActivityItem[] }[] = [];
-    for (const item of items) {
+    for (const item of visible) {
       const label = item.at === undefined ? "" : dayLabel(item.at, now);
       const last = days.at(-1);
       if (last && last.label === label) last.rows.push(item);
@@ -125,15 +157,17 @@ export function ActivityList({
             </div>
           </section>
         ))}
+        {more ? <LoadMore onClick={() => setShown((n) => n + (pageSize ?? 0))} /> : null}
       </div>
     );
   }
 
   return (
     <div className={`${wrap} fade-in`}>
-      {items.map((item, i) => (
+      {visible.map((item, i) => (
         <ActivityRow key={item.id} item={item} first={i === 0} divider={divider} />
       ))}
+      {more ? <LoadMore onClick={() => setShown((n) => n + (pageSize ?? 0))} /> : null}
     </div>
   );
 }

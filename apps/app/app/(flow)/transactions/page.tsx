@@ -76,6 +76,7 @@ export default function TransactionsPage() {
           loading={loading}
           grouped
           now={now}
+          pageSize={12}
           emptyTitle={empty.title}
           emptyDescription={empty.description}
         />
