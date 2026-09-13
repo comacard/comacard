@@ -215,3 +215,61 @@ test("a failed request returns the button to Request rather than sticking on a t
   await waitFor(() => expect(screen.getByRole("button", { name: "Request" })).toBeEnabled());
   expect(screen.queryByRole("button", { name: /received/i })).toBeNull();
 });
+
+test("each network tab shows that chain's own coin, and only Sepolia can be minted", async () => {
+  const user = userEvent.setup();
+  collateral.mockReturnValue({
+    assets: [token({ symbol: "tUSDC", faucetable: true })],
+    loading: false,
+    error: false,
+  });
+  creditLine.mockReturnValue({ mint: vi.fn(), onSepolia: true });
+  render(<FaucetSection />);
+
+  // Sepolia: its own coin plus the tokens this app can mint.
+  expect(screen.getByText("ETH")).toBeInTheDocument();
+  expect(screen.getByText("tUSDC")).toBeInTheDocument();
+
+  // BSC pays in BNB. The deposit screen once read `native ? "ETH" : "USDC"` and announced
+  // "Lock ETH" on BSC Testnet, which is the wrong asset on the screen that sends someone to go and
+  // fetch it. Fuji pays in AVAX for the same reason.
+  await user.click(screen.getByRole("tab", { name: /BSC Testnet/ }));
+  expect(screen.getByText("BNB")).toBeInTheDocument();
+  expect(screen.queryByText("tUSDC")).toBeNull();
+
+  await user.click(screen.getByRole("tab", { name: /Avalanche Fuji/ }));
+  expect(screen.getByText("AVAX")).toBeInTheDocument();
+});
+
+test("a far-chain faucet is a link out, never a button that would sign", async () => {
+  const user = userEvent.setup();
+  collateral.mockReturnValue({ assets: [], loading: false, error: false });
+  creditLine.mockReturnValue({ mint: vi.fn(), onSepolia: true });
+  render(<FaucetSection />);
+
+  await user.click(screen.getByRole("tab", { name: /BSC Testnet/ }));
+
+  // There is no tBNB contract of ours to call. A button here would be a signature prompt for a
+  // transaction that does not exist.
+  const link = screen.getByRole("link", { name: "Request" });
+  expect(link).toHaveAttribute("href", expect.stringContaining("bnbchain.org"));
+  expect(link).toHaveAttribute("target", "_blank");
+  expect(link).toHaveAttribute("rel", "noreferrer");
+});
+
+test("offers a faucet for every chain a deposit can come from", async () => {
+  const user = userEvent.setup();
+  collateral.mockReturnValue({ assets: [], loading: false, error: false });
+  creditLine.mockReturnValue({ mint: vi.fn(), onSepolia: true });
+  render(<FaucetSection />);
+
+  // Six tabs, and each one leads somewhere. A tab that selects and then shows an empty list is
+  // worse than no tab: it reads as the chain being unsupported.
+  const tabs = screen.getAllByRole("tab");
+  expect(tabs).toHaveLength(6);
+
+  for (const tab of tabs) {
+    await user.click(tab);
+    expect(screen.getAllByRole("link", { name: "Request" }).length).toBeGreaterThan(0);
+  }
+});

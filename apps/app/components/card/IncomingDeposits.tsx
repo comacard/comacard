@@ -48,7 +48,7 @@ export function IncomingDeposits({
               </div>
               <div className="mt-0.5 text-[11.5px] text-muted">
                 {deposit.slow
-                  ? `Taking longer than usual — ${minutes(deposit.elapsedSeconds)} min so far`
+                  ? `Taking longer than usual, ${minutes(deposit.elapsedSeconds)} min so far`
                   : `Arriving in about ${minutes(deposit.waitSeconds - deposit.elapsedSeconds)} min`}
               </div>
             </div>

@@ -72,6 +72,7 @@ const remote = (over: Partial<RemoteAsset>): RemoteAsset => ({
   locked: 10n ** 16n,
   releasable: 0n,
   available: 0n,
+  fee: 0n,
   pending: false,
   vault: null,
   evmChainId: null,
@@ -124,4 +125,34 @@ test("pages the list rather than growing the card without end", async () => {
 
   await user.click(screen.getByRole("button", { name: /load more/i }));
   expect(screen.getByText("Chain 5")).toBeInTheDocument();
+});
+
+test("a read still in flight is a skeleton, not an absent asset", () => {
+  // The two carriers are read from different chains and land seconds apart: Sepolia answers in
+  // under a second, the Wormhole hub sits on Creditcoin at about four seconds a call. Rendering
+  // only what had arrived made the card look complete with BNB simply missing, then grew a row
+  // under the reader.
+  render(<CollateralList assets={[]} remote={[]} loading />);
+
+  expect(screen.getByText("Assets held")).toBeInTheDocument();
+  expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
+});
+
+test("keeps a placeholder while the second carrier is still coming", () => {
+  // Sepolia has landed, Creditcoin has not. The card says so rather than settling at one row.
+  render(
+    <CollateralList
+      assets={[asset({ token: "0x1", symbol: "tUSDC", decimals: 6, locked: 1n, proved: 1n })]}
+      remote={[]}
+      loading
+    />,
+  );
+
+  expect(screen.getByText("tUSDC")).toBeInTheDocument();
+  expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
+});
+
+test("shows nothing at all once the reads are done and there is nothing to show", () => {
+  const { container } = render(<CollateralList assets={[]} remote={[]} loading={false} />);
+  expect(container).toBeEmptyDOMElement();
 });

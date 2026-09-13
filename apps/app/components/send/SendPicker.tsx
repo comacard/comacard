@@ -105,7 +105,7 @@ export function SendPicker() {
           href="/send/to"
           icon={glyph("M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z")}
           title="To another wallet"
-          description="Two signatures — it reaches your wallet first, then goes on"
+          description="Two signatures. It reaches your wallet first, then goes on"
         />
       </div>
 

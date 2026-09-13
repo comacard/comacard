@@ -36,7 +36,7 @@ const MIN_CYCLE_SECONDS = 60;
  */
 function explainRepay(message: string): string {
   if (/RepaymentExceedsDebt/.test(message)) {
-    return "Your balance moved while this was being sent. Nothing was paid — open the screen again and it will settle the new figure.";
+    return "Your balance moved while this was being sent. Nothing was paid. Open the screen again and it will settle the new figure.";
   }
   return message.split("\n")[0] ?? message;
 }

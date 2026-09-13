@@ -15,6 +15,7 @@ import {
   wormholeVaultAbi,
 } from "../../lib/comacard/contracts";
 import { collateralValue, limitFrom } from "../../lib/comacard/credit";
+import { lockNativeUri } from "../../lib/comacard/eip681";
 import { awaitSuccess } from "../../lib/comacard/tx";
 import {
   AssetIcon,
@@ -27,6 +28,7 @@ import {
   TransactionStatus,
 } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
+import { DepositQr } from "./DepositQr";
 
 /**
  * Locking collateral on a chain Attestcoin cannot reach.
@@ -77,6 +79,12 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   const { switchChainAsync, isPending: switching } = useSwitchChain();
   const { writeContractAsync, data: hash, error, reset } = useWriteContract();
 
+  // Resolved before the hooks below, because a hook's arguments cannot depend on an early return.
+  const found: RemoteAsset | null =
+    assets.find((a) => a.id.toLowerCase() === id.toLowerCase()) ?? null;
+  const vaultAddress = found?.vault ?? null;
+  const evmChainId = found?.evmChainId ?? null;
+
   const [amount, setAmount] = useState("0");
   const [busy, setBusy] = useState(false);
   // Everything that can fail before the wallet is even asked — switching chains, reading the message
@@ -86,8 +94,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   const [failed, setFailed] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  const asset: RemoteAsset | null =
-    assets.find((a) => a.id.toLowerCase() === id.toLowerCase()) ?? null;
+  const asset = found;
 
   if (loading) {
     return (
@@ -324,6 +331,24 @@ export function LockRemoteCollateral({ id }: { id: string }) {
           Signed across to Creditcoin in {crossingTime(asset.wormholeChainId)}. Your {symbol} stays
           on {asset.chainName}.
         </p>
+
+        {/*
+          Native only, and only once there is an amount and a fee.
+
+          An ERC20 lock calls `safeTransferFrom`, so it needs an allowance that no URI can grant. A
+          QR for one would open a confirmation that always reverts, which is worse than no QR: it
+          looks like the feature working right up to the signature.
+
+          The fee rides on top of the amount rather than coming out of it, exactly as `onLock`
+          sends it, so the code and the button produce the same transaction.
+        */}
+        {asset.native && entered > 0n && !exceeded && vaultAddress && evmChainId !== null ? (
+          <DepositQr
+            uri={lockNativeUri(vaultAddress, evmChainId, entered + asset.fee)}
+            chainName={asset.chainName}
+            amount={`${fmt(entered, asset.decimals)} ${symbol}`}
+          />
+        ) : null}
       </div>
     </div>
   );

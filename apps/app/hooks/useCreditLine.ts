@@ -296,15 +296,23 @@ export function useCreditLine() {
     account: account.data,
     lockedCollateral: locked.data,
     /**
-     * True while the credit line has not answered yet.
+     * True while any of the three figures this hook is usually asked for is still unread.
      *
      * The Creditcoin RPC takes about four seconds a call, measured, against 1.2s for the indexer and
      * 0.7s for Sepolia. For that whole window `available` is undefined, and every screen that wrote
-     * `(available ?? 0n) === 0n` rendered a greyed-out Spend button — a definite "you have nothing"
-     * for a figure nothing had read yet. Same rule as everywhere else today: an unresolved read is
+     * `(available ?? 0n) === 0n` rendered a greyed-out Spend button: a definite "you have nothing"
+     * for a figure nothing had read yet. Same rule as everywhere else today, an unresolved read is
      * not a zero.
+     *
+     * **Prefer `availableLoading` for the Send control.** This one is an OR across three separate
+     * reads, so the slowest of them decides it. `accountOf` returns a struct and is reliably the
+     * last to land, which left Send spinning for seconds after the figure beside it had already
+     * rendered: the screen was simultaneously saying "you can spend 35.0097" and refusing to let
+     * anyone try. A control should wait on the figure it actually needs and no other.
      */
     loading: limit.isLoading || available.isLoading || account.isLoading,
+    /** Just `availableOf`. What Send is gated on, because it is what Send spends. */
+    availableLoading: available.isLoading,
     reads: { limit, available, score, locked, account },
     lock,
     lockToken,

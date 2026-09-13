@@ -4,7 +4,7 @@ import { formatUnits } from "viem";
 import type { CollateralAsset } from "../../hooks/useCollateral";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
 import { NATIVE_SYMBOL } from "../../lib/comacard/contracts";
-import { AssetIcon, badgeForSymbol, CoinBadge, LoadMore, Section } from "../ui";
+import { AssetIcon, badgeForSymbol, CoinBadge, LoadMore, Section, Skeleton } from "../ui";
 import type { TokenSym } from "../ui/CoinBadge";
 
 /**
@@ -17,6 +17,13 @@ import type { TokenSym } from "../ui/CoinBadge";
  *
  * Assets with nothing in them are dropped rather than listed at zero: three empty stablecoin rows
  * tell the holder nothing except that the screen has rows.
+ *
+ * **A read still in flight is a skeleton, never an absence.** The two carriers are read from
+ * different chains and arrive seconds apart: Sepolia answers in well under a second and the
+ * Wormhole hub sits on Creditcoin, whose RPC takes about four seconds a call and is asked several
+ * times. Rendering only what had landed meant the card appeared complete, with BNB simply missing,
+ * and then grew a row underneath the reader. A short row of placeholders says "there is more" for
+ * the same reason an unread figure is a dash rather than a zero.
  *
  * **Every row carries its network, and no row is a link.** Both of those are corrections.
  *
@@ -113,10 +120,13 @@ function Row({
 export function CollateralList({
   assets,
   remote = [],
+  loading = false,
   className = "mt-4",
 }: {
   assets: CollateralAsset[];
   remote?: RemoteAsset[];
+  /** True while either carrier is still being read. See the note above on why this is not absence. */
+  loading?: boolean;
   className?: string;
 }) {
   const [shown, setShown] = useState(PAGE);
@@ -154,6 +164,32 @@ export function CollateralList({
     }),
   ];
 
+  // Nothing read yet and something still coming: placeholders rather than an empty screen.
+  if (rows.length === 0 && loading) {
+    return (
+      <Section title="Assets held" className={className}>
+        <div className="rounded-[16px] border border-line bg-white px-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className={`flex items-center gap-3 py-3.5 ${i === 0 ? "" : "border-t border-line"}`}
+            >
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-[13px] w-16 rounded" />
+                <Skeleton className="mt-1.5 h-[11px] w-24 rounded" />
+              </div>
+              <div className="flex flex-col items-end">
+                <Skeleton className="h-[13px] w-20 rounded" />
+                <Skeleton className="mt-1.5 h-[11px] w-14 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+    );
+  }
+
   if (rows.length === 0) return null;
   const visible = rows.slice(0, shown);
 
@@ -163,6 +199,15 @@ export function CollateralList({
         {visible.map(({ key, ...row }, i) => (
           <Row key={key} {...row} first={i === 0} />
         ))}
+        {loading ? (
+          <div className="flex items-center gap-3 border-t border-line py-3.5">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <div className="min-w-0 flex-1">
+              <Skeleton className="h-[13px] w-16 rounded" />
+              <Skeleton className="mt-1.5 h-[11px] w-24 rounded" />
+            </div>
+          </div>
+        ) : null}
         {visible.length < rows.length ? (
           <LoadMore onClick={() => setShown((n) => n + PAGE)} />
         ) : null}

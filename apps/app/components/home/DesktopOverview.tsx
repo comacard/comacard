@@ -152,8 +152,8 @@ export function DesktopOverview() {
   const { panel, open, close } = usePanel();
   const { account, loading: accountLoading, refresh } = useCardAccount();
   const { assets: collateral } = useCollateral();
-  const { assets: remoteCollateral } = useRemoteCollateral();
-  const { limit, drawn, available, loading: creditLoading } = useCreditLine();
+  const { assets: remoteCollateral, loading: remoteLoading } = useRemoteCollateral();
+  const { limit, drawn, available, availableLoading } = useCreditLine();
   const { borrowed, loading: historyLoading, error: historyError } = useCreditHistory();
   const { assets } = useWalletAssets();
   const { loading: txLoading, items: transactions } = useTransactions();
@@ -208,7 +208,7 @@ export function DesktopOverview() {
               <CardActions
                 owes={owes}
                 canSpend={(available ?? 0n) > 0n}
-                checking={creditLoading}
+                checking={availableLoading}
                 onSpend={() => nav.forward("/send")}
                 onRepay={() => nav.forward("/pay")}
                 onDeposit={() => open("deposit")}
@@ -222,7 +222,12 @@ export function DesktopOverview() {
             {/* Above what backs the limit, because this is money that has already stopped backing it
                 and is waiting on a signature. */}
             <ClaimableCollateral assets={remoteCollateral} />
-            <CollateralList assets={collateral} remote={remoteCollateral} className="mt-0" />
+            <CollateralList
+              assets={collateral}
+              remote={remoteCollateral}
+              loading={remoteLoading}
+              className="mt-0"
+            />
 
             <Section
               title="Transactions"

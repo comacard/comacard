@@ -39,9 +39,9 @@ function MobileHome() {
   const { assets: collateral } = useCollateral();
   // Deposits from chains Attestcoin cannot reach. The credit line already counts these toward the
   // limit, so leaving them out would show a headline backed by more than the rows below it.
-  const { assets: remoteCollateral } = useRemoteCollateral();
+  const { assets: remoteCollateral, loading: remoteLoading } = useRemoteCollateral();
   // What the card owes, if anything. Zero means the cycle is closed.
-  const { drawn, available, loading: creditLoading } = useCreditLine();
+  const { drawn, available, availableLoading } = useCreditLine();
   const {
     verify,
     url: kycUrl,
@@ -100,9 +100,9 @@ function MobileHome() {
               onClick={() => nav.forward("/send")}
               // Disabled while the limit is unknown, but not silently: four seconds of a greyed
               // control with no explanation reads as a refusal rather than a read in flight.
-              disabled={creditLoading || (available ?? 0n) === 0n}
+              disabled={availableLoading || (available ?? 0n) === 0n}
             >
-              {creditLoading ? <Spinner /> : "Send"}
+              {availableLoading ? <Spinner /> : "Send"}
             </ActionPill>
             <ActionPill onClick={() => nav.forward("/deposit")}>Deposit</ActionPill>
             {/* No figure on the pill. The balance is a fact about the account, not part of the name
@@ -145,7 +145,12 @@ function MobileHome() {
 
         {/* What the headline is actually built on. Locking more moves the number at the top of this
           screen. */}
-        <CollateralList assets={collateral} remote={remoteCollateral} className="mb-[22px] mt-0" />
+        <CollateralList
+          assets={collateral}
+          remote={remoteCollateral}
+          loading={remoteLoading}
+          className="mb-[22px] mt-0"
+        />
 
         <h2 className="mx-1 mb-2 text-sm font-medium text-muted">Transactions</h2>
         <Card className="px-5 pb-2 pt-1">

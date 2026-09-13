@@ -81,7 +81,12 @@ const VERIFIED = {
 beforeEach(() => {
   vi.clearAllMocks();
   cardAccount.mockReturnValue(VERIFIED);
-  creditLine.mockReturnValue({ drawn: 0n, available: 33n, loading: false });
+  creditLine.mockReturnValue({
+    drawn: 0n,
+    available: 33n,
+    loading: false,
+    availableLoading: false,
+  });
 });
 
 test("the actions sit above the card artwork", () => {
@@ -107,7 +112,12 @@ test("nothing is owed: Send and Deposit, and no Repay", () => {
 
 test("an open balance adds Repay last, and the order never moves", async () => {
   const user = userEvent.setup();
-  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n, loading: false });
+  creditLine.mockReturnValue({
+    drawn: 1_000_000_000_000_000_000n,
+    available: 5n,
+    loading: false,
+    availableLoading: false,
+  });
   const { container } = render(<HomePage />);
 
   // Send · Deposit · Repay, in that order and with Send still leading. Moving the primary around as
@@ -126,7 +136,12 @@ test("an open balance adds Repay last, and the order never moves", async () => {
 });
 
 test("a limit still being read disables Spend as a wait, not a refusal", () => {
-  creditLine.mockReturnValue({ drawn: 0n, available: undefined, loading: true });
+  creditLine.mockReturnValue({
+    drawn: 0n,
+    available: undefined,
+    loading: true,
+    availableLoading: true,
+  });
   render(<HomePage />);
 
   expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
@@ -168,4 +183,21 @@ test("the overflow offers withdraw only for collateral that can actually come ba
   // Attestcoin collateral is never offered here: `approveRelease` is operator-gated, and a control
   // that ends in "ask us" is worse than no control.
   expect(screen.queryByText(/Take back/)).toBeNull();
+});
+
+test("Send is live as soon as the figure beside it is, not when the slowest read lands", () => {
+  // The bug: `loading` is an OR across limitOf, availableOf and accountOf, and `accountOf` returns
+  // a struct and lands last. Send was gated on all three, so the screen showed "Spendable
+  // 35.0097 tCTC" beside a spinner that refused to let anyone spend it, for seconds.
+  creditLine.mockReturnValue({
+    drawn: 0n,
+    available: 33n,
+    loading: true,
+    availableLoading: false,
+  });
+  render(<HomePage />);
+
+  const send = screen.getByRole("button", { name: "Send" });
+  expect(send).toBeInTheDocument();
+  expect(send).toBeEnabled();
 });

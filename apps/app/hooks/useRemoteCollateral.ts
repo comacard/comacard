@@ -2,10 +2,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { type Address, createPublicClient, type Hex, http } from "viem";
 import {
+  nativeAssetId,
   REMOTE_HUB,
   remoteHubAbi,
   WORMHOLE_CHAIN_NAMES,
   WORMHOLE_VAULTS,
+  wormholeCoreAbi,
   wormholeVaultAbi,
 } from "../lib/comacard/contracts";
 import {
@@ -64,6 +66,16 @@ export type RemoteAsset = {
   available: bigint;
   /** True while a deposit has been locked but the guardians have not signed it across yet. */
   pending: boolean;
+  /**
+   * Wormhole's publish fee on that chain, in its native wei.
+   *
+   * Read here because the far chain is already being read here. A screen that wanted it was
+   * otherwise chaining two `useReadContract` calls of its own, `WORMHOLE()` then `messageFee()`,
+   * which is a second way to ask the same question and one more thing to be wrong about.
+   * `lockNative` reverts with `FeeNotCovered` when the value does not clear it, so anything
+   * building a transaction needs this figure and not a guess at it.
+   */
+  fee: bigint;
   /** The vault to lock into, and the EVM chain id the wallet has to be on to do it. */
   vault: Address | null;
   evmChainId: number | null;
@@ -86,8 +98,59 @@ const ZERO32 = "0x00000000000000000000000000000000000000000000000000000000000000
 
 /** Blocks per `getLogs` call, and how far back to keep asking. Measured: 5,000 blocks answers in
  *  about a second on the Creditcoin RPC, while an unbounded query times out after forty. */
+
+/**
+ * Where a listing came from, remembered between visits.
+ *
+ * **This cannot go stale, and that is a property of the id rather than a hope.** The hub files an
+ * asset under `keccak256(abi.encodePacked(chainId, token))`, so an id determines its chain and token
+ * exactly. Two different origins cannot share an id, and re-listing the same pair produces the same
+ * id again. Nothing else is cached here: price and decimals are read from `remoteAsset()` on every
+ * pass, because those the hub can change.
+ *
+ * What it saves is the log scan, which is the slow part by a wide margin. `eth_getLogs` on the
+ * Creditcoin RPC costs three to six seconds per 5,000-block window and the ERC20 listings are the
+ * only reason it runs at all, so without this a visitor waits on it every time even though the
+ * answer has not changed since deployment.
+ *
+ * Every access is wrapped: `localStorage` throws outright in some privacy modes, and a collateral
+ * list that fails to render because a cache read was refused would be a much worse bug than a slow
+ * one. A miss simply means the scan runs.
+ */
+const ORIGIN_CACHE_KEY = "soro.remote.origin.v1";
+
+function readOriginCache(): Map<string, { chainId: number; token: Hex }> {
+  try {
+    const raw = window.localStorage.getItem(ORIGIN_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed = JSON.parse(raw) as Record<string, { chainId: number; token: string }>;
+    const out = new Map<string, { chainId: number; token: Hex }>();
+    for (const [key, value] of Object.entries(parsed)) {
+      // A hand-edited or half-written entry must not become an asset attributed to chain 0.
+      if (typeof value?.chainId !== "number" || typeof value?.token !== "string") continue;
+      if (!WORMHOLE_CHAIN_NAMES[value.chainId]) continue;
+      out.set(key, { chainId: value.chainId, token: value.token as Hex });
+    }
+    return out;
+  } catch {
+    return new Map();
+  }
+}
+
+function writeOriginCache(origin: Map<string, { chainId: number; token: Hex }>): void {
+  try {
+    window.localStorage.setItem(ORIGIN_CACHE_KEY, JSON.stringify(Object.fromEntries(origin)));
+  } catch {
+    // Full, or refused. The scan runs next time, which is the behaviour before this existed.
+  }
+}
+
 const LOG_CHUNK = 5_000n;
 const LOG_SCAN_CHUNKS = 20;
+/** Windows fetched per round trip. See the note in the scan for the measurement behind this. */
+const LOG_SCAN_BATCH = 4;
+/** The chains with a vault, plus Sepolia. Native ids are derived for these before any log call. */
+const KNOWN_WORMHOLE_CHAINS = [4, 6, 10002, 10003, 10004, 10005];
 
 const erc20BalanceAbi = [
   {
@@ -141,28 +204,74 @@ export function useRemoteCollateral(): {
        */
       const origin = new Map<string, { chainId: number; token: Hex }>();
       const wanted = new Set(ids.map((id) => id.toLowerCase()));
-      const assetListed = remoteHubAbi.find((entry) => entry.name === "AssetListed") as never;
-      for (let i = 0n; i < BigInt(LOG_SCAN_CHUNKS) && origin.size < wanted.size; i++) {
-        const to = head - i * LOG_CHUNK;
-        if (to <= 0n) break;
-        const from = to > LOG_CHUNK ? to - LOG_CHUNK + 1n : 0n;
-        const logs = await cc
-          .getLogs({ address: hub, event: assetListed, fromBlock: from, toBlock: to })
-          .catch(() => []);
-        for (const log of logs) {
-          const args = (log as { args?: { assetId?: Hex; chainId?: number; token?: Hex } }).args;
-          if (!args?.assetId) continue;
-          const key = args.assetId.toLowerCase();
-          // Walking backwards means the first hit is the most recent listing, so an earlier one
-          // must not overwrite it: a re-list would otherwise resurrect its old decimals.
-          if (origin.has(key)) continue;
-          origin.set(key, {
-            chainId: Number(args.chainId ?? 0),
-            token: (args.token ?? ZERO32) as Hex,
-          });
-        }
-        if (from === 0n) break;
+
+      /**
+       * The native assets, filled in for free before a single log is fetched.
+       *
+       * `assetId` is `keccak256(encodePacked(chainId, token))` and a native token is 32 zero bytes,
+       * so every native listing's id can be computed here. Five of the seven assets on the live hub
+       * are native, including BNB, and this is what stops them waiting on the scan below.
+       */
+      for (const chainId of KNOWN_WORMHOLE_CHAINS) {
+        const key = nativeAssetId(chainId).toLowerCase();
+        if (wanted.has(key)) origin.set(key, { chainId, token: ZERO32 as Hex });
       }
+
+      // Anything seen on a previous visit. See `readOriginCache` for why this cannot go stale.
+      for (const [key, value] of readOriginCache()) {
+        if (wanted.has(key) && !origin.has(key)) origin.set(key, value);
+      }
+
+      const assetListed = remoteHubAbi.find((entry) => entry.name === "AssetListed") as never;
+      /**
+       * Whatever is left is an ERC20, whose address cannot be guessed, so the logs are the only
+       * record. Windows go out in batches rather than one at a time.
+       *
+       * Serially, each window costs three to six seconds on this RPC and the second one only starts
+       * after the first has answered. Measured 13 September 2026: 5.77s then 3.11s for the two
+       * windows a full scan needed. A batch of four costs one round trip for the same reach, and
+       * the loop still stops as soon as every id has an origin, so the common case of everything
+       * being in the first window is unchanged.
+       */
+      for (
+        let batch = 0;
+        batch < LOG_SCAN_CHUNKS / LOG_SCAN_BATCH && origin.size < wanted.size;
+        batch++
+      ) {
+        const windows: { from: bigint; to: bigint }[] = [];
+        for (let i = 0; i < LOG_SCAN_BATCH; i++) {
+          const to = head - BigInt(batch * LOG_SCAN_BATCH + i) * LOG_CHUNK;
+          if (to <= 0n) break;
+          windows.push({ from: to > LOG_CHUNK ? to - LOG_CHUNK + 1n : 0n, to });
+        }
+        if (windows.length === 0) break;
+
+        const pages = await Promise.all(
+          windows.map((w) =>
+            cc
+              .getLogs({ address: hub, event: assetListed, fromBlock: w.from, toBlock: w.to })
+              .catch(() => []),
+          ),
+        );
+
+        // Newest window first, and newest log within it last, so the most recent listing is the one
+        // that survives: a re-list must not be overwritten by the entry it replaced.
+        for (const logs of pages) {
+          for (const log of logs) {
+            const args = (log as { args?: { assetId?: Hex; chainId?: number; token?: Hex } }).args;
+            if (!args?.assetId) continue;
+            const key = args.assetId.toLowerCase();
+            if (origin.has(key)) continue;
+            origin.set(key, {
+              chainId: Number(args.chainId ?? 0),
+              token: (args.token ?? ZERO32) as Hex,
+            });
+          }
+        }
+        if (windows[windows.length - 1].from === 0n) break;
+      }
+
+      writeOriginCache(origin);
 
       const assets = await Promise.all(
         // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
@@ -197,11 +306,31 @@ export function useRemoteCollateral(): {
           // permission; it never pushes funds, so a release is not finished when the guardians have
           // signed it — there is a second signature to collect.
           let releasable = 0n;
+          let fee = 0n;
           const rpc = deployment ? RPCS[deployment.evmChainId] : undefined;
           if (deployment && rpc) {
             const source = createPublicClient({ transport: http(rpc) });
             const asToken = `0x${token.slice(26)}` as Address;
-            [locked, available, releasable] = await Promise.all([
+
+            // The fee is two reads deep (`WORMHOLE()` then `messageFee()`) and rides in the same
+            // `Promise.all` as the balances, so it is awaited with them rather than racing them. It
+            // is zero on these testnets today, which is exactly why it is read and not assumed.
+            const feeRead = source
+              .readContract({
+                address: deployment.vault,
+                abi: wormholeVaultAbi,
+                functionName: "WORMHOLE",
+              })
+              .then((core) =>
+                source.readContract({
+                  address: core as Address,
+                  abi: wormholeCoreAbi,
+                  functionName: "messageFee",
+                }),
+              )
+              .catch(() => 0n);
+
+            [locked, available, releasable, fee] = await Promise.all([
               native
                 ? source.readContract({
                     address: deployment.vault,
@@ -236,10 +365,12 @@ export function useRemoteCollateral(): {
                     functionName: "tokenReleasable",
                     args: [who, asToken],
                   }),
-            ]).catch(() => [0n, 0n, 0n] as [bigint, bigint, bigint]);
+              feeRead,
+            ]).catch(() => [0n, 0n, 0n, 0n] as [bigint, bigint, bigint, bigint]);
           }
 
           const asset: RemoteAsset = {
+            fee,
             id,
             wormholeChainId: chainId,
             chainName: WORMHOLE_CHAIN_NAMES[chainId] ?? `Chain ${chainId}`,

@@ -87,7 +87,7 @@ export function SendToAddress() {
       // the money is in their wallet, not lost.
       setFailed(
         reached === "transfer"
-          ? "The credit reached your wallet but the transfer did not. Nothing is lost — send it from your wallet, or try again."
+          ? "The credit reached your wallet but the transfer did not. Nothing is lost: send it from your wallet, or try again."
           : cause instanceof Error
             ? cause.message.split("\n")[0]
             : String(cause),
@@ -157,7 +157,7 @@ export function SendToAddress() {
           // The mistake this screen makes easy, named before it is made.
           <p className="mt-2 px-1 text-[12px] leading-snug text-muted">
             Goes to this address <strong className="font-semibold">on Creditcoin</strong>. An
-            address from another network has the same shape and will still accept it — the money
+            address from another network has the same shape and will still accept it, and the money
             lands where nobody can reach it.
           </p>
         )}

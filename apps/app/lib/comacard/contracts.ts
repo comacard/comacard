@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import { type Address, encodePacked, type Hex, keccak256 } from "viem";
 import {
   arbitrumSepolia,
   avalancheFuji,
@@ -660,3 +660,27 @@ export const testTokenAbi = [
     outputs: [{ type: "uint256" }],
   },
 ] as const;
+
+/** A token of all zeroes is how the hub spells "this chain's own coin". */
+export const ZERO_TOKEN = `0x${"0".repeat(64)}` as Hex;
+
+/**
+ * The id the hub files an asset under, derived rather than looked up.
+ *
+ * `CollateralMessage.assetId` is `keccak256(abi.encodePacked(chainId, token))`, so the id is a pure
+ * function of the chain and the token. For the chain's own coin the token is 32 zero bytes, which
+ * means all five native assets can be computed here with no network call at all.
+ *
+ * That matters because the alternative is expensive. The origin of a listing is otherwise recovered
+ * from `AssetListed` logs, and `eth_getLogs` on the Creditcoin RPC costs three to six seconds per
+ * 5,000-block window, walked backwards one window at a time. Measured on 13 September 2026: two
+ * windows, 5.77s then 3.11s, before a single balance had been read. BNB simply was not on Home for
+ * the first nine seconds.
+ *
+ * **`encodePacked`, not `encode`.** With `abi.encode` the uint16 is left-padded to a full word and
+ * every id comes out different; the ids then match nothing on chain and every asset looks unlisted.
+ * `contracts.test.ts` pins all five against ids read off the live hub.
+ */
+export function nativeAssetId(wormholeChainId: number): Hex {
+  return keccak256(encodePacked(["uint16", "bytes32"], [wormholeChainId, ZERO_TOKEN]));
+}

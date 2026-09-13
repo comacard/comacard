@@ -96,7 +96,12 @@ const VERIFIED = {
 beforeEach(() => {
   vi.clearAllMocks();
   cardAccount.mockReturnValue(VERIFIED);
-  creditLine.mockReturnValue({ drawn: 0n, available: 33n, loading: false });
+  creditLine.mockReturnValue({
+    drawn: 0n,
+    available: 33n,
+    loading: false,
+    availableLoading: false,
+  });
   creditHistory.mockReturnValue({
     events: [],
     borrowed: 0n,
@@ -145,7 +150,12 @@ test("Send and Deposit are both offered, and Send goes to the full page", async 
 
 test("an open balance leads with Repay without hiding Deposit", async () => {
   const user = userEvent.setup();
-  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n, loading: false });
+  creditLine.mockReturnValue({
+    drawn: 1_000_000_000_000_000_000n,
+    available: 5n,
+    loading: false,
+    availableLoading: false,
+  });
   render(<DesktopOverview />);
 
   // The figure lives in the strip; the card holds the control alone, so the balance is stated once.
@@ -189,7 +199,12 @@ test("an unverified holder is offered verification instead of the actions", asyn
 });
 
 test("a dead indexer reports no spending as unknown, not as none", () => {
-  creditLine.mockReturnValue({ drawn: 1_000_000_000_000_000_000n, available: 5n, loading: false });
+  creditLine.mockReturnValue({
+    drawn: 1_000_000_000_000_000_000n,
+    available: 5n,
+    loading: false,
+    availableLoading: false,
+  });
   creditHistory.mockReturnValue({
     events: [],
     borrowed: 0n,
@@ -210,7 +225,12 @@ test("a limit still being read disables Send as a wait, not as a refusal", () =>
   // The Creditcoin RPC takes about four seconds a call. For that whole window `available` is
   // undefined, and `(available ?? 0n) === 0n` rendered a flat greyed button — which says "you have
   // nothing to spend" about a figure nothing had read yet.
-  creditLine.mockReturnValue({ drawn: 0n, available: undefined, loading: true });
+  creditLine.mockReturnValue({
+    drawn: 0n,
+    available: undefined,
+    loading: true,
+    availableLoading: true,
+  });
   render(<DesktopOverview />);
 
   const spend = screen.getByRole("button", { name: "" });
@@ -218,4 +238,21 @@ test("a limit still being read disables Send as a wait, not as a refusal", () =>
   // The label is gone because a spinner is in its place; the point is that it does not read "Send"
   // beside a dead control.
   expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
+});
+
+test("Send is live as soon as the figure beside it is, not when the slowest read lands", () => {
+  // The bug: `loading` is an OR across limitOf, availableOf and accountOf, and `accountOf` returns
+  // a struct and lands last. Send was gated on all three, so the screen showed "Spendable
+  // 35.0097 tCTC" beside a spinner that refused to let anyone spend it, for seconds.
+  creditLine.mockReturnValue({
+    drawn: 0n,
+    available: 33n,
+    loading: true,
+    availableLoading: false,
+  });
+  render(<DesktopOverview />);
+
+  const send = screen.getByRole("button", { name: "Send" });
+  expect(send).toBeInTheDocument();
+  expect(send).toBeEnabled();
 });

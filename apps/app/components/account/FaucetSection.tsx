@@ -8,10 +8,10 @@ import { useConfig, useSwitchChain } from "wagmi";
 
 import { useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
-import { SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
+import { SEPOLIA_CHAIN_ID, WORMHOLE_CHAIN_NAMES } from "../../lib/comacard/contracts";
+import { FAUCET_CHAINS, FAUCETS } from "../../lib/comacard/faucets";
 import { awaitSuccess } from "../../lib/comacard/tx";
-import { badgeForSymbol, CoinBadge, Spinner, SuccessCheck } from "../ui";
-import type { TokenSym } from "../ui/CoinBadge";
+import { badgeForSymbol, CoinBadge, NetworkTabs, Spinner, SuccessCheck } from "../ui";
 
 /**
  * Where testnet funds come from, and the two kinds are not the same kind of thing.
@@ -41,15 +41,7 @@ import type { TokenSym } from "../ui/CoinBadge";
  * The token list is read from the chain, never hardcoded: listing a token is a governance call.
  */
 
-type ExternalFaucet = { token: TokenSym; name: string; href: string };
-
-const EXTERNAL: ExternalFaucet[] = [
-  {
-    token: "ETH",
-    name: "Sepolia ETH",
-    href: "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
-  },
-];
+const SEPOLIA_WORMHOLE_ID = 10002;
 
 const panel = [
   "flex items-center gap-3 rounded-[16px] border border-line bg-white",
@@ -111,6 +103,7 @@ export function FaucetSection({ compact = false }: { compact?: boolean }) {
    * what the wallet's own prompt queue already supports.
    */
   const [pending, setPending] = useState<Record<string, Phase>>({});
+  const [chain, setChain] = useState(SEPOLIA_WORMHOLE_ID);
   const config = useConfig();
   const queryClient = useQueryClient();
   // Cleared on unmount so a tick that outlives the screen cannot set state on a dead component.
@@ -122,7 +115,19 @@ export function FaucetSection({ compact = false }: { compact?: boolean }) {
     };
   }, []);
 
-  const mintable = assets.filter((asset) => asset.faucetable && asset.token !== null);
+  /**
+   * Only Sepolia has tokens this app can mint.
+   *
+   * `TestToken.faucet()` is ours and it is deployed on Sepolia. The far chains hold real testnet
+   * coins from third-party faucets, and there is no ERC20 on any of them we could hand out. So the
+   * other five tabs show their coin and nothing else, which is the honest list rather than a short
+   * one: gas is what a deposit from those chains actually needs.
+   */
+  const mintable =
+    chain === SEPOLIA_WORMHOLE_ID
+      ? assets.filter((asset) => asset.faucetable && asset.token !== null)
+      : [];
+  const external = FAUCETS.filter((f) => f.wormholeChainId === chain);
 
   const setPhase = (token: string, phase: Phase | null) =>
     setPending((current) => {
@@ -179,17 +184,30 @@ export function FaucetSection({ compact = false }: { compact?: boolean }) {
       >
         Faucet
       </h2>
+
+      <div className={compact ? "mb-2" : "mb-2.5"}>
+        <NetworkTabs
+          chains={FAUCET_CHAINS}
+          names={WORMHOLE_CHAIN_NAMES}
+          selected={chain}
+          onSelect={setChain}
+          label="Faucet network"
+        />
+      </div>
+
       <div className={compact ? "space-y-1.5" : "space-y-2.5"}>
-        {/* Name only. These rows carry no balance: a gas balance is a wallet readout, and this
-            screen is for getting funds, not for reporting how many you have. The mintable rows
-            below DO show one, because it is the feedback that a mint landed. */}
-        {EXTERNAL.map((row) => (
-          <div key={row.token} className={rowClass}>
-            <CoinBadge token={row.token} size={compact ? 28 : 40} />
-            <div
-              className={`min-w-0 flex-1 ${compact ? "text-sm font-semibold" : "font-semibold"}`}
-            >
-              {row.name}
+        {/* No balance on these rows: a gas balance is a wallet readout, and this screen is for
+            getting funds rather than reporting how many you have. The mintable rows below DO show
+            one, because it is the feedback that a mint landed. The host is named because tapping
+            Request leaves the app for somebody else's site. */}
+        {external.map((row) => (
+          <div key={row.wormholeChainId} className={rowClass}>
+            <CoinBadge token={badgeForSymbol(row.symbol)} size={compact ? 28 : 40} />
+            <div className="min-w-0 flex-1">
+              <div className={compact ? "text-sm font-semibold" : "font-semibold"}>
+                {row.symbol}
+              </div>
+              {compact ? null : <div className="mt-[3px] text-[12px] text-muted">{row.host}</div>}
             </div>
             <a href={row.href} target="_blank" rel="noreferrer" className={pill}>
               Request

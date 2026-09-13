@@ -1,6 +1,6 @@
 import { chainLogo } from "../../../components/ui/ChainBadge";
 import { badgeForSymbol } from "../../../components/ui/CoinBadge";
-import { NATIVE_SYMBOL, WORMHOLE_CHAIN_NAMES, WORMHOLE_VAULTS } from "../contracts";
+import { NATIVE_SYMBOL, nativeAssetId, WORMHOLE_CHAIN_NAMES, WORMHOLE_VAULTS } from "../contracts";
 
 /**
  * The three numbering systems that meet in this app do not agree, and two of the five Wormhole ids
@@ -71,4 +71,45 @@ test("every native coin the hub lists can be named and badged", () => {
   for (const [id, name] of Object.entries(NATIVE_SYMBOL)) {
     expect(badgeForSymbol(name), `${id} → ${name}`).not.toBe("CTC");
   }
+});
+
+/**
+ * Asset ids, pinned against the live hub.
+ *
+ * `assetId` is `keccak256(abi.encodePacked(chainId, token))`. With `abi.encode` instead, the uint16
+ * is left-padded to a full word and every id comes out different, matching nothing on chain, so
+ * every asset reads as unlisted and the whole cross-chain half of Home empties out. Nothing throws.
+ *
+ * These five were read off `listedAssets()` on the deployed hub
+ * (0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f, Creditcoin CC3) on 13 September 2026, which is what
+ * makes this a test rather than a restatement of the implementation.
+ */
+const LIVE_NATIVE_IDS: Record<number, string> = {
+  4: "0x32cdb210881fded98093ddd313dbce19f612b2852920c975483e496c37327ba1",
+  6: "0x779148837d697f373039dc6055ba9b62794c1f14a8fb48756922bcb991d891f0",
+  10003: "0x68ec44ebd2f675a61ae83495f96d229c53ef4eb6f8d8bf0f5e8c1ce09249e71a",
+  10004: "0xc6aa4e4fb533fd7554116f7dca41109d6a4dddfbe397eefc56f10843fdc544bb",
+  10005: "0xca7ea440ca3a18040ca2ac7d4768afe40b36baf680afa7aac84426e936b00a62",
+};
+
+test("a native asset id is derived exactly as the live hub files it", () => {
+  for (const [chain, id] of Object.entries(LIVE_NATIVE_IDS)) {
+    expect(nativeAssetId(Number(chain))).toBe(id);
+  }
+});
+
+test("every chain with a vault can have its native id derived without a log query", () => {
+  // This is what keeps BNB off the nine-second log scan. If a vault is added and this list is not,
+  // its native asset falls back to the scan and quietly gets slow again.
+  for (const chain of Object.keys(WORMHOLE_VAULTS).map(Number)) {
+    expect(LIVE_NATIVE_IDS[chain]).toBeDefined();
+    expect(nativeAssetId(chain)).toBe(LIVE_NATIVE_IDS[chain]);
+  }
+});
+
+test("ids are distinct per chain, which is the whole reason they are keyed this way", () => {
+  // USDC on Base and USDC on Arbitrum share a name and a token address shape. Two chains colliding
+  // here would merge two balances into one row.
+  const ids = Object.keys(LIVE_NATIVE_IDS).map((c) => nativeAssetId(Number(c)));
+  expect(new Set(ids).size).toBe(ids.length);
 });

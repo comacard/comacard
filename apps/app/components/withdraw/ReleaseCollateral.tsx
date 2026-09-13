@@ -291,7 +291,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
           ) : null}
           <p className="mt-3 max-w-[300px] text-center text-[13px] leading-snug text-muted">
             Creditcoin has published the release. The guardians sign it in under a minute on BSC and
-            Fuji, and in fifteen to twenty minutes on the L2s. You sign once more to take it — come
+            Fuji, and in fifteen to twenty minutes on the L2s. You sign once more to take it. Come
             back to this screen and the button will be here.
           </p>
         </div>
@@ -314,8 +314,8 @@ export function ReleaseCollateral({ id }: { id: string }) {
             {fmt(asset.releasable, asset.decimals)} {symbol}
           </div>
           <p className="mt-2.5 text-[12.5px] leading-snug text-muted">
-            Approved on {asset.chainName}. It stays in the vault until you take it — the relay
-            grants permission, it never sends.
+            Approved on {asset.chainName}. It stays in the vault until you take it: the relay grants
+            permission, it never sends.
           </p>
         </div>
 
