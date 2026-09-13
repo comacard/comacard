@@ -156,8 +156,6 @@ test("the overflow opens what has nowhere else to sit on Home", async () => {
 
   expect(screen.getByText("All transactions")).toBeInTheDocument();
   expect(screen.getByText("Get test tokens")).toBeInTheDocument();
-  // The question the collateral list otherwise raises without answering.
-  expect(screen.getByText(/released by us, not by you/i)).toBeInTheDocument();
 });
 
 test("the overflow offers withdraw only for collateral that can actually come back", async () => {

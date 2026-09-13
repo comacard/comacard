@@ -98,7 +98,7 @@ export default function AccountPage() {
               <span className="min-w-0 grow">
                 <span className="block font-semibold">Activity</span>
                 <span className="block text-[12.5px] text-muted">
-                  Deposits, spending and repayments
+                  Deposits, spending and payments
                 </span>
               </span>
               <svg

@@ -9,15 +9,19 @@ import { BottomSheet } from "../ui";
  *
  * I argued against an overflow at first, on the grounds that a menu holding nothing is furniture.
  * That was right about a menu of invented actions and wrong about this one: there are three real
- * things a cardholder can do that have nowhere else to sit on Home — take collateral back, get test
+ * things a cardholder can do that have nowhere else to sit on Home: take a deposit back, get test
  * tokens, and read the full history. Two of them were only reachable through Account.
  *
- * **Withdraw only lists what can actually be withdrawn.** Collateral that arrived by Wormhole has a
- * trustless release path — `requestRelease` on Creditcoin, the guardians, then the borrower's own
- * signature. Collateral proved from Sepolia by Attestcoin does not: `SourceVault.approveRelease` is
- * gated on the team, because Attestcoin writability is still in third-party audit and Creditcoin
- * cannot write back to Ethereum. Offering a control that ends in "ask us" would be worse than not
- * offering it, so the Sepolia rows say why instead.
+ * **Withdraw only lists what can actually be withdrawn.** A deposit that arrived by Wormhole has a
+ * trustless release path: `requestRelease` on Creditcoin, the guardians, then the holder's own
+ * signature. One proved from Sepolia by Attestcoin does not, because `SourceVault.approveRelease` is
+ * gated on the team while Attestcoin writability is in third-party audit and Creditcoin cannot write
+ * back to Ethereum. Offering a control that ends in "ask us" is worse than not offering it, so those
+ * assets simply do not appear here.
+ *
+ * This sheet is the only place withdrawal is offered. `CollateralList` used to carry a chevron on
+ * the Wormhole rows and a line of explanation on the others, which made a list about what backs the
+ * limit spend half its space on a different subject.
  */
 
 function Row({
@@ -121,7 +125,7 @@ export function MoreSheet({
         <Row
           icon={icon("M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01")}
           title="All transactions"
-          description="Deposits, spending and repayments"
+          description="Deposits, spending and payments"
           onClick={() => go("/transactions")}
         />
         <Row
@@ -130,14 +134,6 @@ export function MoreSheet({
           description="Mint collateral on Sepolia from the faucet"
           onClick={() => go("/account")}
         />
-
-        {/* The question the collateral list otherwise raises without answering: why does one row have
-            a chevron and the other does not. */}
-        <p className="mt-3 px-3 pb-1 text-[12px] leading-snug text-muted">
-          Collateral on Ethereum is released by us, not by you — Attestcoin cannot yet write back to
-          Ethereum, so that half is still operator-approved. Everything that arrived from another
-          chain comes back without anyone&rsquo;s permission.
-        </p>
       </div>
     </BottomSheet>
   );

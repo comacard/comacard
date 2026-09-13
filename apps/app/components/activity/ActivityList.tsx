@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { ActivityItem } from "../../lib/comacard/activity";
-import { Skeleton } from "../ui";
+import { LoadMore, Skeleton } from "../ui";
 import { ActivityRow } from "./ActivityRow";
 
 /**
@@ -28,29 +28,6 @@ function dayLabel(at: number, now: number): string {
     year: new Date(at).getFullYear() === new Date(now).getFullYear() ? undefined : "numeric",
   });
 }
-
-const LoadMore = ({ onClick }: { onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex w-full items-center justify-center gap-[3px] pb-[3px] pt-[13px] text-[13.5px] font-medium text-muted transition-colors hover:text-ink"
-  >
-    Load more
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  </button>
-);
 
 export function ActivityList({
   items,

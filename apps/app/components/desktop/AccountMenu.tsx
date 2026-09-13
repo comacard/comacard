@@ -110,7 +110,7 @@ export function AccountMenu() {
             </svg>
             <span className="grow">
               <span className="block text-sm font-semibold">Activity</span>
-              <span className="block text-xs text-muted">Deposits, spending and repayments</span>
+              <span className="block text-xs text-muted">Deposits, spending and payments</span>
             </span>
             <svg
               aria-hidden="true"

@@ -10,6 +10,7 @@ export { CopyButton } from "./CopyButton";
 export { CountUp } from "./CountUp";
 export { DesktopNav } from "./DesktopNav";
 export { Keypad } from "./Keypad";
+export { LoadMore } from "./LoadMore";
 export { PageHeader } from "./PageHeader";
 export { PendingLabel } from "./PendingLabel";
 export { Section } from "./Section";

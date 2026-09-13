@@ -170,8 +170,11 @@ export function CreditScreen() {
             <>
               <Bars values={series} className="mt-4" />
               <div className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px] text-muted tabular-nums">
-                <span>{ctc(borrowed)} tCTC borrowed</span>
-                <span>{ctc(repaid)} tCTC repaid</span>
+                {/* A card statement says spent and paid. "borrowed" and "repaid" are the lending
+                    product underneath, and the same figure is already called "Spent from your card"
+                    on Home: one number should not answer to two names across two screens. */}
+                <span>{ctc(borrowed)} tCTC spent</span>
+                <span>{ctc(repaid)} tCTC paid</span>
               </div>
             </>
           ) : (

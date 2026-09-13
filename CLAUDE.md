@@ -9,6 +9,21 @@ husky pre-commit hook runs `biome check --staged --write`: it only touches stage
 fixes back, so an unrelated mess elsewhere never blocks a commit. Stage a few hundred files at once,
 though, and it checks all of them.
 
+## Writing rules, and they are not suggestions
+
+**Never use an em dash.** Not in UI copy, not in code comments, not in commit messages, not in these
+docs, not in a reply to anyone on this project. Axel asked for this directly and it holds everywhere.
+Use a comma, a colon, a full stop, or parentheses instead. Recast the sentence if none of those fit.
+
+Two related habits that follow from the same request:
+
+- **Axel picks the words.** Any user-visible wording change, a button label, a heading, a figure's
+  caption, is his call and not the implementer's. Bring him two or three concrete options with a
+  recommendation and the reason behind it, then wait. This has been asked for more than once.
+- **No buzzwords.** This is a banking product, so it reads like one. "borrowed", "backing your
+  limit", "collateral" are DeFi vocabulary, and a cardholder who has never used a lending protocol
+  has to guess at them. Prefer what a bank statement would say.
+
 ## Who owns what
 
 Three people, and the split matters because it decides who fixes what.

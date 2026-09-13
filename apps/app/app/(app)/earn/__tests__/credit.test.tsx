@@ -75,7 +75,7 @@ test("a real record draws the bars and totals what happened", () => {
 
   expect(screen.getByTestId("bars")).toBeInTheDocument();
   expect(screen.getByText("1 cycle closed")).toBeInTheDocument();
-  expect(screen.getByText(/0\.24 tCTC borrowed/)).toBeInTheDocument();
+  expect(screen.getByText(/0\.24 tCTC spent/)).toBeInTheDocument();
 });
 
 test("offers the two halves of a cycle, and dims the half that has nothing to do", async () => {

@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { CollateralAsset } from "../../../hooks/useCollateral";
+import type { RemoteAsset } from "../../../hooks/useRemoteCollateral";
 import { CollateralList } from "../CollateralList";
 
 const asset = (over: Partial<CollateralAsset>): CollateralAsset => ({
@@ -56,4 +58,70 @@ test("says nothing at all when nothing is posted", () => {
     <CollateralList assets={[asset({}), asset({ token: "0x1", symbol: "tUSDT", decimals: 6 })]} />,
   );
   expect(container).toBeEmptyDOMElement();
+});
+
+const remote = (over: Partial<RemoteAsset>): RemoteAsset => ({
+  id: "0x04",
+  wormholeChainId: 4,
+  chainName: "BSC Testnet",
+  token: `0x${"0".repeat(64)}`,
+  native: true,
+  decimals: 18,
+  price: 600n * 10n ** 18n, // 600 tCTC per whole coin
+  credited: 10n ** 16n,
+  locked: 10n ** 16n,
+  releasable: 0n,
+  available: 0n,
+  pending: false,
+  vault: null,
+  evmChainId: null,
+  explorer: null,
+  ...over,
+});
+
+test("every row names its network, whichever carrier it arrived by", () => {
+  // The Sepolia rows used to spend this line on "Released by us, not by you", which answered a
+  // question about withdrawal on a list that is not about withdrawal, and left the one fact every
+  // other row showed missing from exactly these two.
+  render(
+    <CollateralList
+      assets={[asset({ token: "0x1", symbol: "tUSDC", decimals: 6, locked: 1n, proved: 1n })]}
+      remote={[remote({})]}
+    />,
+  );
+
+  expect(screen.getByText("Ethereum Sepolia")).toBeInTheDocument();
+  expect(screen.getByText("BSC Testnet")).toBeInTheDocument();
+  expect(screen.queryByText(/released by us/i)).toBeNull();
+});
+
+test("no row is a link, so none of them look half-enabled", () => {
+  // A chevron on the Wormhole rows and none on the others read as a feature that failed to load.
+  // Withdrawal lives in the overflow menu, which can list only what is actually withdrawable.
+  render(
+    <CollateralList
+      assets={[asset({ token: "0x1", symbol: "tUSDC", decimals: 6, locked: 1n, proved: 1n })]}
+      remote={[remote({})]}
+    />,
+  );
+
+  expect(screen.queryAllByRole("link")).toHaveLength(0);
+});
+
+test("pages the list rather than growing the card without end", async () => {
+  const user = userEvent.setup();
+  render(
+    <CollateralList
+      assets={[]}
+      remote={[1, 2, 3, 4, 5, 6].map((n) =>
+        remote({ id: `0x0${n}`, chainName: `Chain ${n}`, wormholeChainId: n }),
+      )}
+    />,
+  );
+
+  expect(screen.getByText("Chain 4")).toBeInTheDocument();
+  expect(screen.queryByText("Chain 5")).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: /load more/i }));
+  expect(screen.getByText("Chain 5")).toBeInTheDocument();
 });
