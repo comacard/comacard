@@ -8,20 +8,28 @@ behaviour, while the collateral backing it never leaves the chain it started on.
 Built on [Creditcoin](https://creditcoin.org) with the
 [Attestcoin Protocol](https://docs.attestcoin.org).
 
+| | |
+| --- | --- |
+| **Try it** | **[app.comacard.xyz](https://app.comacard.xyz)** |
+| About | [comacard.xyz](https://comacard.xyz) |
+
+Bring a wallet with testnet funds. The faucets for every supported chain are in
+the app under Account, and nothing here touches real money.
+
 ---
 
 ## Live on testnet
 
-Everything below is deployed, verified, and working — the numbers in the demo
+Everything below is deployed, verified, and working. The numbers in the demo
 come off these contracts, not out of a mock.
 
-**Ethereum Sepolia** — where collateral is locked and stays
+**Ethereum Sepolia**, where collateral is locked and stays
 
 | | |
 | --- | --- |
 | SourceVault | [`0x911290c3…3303`](https://sepolia.etherscan.io/address/0x911290c37E9558C704870f4C44CBdEA1B2B33303) |
 
-**Creditcoin CC3 testnet** (chain `102031`) — where credit lives
+**Creditcoin CC3 testnet** (chain `102031`), where credit lives
 
 | | |
 | --- | --- |
@@ -29,7 +37,7 @@ come off these contracts, not out of a mock.
 | CtcStakingAdapter | [`0xA94218Db…7045`](https://creditcoin-testnet.blockscout.com/address/0xA94218Dbdb142A10e32eF7b494105D27F47f7045) |
 | WormholeCollateralHub | [`0x9D77f5E1…437f`](https://creditcoin-testnet.blockscout.com/address/0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f) |
 
-**Five more chains** — collateral Attestcoin cannot reach, carried by Wormhole
+**Five more chains**, collateral Attestcoin cannot reach, carried by Wormhole
 
 | | |
 | --- | --- |
@@ -45,13 +53,23 @@ an operator: a `ReleaseRelay` beside each vault holds the role a person used to,
 and acts only on a message Creditcoin signed. Adding another chain is a deploy
 and two calls.
 
-**Services** — on Railway
+**Front ends** on Vercel
+
+| | |
+| --- | --- |
+| App | [app.comacard.xyz](https://app.comacard.xyz) |
+| Landing | [comacard.xyz](https://comacard.xyz) |
+
+**Services** on Railway
 
 | | Base URL | Swagger |
 | --- | --- | --- |
 | API | https://api-production-1141.up.railway.app | [/docs](https://api-production-1141.up.railway.app/docs) |
 | KYC | https://kyc-production-e05a.up.railway.app | [/docs](https://kyc-production-e05a.up.railway.app/docs) |
-| Worker | no HTTP surface — it polls Sepolia and submits proofs | |
+| Worker | no HTTP surface, it polls and submits proofs | |
+
+The worker is deployed and has no URL because it is a daemon rather than a
+server. An empty column there does not mean it is missing.
 
 A frontend only ever talks to the API. It is read-only, has CORS open, and
 every number is either read off the chain or off the indexer's copy of it.
@@ -60,9 +78,9 @@ One call per screen:
 | Call | Gives you |
 | --- | --- |
 | [`GET /account/{wallet}`](https://api-production-1141.up.railway.app/account/0x3b4f0135465d444a5bd06ab90fc59b73916c85f5) | KYC status, live limit / available / drawn, CTC balance, and the card (active, masked number, account number, expiry) |
-| `POST /account/{wallet}/kyc` | Starts Didit, returns `{ sessionId, url }` — send the user to `url` |
+| `POST /account/{wallet}/kyc` | Starts Didit, returns `{ sessionId, url }`. Send the user to `url` |
 | `GET /account/{wallet}/card` | Full card number, CVV, expiry. 404 until KYC is Approved |
-| [`GET /account/{wallet}/activity`](https://api-production-1141.up.railway.app/account/0x3b4f0135465d444a5bd06ab90fc59b73916c85f5/activity) | Draws, repayments, collateral locks, defaults — newest first, with explorer tx hashes |
+| [`GET /account/{wallet}/activity`](https://api-production-1141.up.railway.app/account/0x3b4f0135465d444a5bd06ab90fc59b73916c85f5/activity) | Draws, repayments, collateral locks, defaults. Newest first, with explorer tx hashes |
 | [`GET /protocol`](https://api-production-1141.up.railway.app/protocol) | Pool liquidity, CTC staking position, collateral price |
 
 ```sh
@@ -79,13 +97,13 @@ curl $API/protocol
 `card.active` means KYC cleared and nothing is overdue; `card.spendable` is
 what `ASCCreditLine.availableOf` will honour right now, which can be zero.
 Drawing and repaying are wallet transactions against the contract, not API
-calls — see `apps/app/src/lib/creditLine.ts` for the two-function ABI.
+calls. See `apps/app/src/lib/creditLine.ts` for the two-function ABI.
 
 The API reaches the KYC service over Railway's private network; the KYC
 service keeps its SQLite state on a volume at `/data`. Both build from the
 `Dockerfile` in their own directory with the repository root as context.
 
-**Indexer** — both chains in one GraphQL API, hosted on Envio Cloud
+**Indexer**, both chains in one GraphQL API, hosted on Envio Cloud
 
     https://indexer.dev.hyperindex.xyz/f7883b8/v1/graphql
 
@@ -101,13 +119,13 @@ it reads `INDEXER_URL` rather than hardcoding it.
 
 Both Creditcoin contracts sit behind UUPS proxies; the Sepolia vault does too.
 All three are compiled for the London EVM, because CC3 reports `baseFeePerGas`
-but no `mixHash` — building for a later target emits opcodes the chain cannot
+but no `mixHash`. Building for a later target emits opcodes the chain cannot
 run, and it only shows up once you are already on-chain.
 
 A full credit cycle run against these contracts, with every transaction hash:
 [docs/e2e-testnet-run.md](docs/e2e-testnet-run.md).
 
-Recording a demo of this: [DEMO.md](DEMO.md) — the sequence, the exact commands,
+Recording a demo of this: [DEMO.md](DEMO.md). The sequence, the exact commands,
 and the one timing constraint that will ruin a take if you meet it live.
 
 ## How it works
@@ -129,7 +147,7 @@ Avalanche ─────────┘
   collateral locked
 ```
 
-Attestcoin proves **transactions and their event logs** — never balances. Every
+Attestcoin proves **transactions and their event logs**, never balances. Every
 input to a credit decision is therefore an observed event, which is why the
 score is built from behaviour rather than net worth. That constraint is what
 makes this a credit product rather than a wallet.
@@ -137,7 +155,7 @@ makes this a credit product rather than a wallet.
 Attestcoin reaches Ethereum and Sepolia, and nothing else. A card that only
 takes deposits from one chain is not much of a card, so every other chain
 arrives through the one Wormhole component Creditcoin actually has: the Core
-Contract. No token bridge, no relayer, no wrapped asset — the deposit stays in a
+Contract. No token bridge, no relayer, no wrapped asset: the deposit stays in a
 vault on its own chain and only the message crosses, which is the same promise
 the Attestcoin path makes.
 
@@ -146,22 +164,26 @@ the Attestcoin path makes.
 | Layer | Status |
 | --- | --- |
 | Credit history | Real Ethereum Mainnet transactions (`chainKey 3`) |
-| Attestcoin verification | Real — full Merkle + continuity proofs |
+| Attestcoin verification | Real, full Merkle plus continuity proofs |
 | Collateral vault | Real contract on Sepolia, testnet value |
 | Credit line and draws | Real transactions on Creditcoin CC3 testnet |
 | Cross-chain deposits | Real Wormhole guardian signatures, finalized consistency |
 | Cross-chain withdrawals | Real, and with no operator in the path |
 | Collateral prices | **Operator-fed.** Attestcoin proves transactions, not prices |
-| The Earn screen's vault figures | **An in-memory mock**, not this protocol — see [#9](https://github.com/comacard/comacard/issues/9) |
+| Sepolia collateral release | **Operator-approved.** `approveRelease` is gated on us |
 
 Token values are testnet values; the cryptography and the state transitions are
 not simulated.
 
-The last two rows are the ones worth reading twice. Everything the credit line
-does — the limit, the collateral, the score, draws and repayments — is on chain
-and checkable. The yield figures on the Earn screen come from a mock client that
-predates this project, and the real staking state lives in `CtcStakingAdapter`
-instead: `deployedPrincipal` and `accruedRewards`, readable on Creditcoin.
+The two bold rows are the ones worth reading twice, because they are the two
+places this product is not trustless and the rest of the table is. Everything
+the credit line does, the limit, the collateral, the score, draws and
+repayments, is on chain and checkable.
+
+There used to be a third: the app's middle tab showed yield figures from a mock
+belonging to the product this frontend was ported from. That tab is Credit now,
+it reports the cycles that earned the limit, and every figure on it is read from
+the chain or from the indexer's copy of it.
 
 Wormhole's **testnet guardian set has one member**, so cross-chain messages here
 carry a single signature rather than the 13-of-19 the name suggests. The same
@@ -172,17 +194,18 @@ out the rest.
 
 ```
 apps/
-  api/        HTTP API — composes indexer, KYC and chain per wallet
-  kyc/        KYC service — Didit sessions and webhook intake
-  app/        Cardholder app — Next.js, wagmi; KYC, draw, repay
-  web/        Cardholder dashboard
+  api/        HTTP API, composes indexer, KYC and chain per wallet
+  kyc/        KYC service, Didit sessions and webhook intake
+  app/        Cardholder app: Next.js and wagmi. KYC, draw, repay
   landing/    Marketing site
-  indexer/    Oracle query worker: source events → proofs → Creditcoin
-contracts/    Foundry — SourceVault (Sepolia), ASCCreditLine (Creditcoin),
+  worker/     The daemon: proves Sepolia locks, relays Wormhole messages
+  indexer/    Envio indexer, both chains behind one GraphQL endpoint
+  web/        An empty scaffold. Nothing runs there
+contracts/    Foundry: SourceVault (Sepolia), ASCCreditLine (Creditcoin),
               WormholeVault (everywhere else)
 packages/
   attestcoin/ Attestcoin chain constants and proof types
-  core/       Domain model — money, attested events, scoring
+  core/       Domain model: money, attested events, scoring
   tsconfig/   Shared TypeScript configuration
 ```
 
@@ -210,7 +233,7 @@ forge build && forge test
 Facts verified against `@gluwa/asc-contracts@0.2.1` and the Attestcoin docs:
 
 - **Source chains are limited.** CC3 testnet attests Ethereum Sepolia
-  (`chainKey 1`) and Ethereum Mainnet (`chainKey 3`). Nothing else — which is
+  (`chainKey 1`) and Ethereum Mainnet (`chainKey 3`). Nothing else, which is
   why anywhere else arrives by Wormhole.
 - **Creditcoin has Wormhole Core and nothing more.** No token bridge, no
   automatic relayer, so fetching a signed message and delivering it is our own
