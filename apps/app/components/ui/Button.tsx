@@ -5,7 +5,7 @@ type Variant = "ink" | "glass";
  * `lg` is the phone button: full-bleed, 56px, thumb-sized. `md` is the desktop one.
  *
  * Not a preference. Measured at 1440px across seventeen finance sites, no desktop control renders
- * anywhere near the width this app was giving them — Repay came out 481×56 and Spend 252×56, for
+ * anywhere near the width this app was giving them: Repay came out 481×56 and Spend 252×56, for
  * labels of five letters. A pill that wide stops reading as a button and starts reading as a banner
  * you cannot click. `lg` stays the default so every existing call site keeps the size it had.
  */

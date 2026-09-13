@@ -4,7 +4,7 @@
  */
 const SIZE = 5;
 
-/** djb2 — small, deterministic, and enough entropy for 15 bits of grid. */
+/** djb2: small, deterministic, and enough entropy for 15 bits of grid. */
 function hash(address: string): number {
   let h = 5381;
   for (let i = 0; i < address.length; i++) h = ((h * 33) ^ address.charCodeAt(i)) >>> 0;

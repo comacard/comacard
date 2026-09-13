@@ -223,7 +223,7 @@ test("a dead indexer reports no spending as unknown, not as none", () => {
 
 test("a limit still being read disables Send as a wait, not as a refusal", () => {
   // The Creditcoin RPC takes about four seconds a call. For that whole window `available` is
-  // undefined, and `(available ?? 0n) === 0n` rendered a flat greyed button — which says "you have
+  // undefined, and `(available ?? 0n) === 0n` rendered a flat greyed button, which says "you have
   // nothing to spend" about a figure nothing had read yet.
   creditLine.mockReturnValue({
     drawn: 0n,

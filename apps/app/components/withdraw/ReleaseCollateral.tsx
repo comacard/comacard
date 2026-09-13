@@ -37,13 +37,13 @@ import { SubHeader } from "../ui/SubHeader";
  * This is the half of the Wormhole path that used to need us. `WormholeVault.approveRelease` is
  * operator-gated and the operator was the team, which is honest and custodial: a borrower's
  * collateral came back when we said so. A `ReleaseRelay` holds that role on each chain now and
- * approves nothing of its own accord — it relays what the guardians signed, and the guardians only
+ * approves nothing of its own accord: it relays what the guardians signed, and the guardians only
  * sign what Creditcoin published after checking the debt still stands up.
  *
  * **Three steps, and the screen has to be honest that it is three.**
  *
  * 1. `requestRelease` on Creditcoin. This is where it can be refused.
- * 2. The guardians sign and the worker relays it. Nothing for the user to do, but it is real time —
+ * 2. The guardians sign and the worker relays it. Nothing for the user to do, but it is real time,
  *    well under a minute for BSC and Fuji, fifteen to twenty for the three L2s, which publish at
  *    finalized consistency and so finalize against Ethereum.
  * 3. **A second transaction the user signs.** The relay approves; it does not push funds, because
@@ -55,8 +55,8 @@ import { SubHeader } from "../ui/SubHeader";
  * `ReleaseWouldStrandDebt(drawn, remainingLimit)` if the borrower would be left owing more than the
  * remainder supports. Letting someone find that edge by hitting it costs gas and returns two
  * numbers instead of an action, so `releasableValue` solves the same inequality the other way and
- * the keypad is capped by it. The refusal is still handled — the contract is the authority and this
- * is a mirror of its arithmetic — but it should not be how anyone learns the rule.
+ * the keypad is capped by it. The refusal is still handled: the contract is the authority and this
+ * is a mirror of its arithmetic, but it should not be how anyone learns the rule.
  *
  * **Only the Wormhole path works this way.** Collateral proved from Sepolia by Attestcoin is
  * released by a person, because Attestcoin writability is in third-party audit and Creditcoin
@@ -103,8 +103,8 @@ export function ReleaseCollateral({ id }: { id: string }) {
   const { writeContractAsync, data: hash, error, reset } = useWriteContract();
   const [amount, setAmount] = useState("0");
   const [busy, setBusy] = useState(false);
-  // Everything that can fail before the wallet is even asked — switching chains, reading the message
-  // fee, the receipt check afterwards — used to be caught and dropped, because the only error shown
+  // Everything that can fail before the wallet is even asked: switching chains, reading the message
+  // fee, the receipt check afterwards: used to be caught and dropped, because the only error shown
   // was `useWriteContract`'s. A declined chain switch left the button idle with nothing said, which
   // is indistinguishable from the click not registering.
   const [failed, setFailed] = useState<string | null>(null);

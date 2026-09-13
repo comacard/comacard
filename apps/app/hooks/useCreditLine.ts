@@ -158,7 +158,7 @@ export function useCreditLine() {
           args: [vault, amount],
           chainId: SEPOLIA_CHAIN_ID,
         });
-        // The lock reverts if it runs before the approval is mined, so this wait is load-bearing —
+        // The lock reverts if it runs before the approval is mined, so this wait is load-bearing,
         // and an approval that reverted is followed by a lock that reverts, with nothing on screen
         // saying which of the two failed.
         await awaitSuccess(config, approval, SEPOLIA_CHAIN_ID, async () => {
@@ -228,7 +228,7 @@ export function useCreditLine() {
    * ```
    *
    * @FjrREPO lost a transaction to this sending 480 against a debt of 479.026845637583892617. The
-   * figure this screen had was `accountOf`'s, cached by react-query on a poll — right almost always
+   * figure this screen had was `accountOf`'s, cached by react-query on a poll, right almost always
    * and wrong exactly when it matters, since a stale-high copy reverts and a stale-low one pays
    * without closing the cycle, which is the only thing that scores.
    *

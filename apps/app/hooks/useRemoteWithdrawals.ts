@@ -70,7 +70,7 @@ export function useRemoteWithdrawals(): {
       return (answer.value.RemoteWithdrawal ?? []).flatMap((row) =>
         row.asset === null
           ? // A mid-sync read: the withdrawal row has landed and its asset row has not. Dropping it
-            // is right — without decimals the amount cannot be shown, and inventing 18 would
+            // is right: without decimals the amount cannot be shown, and inventing 18 would
             // misreport a 6-decimal stablecoin by twelve orders of magnitude.
             []
           : [

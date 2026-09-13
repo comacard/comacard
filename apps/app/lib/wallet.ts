@@ -4,12 +4,12 @@ import * as real from "./wallet-reown";
 export { USER_CLOSED_MODAL, WalletError } from "./wallet-error";
 
 // `real` is Reown AppKit (`wallet-reown.ts`). The Stellar Wallets Kit implementation this seam
-// was originally written against is gone — it was unreachable from `wallet.ts` after the move to
+// was originally written against is gone: it was unreachable from `wallet.ts` after the move to
 // Reown, and the three `@stellar/*` packages in the manifest existed only to satisfy it.
 
 /**
  * Next inlines NEXT_PUBLIC_* at build time, so in a production build this reads `"" === "1"` and every
- * e2e branch below is dead. `wallet-e2e.ts` still travels in the bundle — the ternaries reference it —
+ * e2e branch below is dead. `wallet-e2e.ts` still travels in the bundle, the ternaries reference it,
  * but it is ~30 lines, holds no key material, and is unreachable. Excluding it outright would need a
  * webpack alias; that config surface costs more than it buys. See the U17 design doc.
  */

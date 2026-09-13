@@ -7,7 +7,7 @@ import { waitForTransactionReceipt } from "wagmi/actions";
  *
  * **A receipt is not a success.** A reverted transaction produces one, with `status: "reverted"`.
  * Awaiting `waitForTransactionReceipt` and then showing a green check reports a revert as a
- * confirmation — on the lock screen, the faucet, and, through `receipt.isSuccess` (which is wagmi's
+ * confirmation: on the lock screen, the faucet, and, through `receipt.isSuccess` (which is wagmi's
  * "the query resolved", not "the transaction succeeded"), on every draw and repayment.
  *
  * **And a success is not always proof.** @FjrREPO hit this writing the worker's release sweep: the

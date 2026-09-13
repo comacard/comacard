@@ -17,12 +17,12 @@ This app started as a **verbatim copy of the SoroSense Stellar frontend** and wa
 As of the #9 sweep the conversion is done: `@sorosense/vault-client`, `lib/vault`, `lib/api`,
 `lib/earn`, `lib/wallet`, `providers/VaultProvider`, `lib/wallet-real.ts` and the three `@stellar/*`
 packages are all gone, along with the `/withdraw` route that was still rendering a Stellar keypad on
-the path `/withdraw/x/[id]` now uses. 100 files, and the test count went 427 → 200 — not coverage
+the path `/withdraw/x/[id]` now uses. 100 files, and the test count went 427 → 200, not coverage
 lost, but assertions about buckets, APY and an agent feed this product does not have.
 
 Two things survive on purpose:
 
-- **`app/page.tsx`** — the onboarding screen. Still names Blend and DeFindex in its copy. It imports
+- **`app/page.tsx`**: the onboarding screen. Still names Blend and DeFindex in its copy. It imports
   none of the removed code; this is wording, not wiring, and Axel is handling it separately.
 - **Provenance comments.** `Switch.tsx`, `Segmented.tsx` and `Bars.tsx` cite
   `docs/mockups/sorosense-mock-2.html` as the origin of their geometry. Those are honest notes about
@@ -74,7 +74,7 @@ route and that row is how a screen learns collateral has finished crossing.
 **Read the chain for anything the user is about to act on, the indexer only for history.** Not a
 preference: the indexer has held a plausible wrong answer twice in one day and neither surfaced as an
 error. `ClaimableCollateral` reads the vault's own `nativeReleasable` rather than
-`RemoteWithdrawal.approvedAt`, and where the two disagree the chain wins — there is a test on that
+`RemoteWithdrawal.approvedAt`, and where the two disagree the chain wins, there is a test on that
 ordering, because two of the three real withdrawals on the live indexer carry `withdrawnAt` with
 `approvedAt` still null.
 
@@ -99,15 +99,15 @@ The vault credits what actually arrived, so never assume the requested amount is
 
 `useCollateral` is the Attestcoin path (Sepolia). `useRemoteCollateral` is the Wormhole path, reading
 `WormholeCollateralHub` on Creditcoin plus each far vault directly. They are summed by the contract,
-not here — see the root `CLAUDE.md` for why the credit line never learned about a second chain.
+not here: see the root `CLAUDE.md` for why the credit line never learned about a second chain.
 
 **Chain ids are three different number spaces and two of the five break the pattern.** BSC is
 Wormhole `4` and Fuji is `6`; Base, Arbitrum and Optimism are 10004, 10003, 10005. Extrapolating puts
-Fuji at `10006`, which is Holesky — this app shipped that bug. `lib/comacard/__tests__/chains.test.ts`
+Fuji at `10006`, which is Holesky: this app shipped that bug. `lib/comacard/__tests__/chains.test.ts`
 pins all five in both directions against the worker's vault list.
 
 **The native coin is not always ETH.** `NATIVE_SYMBOL` maps the chain to BNB, AVAX or ETH. The deposit
-screen used to read `native ? "ETH" : "USDC"` and announced "Lock ETH — 0.072136 ETH on BSC Testnet",
+screen used to read `native ? "ETH" : "USDC"` and announced "Lock ETH, 0.072136 ETH on BSC Testnet",
 which is the wrong asset on the screen that asks someone to part with it.
 
 **Nor is the wait one number.** `crossingTime()` says "under a minute" for BSC and Fuji and "about
@@ -126,8 +126,8 @@ the failure this avoids.
 
 **`(flow)` routes redirect on desktop, except the two addressed by asset id.** `/deposit/x/[id]` and
 `/withdraw/x/[id]` render at every width; everything else in that group has a drawer to redirect to.
-`/deposit/x/[id]` used to be matched by the `/deposit/` rule and sent to `?panel=deposit` — the drawer
-the link was clicked in — so desktop cross-chain deposits went in a circle.
+`/deposit/x/[id]` used to be matched by the `/deposit/` rule and sent to `?panel=deposit`, the drawer
+the link was clicked in, so desktop cross-chain deposits went in a circle.
 
 ## KYC
 
@@ -163,23 +163,23 @@ vendored beUI card-folder uses it.
 
 **A receipt is not a success.** `lib/comacard/tx.ts` is the one definition: it returns nothing, so
 there is no value a caller can forget to check, and it takes an optional read-back of the state the
-transaction was meant to change. Four screens reported reverts as green checks before it existed —
+transaction was meant to change. Four screens reported reverts as green checks before it existed,
 including `useCreditLine.txStatus`, which read `receipt.isSuccess`, wagmi's "the query resolved"
 rather than "the transaction succeeded".
 
 **A failure before the wallet is asked is still a failure.** `switchChainAsync`, a fee read, the
-receipt check — none of them are `useWriteContract`'s `error`, and every cross-chain screen used to
+receipt check: none of them are `useWriteContract`'s `error`, and every cross-chain screen used to
 catch them into a comment. A button that goes busy, comes back, and says nothing is
 indistinguishable from a click that did not register.
 
 **`useWallet()` is the only answer to who is connected.** Not `useAccount()`, and certainly not
-`config.connectors[0]` — that is the first *registered* connector, not the connected one. It returns
+`config.connectors[0]`: that is the first *registered* connector, not the connected one. It returns
 no accounts, the address comes out `undefined`, and the first contract read throws
 `Address "undefined" is invalid` before the wallet is ever opened.
 
 **An unread figure is a dash, never a zero.** `0 tCTC` is a claim about someone's money. `SpentTotal`
 withholds its row when the indexer read failed, `StatStrip` prints `—`, and Spend disables with a
-spinner rather than a flat grey label while the limit is still being read — the Creditcoin RPC takes
+spinner rather than a flat grey label while the limit is still being read, the Creditcoin RPC takes
 about four seconds a call, and for that whole window `available` is `undefined`.
 
 **`repay()` takes no amount.** `useCreditLine.repay` re-reads `accountOf` one call before sending and

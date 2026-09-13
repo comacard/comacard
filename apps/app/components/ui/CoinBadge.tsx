@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- tiny static icons that must paint the moment
    they appear; next/image defers them, and one mishandles a local SVG. The biome-ignore
    comments below have to sit directly above each tag, so a second next-line directive
-   cannot also be there — hence file scope. */
+   cannot also be there, hence file scope. */
 
 /**
  * The stablecoin whose brand logo represents each currency bucket, plus the native coins. CTC is

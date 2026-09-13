@@ -14,6 +14,12 @@ though, and it checks all of them.
 **Never use an em dash.** Not in UI copy, not in code comments, not in commit messages, not in these
 docs, not in a reply to anyone on this project. Axel asked for this directly and it holds everywhere.
 Use a comma, a colon, a full stop, or parentheses instead. Recast the sentence if none of those fit.
+A colon is usually what an em dash was standing in for: it introduces the explanation of what came
+before it, where a comma in the same place makes a splice.
+
+The one exception is the `—` that stands in for a figure nobody has read yet, in `StatStrip` and
+`CardHero`. That is a typographic glyph rather than punctuation, and a hyphen there reads as a minus
+sign sitting next to a number.
 
 Two related habits that follow from the same request:
 
@@ -56,11 +62,11 @@ WormholeVault ──Wormhole───▶  WormholeCollateralHub   ← a SEPARATE
 ```
 
 **`ASCCreditLine` is still bound to one source chain, permanently.** `sourceVault` and
-`sourceChainKey` are written once in `initialize` and there is no setter — read them on the live
+`sourceChainKey` are written once in `initialize` and there is no setter, read them on the live
 contract and `sourceChainKey` is still `1`, Sepolia. That is issue #4, and it is still open.
 
 Collateral from the other five chains raises a limit anyway, because the credit line does not accept
-their proofs — it **asks a neighbour for a total**:
+their proofs, it **asks a neighbour for a total**:
 
 ```solidity
 address hub = remoteCollateralHub;              // slot 11, two lines
@@ -84,7 +90,7 @@ how to do it safely. Until then it is parked, not forgotten.
 
 **The two carriers do not have the same trust properties, and the difference is worth saying out
 loud before anyone checks.** Wormhole is trustless in both directions. Attestcoin is trustless
-inbound and **operator-approved outbound** — `SourceVault.approveRelease` is gated on us — because
+inbound and **operator-approved outbound** (`SourceVault.approveRelease` is gated on us) because
 Attestcoin writability is still in third-party audit and Creditcoin cannot write back to Ethereum.
 "Non-custodial" is not a claim this product can make about the whole of itself. `contracts/TRUST.md`
 has the full version, including the one that surprises people: **Wormhole's testnet guardian set has
@@ -104,10 +110,10 @@ Every cross-chain bug this repo has had passed through here at least once.
 | --- | --- | --- | --- | --- | --- | --- |
 | **EVM chain id** | 11155111 | 84532 | 421614 | 11155420 | 97 | 43113 |
 | **Wormhole chain id** | 10002 | 10004 | 10003 | 10005 | **4** | **6** |
-| **Attestcoin chainKey** | 1 | — | — | — | — | — |
+| **Attestcoin chainKey** | 1 | (|) | (|) |, |
 
 BSC and Fuji predate Wormhole's 10000-block testnet scheme and keep their mainnet ids. Extrapolating
-the sequence puts Fuji at `10006`, which is **Holesky** — a different chain, and the app shipped that
+the sequence puts Fuji at `10006`, which is **Holesky**: a different chain, and the app shipped that
 bug until it was caught. `apps/app/lib/comacard/__tests__/chains.test.ts` and
 `apps/indexer/test/chain-map.test.ts` both pin these now.
 
@@ -137,7 +143,7 @@ precision above ~9e15. Decode with `BigInt`, never `Number`.
 
 **A receipt is not a success, and a success is not always proof.** A reverted transaction produces a
 receipt like any other, and wagmi's `receipt.isSuccess` means the *query* resolved, not that the
-transaction did — four screens reported reverts as green checks before this was caught. Worse, the
+transaction did: four screens reported reverts as green checks before this was caught. Worse, the
 Fuji and Arbitrum public RPCs both return status-1 receipts for transactions `eth_getTransactionReceipt`
 afterwards reports as unknown, and `tx.wait()` in ethers resolves to `null` without throwing. On
 those chains the only honest test is reading back the state the transaction was meant to change.
@@ -145,7 +151,7 @@ those chains the only honest test is reading back the state the transaction was 
 
 **The Envio deployment id is not the commit hash.** `2621060` built `24e4861`. They are the same
 shape and unrelated, and guessing wasted an hour. The dev tier caps an indexer at three deployments,
-so every redeploy deletes an older one and its URL starts returning 404 — including URLs posted as
+so every redeploy deletes an older one and its URL starts returning 404, including URLs posted as
 "final" an hour earlier. `apps/indexer/README.md` is the record; `envio-cloud indexer get` is the
 only authority. Check it before assuming the schema broke.
 
@@ -166,15 +172,15 @@ proof those two numbers genuinely differ. Only `proved` raises a limit. Never sh
 Five separate bugs in a single day, in five different files by three different people, and every one
 was **a plural treated as a singular**:
 
-1. `ReleaseRelay` did not check *which* chain a release was for — one signed release was valid on all five.
-2. `approveRelease` set rather than added — two withdrawals in flight, the second ate the first.
-3. The indexer's EVM→Wormhole chain map held two of five chains — three chains indexed as if they did not exist.
+1. `ReleaseRelay` did not check *which* chain a release was for: one signed release was valid on all five.
+2. `approveRelease` set rather than added: two withdrawals in flight, the second ate the first.
+3. The indexer's EVM→Wormhole chain map held two of five chains: three chains indexed as if they did not exist.
 4. `RemoteWithdrawal`'s stages assumed two chains sync in step; they do not, and a `Released` routinely arrives before the request that created its row.
 5. The app's `REMOTE_CHAINS` named two of five, and had Fuji's id wrong on top of that.
 
 None of them threw. Every one produced a plausible wrong answer: a missing row, a stale figure, a
 chain rendered as "Wormhole chain 6". **If a check involves "which one of several", a test suite with
-one of them cannot catch it** — which is why four of the five needed a live run or a second fixture
+one of them cannot catch it**: which is why four of the five needed a live run or a second fixture
 to surface.
 
 The countermeasure that works is a test that reads *both* lists and asserts they agree in both
@@ -212,7 +218,7 @@ through there, so a limit that looks wrong can be checked by hand.
   watching a spinner.
 - **Use BSC or Fuji for anything cross-chain that has to land live.** They are L1s and the guardians
   sign in well under a minute. Base, Arbitrum and Optimism publish at finalized consistency and
-  finalize against Ethereum, so they take fifteen to twenty — same script, twenty minutes of silence
+  finalize against Ethereum, so they take fifteen to twenty: same script, twenty minutes of silence
   in the middle.
 - **`cd apps/worker && bun run roundtrip 4`** runs the whole cross-chain story as one command: lock,
   guardians, credit, request, relay, claim, every figure read off a contract. It exists because the

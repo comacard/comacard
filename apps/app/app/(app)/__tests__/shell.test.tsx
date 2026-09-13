@@ -49,7 +49,7 @@ test("desktop chrome present: the desktop nav renders alongside the mobile botto
 
   // The bar is the point: before it, desktop chrome was a wordmark and an avatar, and Credit had no
   // way to be reached at all. Both navs are landmarks in the DOM at once and CSS picks one per
-  // viewport, so every query here is scoped — both of them link "Credit" to /earn now.
+  // viewport, so every query here is scoped: both of them link "Credit" to /earn now.
   const desktop = within(screen.getByRole("navigation", { name: "Primary" }));
   expect(desktop.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/home");
   expect(desktop.getByRole("link", { name: "Credit" })).toHaveAttribute("href", "/earn");

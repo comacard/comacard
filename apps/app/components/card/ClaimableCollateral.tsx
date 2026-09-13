@@ -9,7 +9,7 @@ import { AssetIcon, badgeForSymbol, CoinBadge, Section } from "../ui";
  * Collateral that is out of the vault's hands and into the borrower's, waiting on their signature.
  *
  * @FjrREPO's words for it in #8: *a nudge, not a spinner*. Between the relay approving a release and
- * the borrower claiming it, nothing is waiting on the protocol — the money is sitting in the vault
+ * the borrower claiming it, nothing is waiting on the protocol: the money is sitting in the vault
  * and the only thing left is a transaction the person has not sent. Without this the state is
  * invisible: the limit dropped when they asked, the withdraw screen would show the button, and
  * nothing on Home says to go there. Someone who closed the tab mid-flow has no way back except
@@ -17,7 +17,7 @@ import { AssetIcon, badgeForSymbol, CoinBadge, Section } from "../ui";
  *
  * **Read from the chain, not the indexer.** `releasable` is the vault's own `nativeReleasable` /
  * `tokenReleasable` for this wallet, which is what `unlockNative` actually checks. The indexer has
- * the same fact in `RemoteWithdrawal` and it has been wrong about it twice today — once because two
+ * the same fact in `RemoteWithdrawal` and it has been wrong about it twice today, once because two
  * chains sync out of step and the stages were matched to the wrong row, once because a redeploy
  * dropped the older relays out of the config and their events with them. This is Fajar's own rule
  * back at him: the indexer for history, the chain for anything the user is about to act on.

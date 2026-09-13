@@ -5,7 +5,7 @@ import type { ActivityItem } from "../../lib/comacard/activity";
  * never a blockchain: a security deposit earns a limit, you spend against it, you pay it back. No
  * chain names in a title.
  *
- * There were twenty cases here and fourteen could never fire — "Put to work", "Rewards added",
+ * There were twenty cases here and fourteen could never fire: "Put to work", "Rewards added",
  * "Auto reinvest updated", freeze, proposed-exit, sign-mandate, consented, approve-exit. All of them
  * described a SoroSense agent moving money between Stellar yield buckets, which is not a thing this
  * product does. Dead branches in a `switch` are worse than dead files: they read as behaviour.

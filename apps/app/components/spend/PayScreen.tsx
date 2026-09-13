@@ -18,7 +18,7 @@ import { SubHeader } from "../ui/SubHeader";
  *
  * **The sixty-second rule is the other trap.** `minCycleDuration` on the deployed line is 60
  * seconds, and a balance settled faster than that clears the debt while the score stays exactly
- * where it was — no error, no explanation. So the button waits, visibly, and says why. Someone who
+ * where it was: no error, no explanation. So the button waits, visibly, and says why. Someone who
  * spent and paid within a few seconds would otherwise conclude the scoring is broken.
  *
  * The exact amount matters too: `repay()` reverts when `msg.value` exceeds the debt, so the figure

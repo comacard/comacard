@@ -1,5 +1,5 @@
 /**
- * Progressive blur strip pinned to the top of the viewport — the mirror of the
+ * Progressive blur strip pinned to the top of the viewport, the mirror of the
  * BottomNav's blur. Stacked backdrop-filter layers with mask gradients make the
  * blur strongest at the very top edge and fade to nothing lower down, so content
  * dissolves into a soft blur as it scrolls up under it. Purely decorative.

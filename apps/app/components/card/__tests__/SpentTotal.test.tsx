@@ -28,7 +28,7 @@ beforeEach(() => {
 test("states zero rather than hiding the row", () => {
   render(<SpentTotal />);
 
-  // Hidden, the only tCTC on the screen is "50.0000 tCTC" under the collateral — which is what the
+  // Hidden, the only tCTC on the screen is "50.0000 tCTC" under the collateral, which is what the
   // collateral is worth, not what was spent. The zero is what tells them apart.
   expect(screen.getByText("Spent from your card")).toBeInTheDocument();
   expect(screen.getByText("0 tCTC")).toBeInTheDocument();

@@ -6,7 +6,7 @@ const push = vi.fn();
 const replace = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }) }));
 const connect = vi.fn();
-// hydrated: true, address: null — a disconnected-but-hydrated session, so the STE-43 forward guard
+// hydrated: true, address: null, a disconnected-but-hydrated session, so the STE-43 forward guard
 // in Landing doesn't short-circuit these onConnect-flow tests (see app/__tests__/page.test.tsx for
 // the hydration/forward behavior itself).
 vi.mock("../../hooks/useWallet", () => ({
@@ -28,7 +28,7 @@ test("navigates to /home after a successful connect", async () => {
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/home"));
 });
 
-test("surfaces a readable message on failure — no [object Object], no navigation", async () => {
+test("surfaces a readable message on failure: no [object Object], no navigation", async () => {
   connect.mockRejectedValue(new WalletError("Freighter is locked", 5));
   render(<Landing />);
   fireEvent.click(await screen.findByText("Connect wallet"));

@@ -5,17 +5,17 @@ import { AuthGate } from "../../components/AuthGate";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 
 /**
- * Desktop has no full-page flows — Deposit / Withdraw / Activity are drawers on the Overview,
+ * Desktop has no full-page flows: Deposit / Withdraw / Activity are drawers on the Overview,
  * and there is no desktop design for these routes. A desktop visitor who reaches a (flow) URL (typed,
  * bookmarked, or a stale deep link) is sent to /home with the matching drawer open; anything else
  * falls back to /home. Mobile is untouched: `useIsDesktop` is false there, so children render as
  * before. This lives in the layout so the shared flow components (AddFunds/DepositKeypad/…) stay
- * byte-identical — desktop UI never navigates here (it uses `open(panel)`), only manual URLs do.
+ * byte-identical: desktop UI never navigates here (it uses `open(panel)`), only manual URLs do.
  */
 /**
  * The two exceptions, and they are exceptions because there is nowhere to send them.
  *
- * Every other flow route has a desktop equivalent to redirect to — a drawer on the Overview. The
+ * Every other flow route has a desktop equivalent to redirect to: a drawer on the Overview. The
  * cross-chain asset screens do not: `/deposit/x/[id]` was being matched by the `/deposit/` rule and
  * bounced to `?panel=deposit`, which is the drawer the link was clicked *in*, so the desktop
  * cross-chain deposit went in a circle and could not be completed at all. Withdraw would have
@@ -28,7 +28,7 @@ const RENDERS_ON_DESKTOP = (path: string): boolean =>
   path.startsWith("/deposit/x/") ||
   path.startsWith("/withdraw/x/") ||
   // `/send`, `/send/me` and `/send/to`. Send became a picker rather than a keypad, and there is no
-  // desktop drawer to redirect it to — a desktop visitor clicking Send would land back on Home,
+  // desktop drawer to redirect it to: a desktop visitor clicking Send would land back on Home,
   // which is the loop `/deposit/x/[id]` was in before this list existed.
   path === "/send" ||
   path.startsWith("/send/");

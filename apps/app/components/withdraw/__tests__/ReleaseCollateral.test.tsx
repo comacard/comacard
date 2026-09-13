@@ -12,7 +12,7 @@ import { ReleaseCollateral } from "../ReleaseCollateral";
  * The two mistakes worth pinning are opposites. Saying "withdrawn" once the guardians have signed
  * claims the money is in their wallet when it is sitting in a vault waiting for a signature they
  * have not given. And losing the request on a reload leaves them with a limit that dropped and
- * nothing on screen accounting for it — which is why the stage is read from the indexer rather than
+ * nothing on screen accounting for it: which is why the stage is read from the indexer rather than
  * remembered in component state.
  */
 
@@ -76,7 +76,7 @@ test("offers the request form, capped by what the debt leaves free", () => {
   expect(screen.getByRole("button", { name: /Withdraw BNB/ })).toBeInTheDocument();
   expect(screen.getByText(/0\.05 BNB backing your limit on BSC Testnet/)).toBeInTheDocument();
   // Nothing is drawn, so none of it is held back and the screen says nothing about debt. (The
-  // keypad's hint is an error message — it renders only once an entry is over the maximum.)
+  // keypad's hint is an error message: it renders only once an entry is over the maximum.)
   expect(screen.queryByText(/backing what you have already spent/)).toBeNull();
 });
 
@@ -133,7 +133,7 @@ test("a chain this wallet holds nothing on gets words, not a keypad", () => {
 });
 
 test("an open balance holds back what it needs, and names the part that is stuck", () => {
-  // 30 CTC of collateral against 10 drawn at score 0 must keep 15 back, so 15 of the 30 is free —
+  // 30 CTC of collateral against 10 drawn at score 0 must keep 15 back, so 15 of the 30 is free,
   // half the 0.05 BNB. Asking for the other half would cost gas to learn `ReleaseWouldStrandDebt`,
   // so the screen states the split instead of letting someone find it.
   creditLine.mockReturnValue({ drawn: 10n * 10n ** 18n, score: 0n });

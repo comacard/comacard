@@ -31,7 +31,7 @@ const EMPTY_COPY: Record<Tab, { title: string; description: string }> = {
 
 /**
  * Desktop activity drawer: mirrors the mobile Activity page (interface-map §8) but the hand-rolled
- * tab buttons become the shared flat `Segmented` (variant="period"). ActivityList is reused AS-IS —
+ * tab buttons become the shared flat `Segmented` (variant="period"). ActivityList is reused AS-IS,
  * the `kind`→icon enhancement is deferred (pending Axel's reply on STE-48). Review → onReview (the
  * panel host opens the safe-exit dialog).
  */

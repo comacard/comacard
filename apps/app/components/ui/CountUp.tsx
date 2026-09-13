@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 /**
  * Animates a number toward `value` (~0.6s ease-out) and renders it through `format`. Test/SSR-safe:
  * `display` starts at `value`, so the final text shows immediately if rAF never runs, and the very
- * first render (mount) does not animate — only later value changes (cycling buckets, toggling
+ * first render (mount) does not animate: only later value changes (cycling buckets, toggling
  * Total/Earned) count. Stilled under prefers-reduced-motion.
  */
 export function CountUp({

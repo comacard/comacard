@@ -138,8 +138,8 @@ function MobileHome() {
 
         {/* Taken from the card, above what backs it. Read from Draw events rather than the wallet,
           because tCTC that arrived from anywhere else was never spent on this card.
-          Hidden while a balance is open: the two figures are different questions — what is owed
-          now, and what has ever been taken — but they read as one repeated number until the first
+          Hidden while a balance is open: the two figures are different questions, what is owed
+          now, and what has ever been taken, but they read as one repeated number until the first
           repayment makes them diverge. */}
         {owes ? null : <SpentTotal className="mb-[22px]" />}
 

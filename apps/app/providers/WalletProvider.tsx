@@ -50,11 +50,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           setWalletName(window.localStorage.getItem(NAME_KEY));
           return;
         }
-        // Mismatch (account switch / foreign wallet) — fall through to clear.
+        // Mismatch (account switch / foreign wallet), fall through to clear.
       } catch {
         // getAddress rejected (locked / revoked / no permission), OR localStorage access itself
         // threw (private mode / sandboxed). Either way: no verified session. Fall through to clear
-        // and resolve hydration — never hang at the undefined/skeleton state.
+        // and resolve hydration: never hang at the undefined/skeleton state.
       }
       if (!alive) return;
       try {
@@ -62,7 +62,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         window.localStorage.removeItem(NAME_KEY);
         window.localStorage.removeItem(ID_KEY);
       } catch {
-        // storage unavailable — nothing to clear.
+        // storage unavailable, nothing to clear.
       }
       setAddress(null);
     })();

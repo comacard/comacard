@@ -8,7 +8,7 @@ import { ClaimableCollateral } from "../ClaimableCollateral";
  *
  * @FjrREPO's framing in #8, and the distinction the whole component rests on: between the relay
  * approving a release and the borrower claiming it, **nothing is waiting on the protocol**. So this
- * is a nudge, not a spinner — and it has to disappear when there is nothing to nudge about, because
+ * is a nudge, not a spinner, and it has to disappear when there is nothing to nudge about, because
  * a prompt that is always on screen is not a prompt.
  */
 
@@ -68,7 +68,7 @@ test("lists one row per chain, because a claim is per vault", () => {
     />,
   );
 
-  // Two claimable, and `unlockNative` is a call against one vault on one chain — they cannot be
+  // Two claimable, and `unlockNative` is a call against one vault on one chain, they cannot be
   // collapsed into a single total.
   expect(screen.getAllByRole("link")).toHaveLength(2);
   expect(screen.getByText("0.02 BNB")).toBeInTheDocument();

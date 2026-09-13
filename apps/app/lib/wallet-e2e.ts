@@ -5,7 +5,7 @@
  *
  * `signTransaction` returns a marker, not a signature. Nothing verifies it: `MockVaultClient` calls
  * `signer.sign(xdr)` and discards the result. When the real bindings land (U20) this module is not
- * part of that path — the dispatcher simply never selects it outside an e2e run.
+ * part of that path: the dispatcher simply never selects it outside an e2e run.
  */
 
 /**

@@ -13,10 +13,10 @@ export async function shot(page: Page, name: string): Promise<void> {
 export async function connectWallet(page: Page): Promise<void> {
   await page.goto("/");
   // With a session already stored, the landing auto-forwards to /home (STE-43) before the button
-  // ever renders — that path is itself proof the fix works. Only click when onboarding is actually
+  // ever renders: that path is itself proof the fix works. Only click when onboarding is actually
   // shown. `goto` resolves on HTML load, well before hydration flips the landing past its `null`
   // SSR shell, so a one-shot `isVisible()` right after `goto` reads false even when the button is
-  // about to appear (no stored session, the common case) — race whichever settles first instead.
+  // about to appear (no stored session, the common case): race whichever settles first instead.
   const connect = page.getByRole("button", { name: "Connect wallet" });
   const showsButton = await Promise.race([
     connect.waitFor({ state: "visible" }).then(() => true),
@@ -65,7 +65,7 @@ export async function depositEurc(page: Page, amount: string): Promise<void> {
   await shot(page, "02-consent-sheet");
   await consent.getByRole("button", { name: "Agree & sign" }).click();
 
-  // Success is a status screen (STE-48), not an auto-redirect — confirm it, then return home.
+  // Success is a status screen (STE-48), not an auto-redirect: confirm it, then return home.
   await expect(page.getByText("Deposit Success")).toBeVisible();
   await page.getByRole("button", { name: "Back to Home" }).click();
   await expect(page).toHaveURL(/\/home$/);
@@ -74,7 +74,7 @@ export async function depositEurc(page: Page, amount: string): Promise<void> {
 /**
  * Assert the desktop Overview chrome is on screen and the mobile bottom nav is hidden. Structural
  * only (no bucket values) so it holds whether the shared MockVaultClient singleton is empty or was
- * funded by an earlier spec. R11: only the never-appear tokens (risk/score/sentinel) are checked —
+ * funded by an earlier spec. R11: only the never-appear tokens (risk/score/sentinel) are checked,
  * "safe exit" is the vetted ExitApproval action name, always mounted, and is not a risk label.
  */
 export async function expectDesktopHome(page: Page): Promise<void> {

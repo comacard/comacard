@@ -29,13 +29,13 @@ import { useWallet } from "./useWallet";
  *
  * **This exists because `collateralValueOf` already counts it.** The credit line adds the hub's
  * total to its own, so a screen reading only `listedTokens()` reports a limit backed by more than
- * the rows it lists — the figures disagree and neither is wrong. Reading the hub is what closes
+ * the rows it lists: the figures disagree and neither is wrong. Reading the hub is what closes
  * that gap.
  *
  * Assets are keyed by `keccak256(chainId, token)`, never by address alone: USDC on Base and USDC on
  * Arbitrum are different assets in different vaults, and a depeg on one says nothing about the
  * other. The chain and token behind an id come from the `AssetListed` log rather than a table here,
- * for the same reason the Sepolia list is read from chain — listing is a governance call, and the
+ * for the same reason the Sepolia list is read from chain: listing is a governance call, and the
  * log cannot go stale.
  */
 
@@ -199,7 +199,7 @@ export function useRemoteCollateral(): {
        * A single `fromBlock: 0` query is the obvious thing and it does not work: the Creditcoin RPC
        * spends forty seconds on it and then times out, which is exactly how this screen hung on a
        * skeleton. A 5,000-block window answers in about a second, so the scan walks backwards and
-       * stops the moment every listed id has an origin — usually the first window, since listing is
+       * stops the moment every listed id has an origin: usually the first window, since listing is
        * a deployment-time act.
        */
       const origin = new Map<string, { chainId: number; token: Hex }>();
@@ -304,7 +304,7 @@ export function useRemoteCollateral(): {
           let available = 0n;
           // Approved by the relay and waiting for the borrower's own transaction. The relay grants
           // permission; it never pushes funds, so a release is not finished when the guardians have
-          // signed it — there is a second signature to collect.
+          // signed it: there is a second signature to collect.
           let releasable = 0n;
           let fee = 0n;
           const rpc = deployment ? RPCS[deployment.evmChainId] : undefined;

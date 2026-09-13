@@ -5,8 +5,8 @@ import { SendPicker } from "../SendPicker";
 /**
  * The picker's whole job is to be honest that both routes go through the borrower's own wallet.
  *
- * `draw()` ends in `Address.sendValue(payable(msg.sender), amount)` — there is no destination
- * parameter — so "to another wallet" is the same draw plus a second transaction. A picker that
+ * `draw()` ends in `Address.sendValue(payable(msg.sender), amount)`, there is no destination
+ * parameter, so "to another wallet" is the same draw plus a second transaction. A picker that
  * implied otherwise would be advertising a transfer feature the credit line does not have.
  */
 

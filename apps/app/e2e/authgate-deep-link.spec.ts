@@ -11,7 +11,7 @@ import { connectWallet } from "./support/journey";
 /**
  * Wait FOR the STE-43 bounce rather than asserting the URL directly. The redirect is fired from
  * AuthGate's effect a beat after `goto` resolves, so a plain `toHaveURL(/\/home$/)` matches the
- * still-correct URL on its first poll and returns before the redirect ever runs — it would pass
+ * still-correct URL on its first poll and returns before the redirect ever runs, it would pass
  * even with the bug present. This waits for the URL to reach the landing (`pathname === "/"`); if
  * that happens within the window the deep link bounced, which must not.
  */

@@ -4,7 +4,7 @@
  * The name is OCR'd off an identity document, so it arrives at whatever length the document says
  * and cannot be shortened by asking the holder to type something else. "Axel Urwawuska Atarubby"
  * is 23 characters and the folder's name slot holds about 18, which is how the card ended up
- * reading "Axel Urwawuska At…" — a truncation that cuts mid-word and loses the surname, the one
+ * reading "Axel Urwawuska At…": a truncation that cuts mid-word and loses the surname, the one
  * part of a name that identifies anybody.
  *
  * So this abbreviates the way an embossing machine does rather than the way CSS does: the given

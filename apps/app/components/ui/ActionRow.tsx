@@ -4,7 +4,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
  * The row of actions that sits directly under the headline figure.
  *
  * Two things about it are borrowed and one is not. The shape is: one filled pill leading, the rest
- * outlined, sized to their labels rather than stretched — the eye is already on the number, so the
+ * outlined, sized to their labels rather than stretched: the eye is already on the number, so the
  * actions meet it there instead of being found further down. What is not borrowed is the count. The
  * reference has four and an overflow; this has two, or three when a balance is open, because those
  * are all the things a cardholder can do here. An overflow menu holding nothing is furniture.

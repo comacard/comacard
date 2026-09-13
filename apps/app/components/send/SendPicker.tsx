@@ -8,7 +8,7 @@ import { SubHeader } from "../ui/SubHeader";
  * Where the credit ends up, asked before the amount.
  *
  * **Both routes go through your own wallet, and the screen says so.** `draw()` ends in
- * `Address.sendValue(payable(msg.sender), amount)` — there is no destination parameter, and there
+ * `Address.sendValue(payable(msg.sender), amount)`: there is no destination parameter, and there
  * cannot be one: the credit line pays the borrower, and anything after that is an ordinary transfer
  * the line knows nothing about. So "to another wallet" is not a different kind of send, it is the
  * same send plus a second transaction.
@@ -19,8 +19,8 @@ import { SubHeader } from "../ui/SubHeader";
  * this product does not have.
  *
  * The reference app this is modelled on offers "To Kolo User", "To IBAN" and "Between Wallets"
- * alongside. None of those exist here — there is no directory of users, no bank rail, and one wallet
- * per holder — and a row that opens a screen saying "coming soon" is worth less than no row.
+ * alongside. None of those exist here: there is no directory of users, no bank rail, and one wallet
+ * per holder, and a row that opens a screen saying "coming soon" is worth less than no row.
  */
 
 const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;

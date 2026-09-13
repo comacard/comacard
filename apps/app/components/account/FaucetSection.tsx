@@ -144,7 +144,7 @@ export function FaucetSection({ compact = false }: { compact?: boolean }) {
     try {
       // Awaited, not fired and forgotten: minting on the wrong chain reverts, and wagmi resolves
       // this only once the wallet has actually moved. A declined switch throws, which skips the
-      // mint — the right outcome, since the user just said no.
+      // mint: the right outcome, since the user just said no.
       if (!onSepolia) {
         setPhase(token, "switching");
         await switchChainAsync({ chainId: SEPOLIA_CHAIN_ID });

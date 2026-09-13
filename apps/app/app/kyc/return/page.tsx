@@ -5,7 +5,7 @@ import Link from "next/link";
  *
  * **This page has no logic on purpose, and must not grow any.** The verdict reaches us through
  * Didit's webhook to `apps/kyc`, never through this redirect, so anything decided here from the
- * query string would be a second source of truth for whether someone is verified — and the one a
+ * query string would be a second source of truth for whether someone is verified, and the one a
  * user can edit in their address bar. The page says what Didit said and sends them back.
  *
  * It carries the route name from the app this one replaced, because the KYC service on Railway is

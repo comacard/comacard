@@ -71,8 +71,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         {/* Centered content column. Mobile keeps the exact px-5 pb-[120px] pt-14; desktop swaps the
             padding and drops the bottom-nav gutter. `SHELL` is shared with the navigation bar so the
             brand cannot stop lining up with the first card under it, and it caps the column at
-            1200px of content — the width every dashboard measured lands on, and 168px narrower than
-            what this ran at before. Centering is mx-auto (never transform — U14). */}
+            1200px of content: the width every dashboard measured lands on, and 168px narrower than
+            what this ran at before. Centering is mx-auto (never transform, U14). */}
         <div className={`${SHELL} pb-[120px] pt-14 lg:pb-16 lg:pt-8`}>
           <div
             key={pathname}

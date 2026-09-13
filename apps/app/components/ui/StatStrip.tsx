@@ -5,8 +5,8 @@ import { Skeleton } from "./Skeleton";
  * The four figures a cardholder opens the app for, in one band above everything else.
  *
  * This is the piece the desktop Overview was missing, and its absence was the expensive one. The
- * screen's entire subject is three numbers — what the limit is, what is left to spend, what is owed
- * — and not one of them was anywhere the eye lands first. Spendable was a figure inside a card
+ * screen's entire subject is three numbers: what the limit is, what is left to spend, what is owed,
+ * and not one of them was anywhere the eye lands first. Spendable was a figure inside a card
  * inside the left column; the balance owed lived in a sub-panel that only existed while it was
  * non-zero, so the answer to "do I owe anything" was the presence or absence of a box; the limit
  * was on another screen entirely. Every dashboard measured puts this band first: Aave gives it a
@@ -16,8 +16,8 @@ import { Skeleton } from "./Skeleton";
  * as four separate objects that happen to be adjacent; these are four readings off one instrument,
  * and the shared border is what says so.
  *
- * A tile with `value === null` renders a dash, not a zero. Zero is a fact about the account —
- * "nothing is owed" — and an unread contract is not that fact.
+ * A tile with `value === null` renders a dash, not a zero. Zero is a fact about the account,
+ * "nothing is owed", and an unread contract is not that fact.
  */
 
 export type Stat = {

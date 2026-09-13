@@ -8,7 +8,7 @@ export const USER_CLOSED_MODAL = -1;
 /**
  * Stellar Wallets Kit rejects with plain `{ code, message }` objects (e.g.
  * kit.js `reject({ code: -1, message: "The user closed the modal." })`), not
- * Error instances — an unhandled one surfaces to the user as the useless
+ * Error instances: an unhandled one surfaces to the user as the useless
  * "[object Object]". Normalising at the wallet boundary gives callers a real
  * Error with a readable message and a `code` to special-case cancellation.
  */

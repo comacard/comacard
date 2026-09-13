@@ -2,9 +2,9 @@
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 
 /**
- * Organic green area chart for the desktop Overview hero — value over time. Interactive: hovering
- * shows a crosshair + a dot riding the smoothed curve + a value tooltip (the technique — measure the
- * real width, then `getPointAtLength` binary-search for y at the cursor's x — is lifted from Tends'
+ * Organic green area chart for the desktop Overview hero, value over time. Interactive: hovering
+ * shows a crosshair + a dot riding the smoothed curve + a value tooltip (the technique, measure the
+ * real width, then `getPointAtLength` binary-search for y at the cursor's x, is lifted from Tends'
  * PortfolioChart). Deterministic input (`data` is passed in), so no randomness/clock read. The path
  * ref is read only inside the mousemove handler (never during render) and `ResizeObserver`/SVG length
  * methods are guarded for jsdom, which lacks them. Adapted from the mock's drawChart/smooth.
@@ -69,7 +69,7 @@ export function ValueChart({ data: raw }: { data: number[] }) {
   // A flat series is the *expected* real-mode picture on a vault nobody has moved money in (and the
   // whole picture until NAV accrual ships). Drawing it against a zero span would divide by zero; pinning
   // it to `min` would slam an honest flat line to the floor, where it reads as "your value fell to
-  // nothing". It is drawn through the middle instead — a level line, which is what happened.
+  // nothing". It is drawn through the middle instead: a level line, which is what happened.
   const flat = max === min;
   const span = flat ? 1 : max - min;
   const mid = padT + (h - padT - padB) / 2;
@@ -81,7 +81,7 @@ export function ValueChart({ data: raw }: { data: number[] }) {
   const last = pts[pts.length - 1]!;
   const area = `${line} L ${last.x.toFixed(1)} ${h} L ${first.x.toFixed(1)} ${h} Z`;
 
-  // Ref is read here (an event handler), never during render — satisfies react-hooks/no-ref-in-render.
+  // Ref is read here (an event handler), never during render: satisfies react-hooks/no-ref-in-render.
   const onMove = (e: MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.max(first.x, Math.min(last.x, e.clientX - rect.left));

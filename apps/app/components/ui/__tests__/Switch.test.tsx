@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Switch } from "../Switch";
 
-test("with onChange it is a live control — pressable, one call per press", async () => {
+test("with onChange it is a live control: pressable, one call per press", async () => {
   const user = userEvent.setup();
   const onChange = vi.fn();
   render(<Switch checked={false} label="Auto reinvest rewards" onChange={onChange} />);
@@ -15,7 +15,7 @@ test("with onChange it is a live control — pressable, one call per press", asy
   expect(onChange).toHaveBeenCalledTimes(1);
 });
 
-test("readOnly is a state display — disabled, announced as such, and onChange never fires", async () => {
+test("readOnly is a state display: disabled, announced as such, and onChange never fires", async () => {
   const user = userEvent.setup();
   const onChange = vi.fn();
   // Both props together is the in-flight case: a live control that must not accept a second press

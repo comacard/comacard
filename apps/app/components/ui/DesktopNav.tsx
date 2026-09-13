@@ -17,10 +17,10 @@ import { SHELL } from "./shell";
  * Measured off Stripe's own header at 1440px rather than guessed: 28px between the brand and the
  * nav group, 14px nav labels, a centred container that stops short of the viewport edge, and a row
  * tall enough (64px here, 76px there) that the links are not crowding the fold. What is *not*
- * borrowed is the item treatment — Stripe underlines, this app has spoken in pills since the mobile
+ * borrowed is the item treatment: Stripe underlines, this app has spoken in pills since the mobile
  * bottom nav, and the product's own vocabulary beats the reference's.
  *
- * Activity is a `?panel=` link, not a route, because `/transactions` has no desktop page by design —
+ * Activity is a `?panel=` link, not a route, because `/transactions` has no desktop page by design,
  * the `(flow)` group redirects desktop visitors to the matching drawer. Pointing the link straight
  * at the drawer's own URL keeps one source of truth for that state and leaves Back working.
  *
@@ -30,7 +30,7 @@ import { SHELL } from "./shell";
 
 const LINKS = [
   { href: "/home", label: "Overview" },
-  // The route stays `/earn` — the bottom nav, the swipe order and the tests all address that path.
+  // The route stays `/earn`: the bottom nav, the swipe order and the tests all address that path.
   // Only what it shows, and what it is called, became Credit.
   { href: "/earn", label: "Credit" },
 ] as const;
@@ -74,11 +74,11 @@ export function DesktopNav({ account }: { account?: ReactNode }) {
         </Link>
 
         {/* "Primary" rather than "Main": the mobile bottom nav already owns that name, and
-            although the two are mutually exclusive by viewport — `display:none` takes the other
-            out of the accessibility tree entirely — two landmarks sharing a name is ambiguous
+            although the two are mutually exclusive by viewport, `display:none` takes the other
+            out of the accessibility tree entirely: two landmarks sharing a name is ambiguous
             anywhere CSS is not applied, the test renderer included. */}
         {/* A hairline between the mark and the links. Without it the active pill sits 28px from the
-            wordmark and the two read as one blob — the brand appearing to have a tab attached. */}
+            wordmark and the two read as one blob: the brand appearing to have a tab attached. */}
         <span aria-hidden className="h-5 w-px shrink-0 bg-line-2" />
 
         <nav aria-label="Primary" className="flex items-center gap-1">

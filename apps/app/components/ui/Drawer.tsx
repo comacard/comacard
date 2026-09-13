@@ -4,8 +4,8 @@ import { createPortal } from "react-dom";
 
 /**
  * Right-edge desktop drawer. Portaled to document.body so a transformed ancestor (.page-enter) never
- * becomes its containing block (U14). Follows BottomSheet's discipline — role="dialog" stays mounted,
- * visibility toggles via translate + aria-hidden — but adds Escape, body scroll-lock, and focus-in
+ * becomes its containing block (U14). Follows BottomSheet's discipline, role="dialog" stays mounted,
+ * visibility toggles via translate + aria-hidden, but adds Escape, body scroll-lock, and focus-in
  * (which BottomSheet deliberately omits on mobile). z-[55]/z-[56]: above the topbar (z-50), below the
  * Dialog (z-[70]).
  */
@@ -22,7 +22,7 @@ export function Drawer({
 }) {
   const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  // Mount flag gates createPortal to client-only (SSR has no document.body). Runs once — the
+  // Mount flag gates createPortal to client-only (SSR has no document.body). Runs once, the
   // set-state-in-effect this rule warns about is intentional here (same pattern as useEarnings).
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);

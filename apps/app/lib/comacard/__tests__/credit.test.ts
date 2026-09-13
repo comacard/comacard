@@ -52,7 +52,7 @@ test("what is kept back is what the debt needs, at this score's ratio", () => {
 test("a debt the collateral barely covers frees nothing, and never a negative", () => {
   // 15 of collateral against 10 drawn at score 0 is exactly the requirement.
   expect(releasableValue(15n * 10n ** 18n, 10n * 10n ** 18n, 0n)).toBe(0n);
-  // Under-collateralised — repricing can do this — and the answer is zero, not a negative that
+  // Under-collateralised (repricing can do this) and the answer is zero, not a negative that
   // would underflow a bigint subtraction downstream.
   expect(releasableValue(5n * 10n ** 18n, 10n * 10n ** 18n, 0n)).toBe(0n);
 });

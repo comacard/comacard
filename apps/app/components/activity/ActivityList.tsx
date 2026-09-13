@@ -49,7 +49,7 @@ export function ActivityList({
    *  during render bakes the server's clock into the HTML. */
   now?: number | null;
   /** Show this many rows and a "Load more" beneath. Unset renders everything, which is what the
-   *  Home previews want — they slice to three before they get here. */
+   *  Home previews want: they slice to three before they get here. */
   pageSize?: number;
   emptyTitle?: string;
   emptyDescription?: string;

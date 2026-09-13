@@ -14,14 +14,14 @@ import { QrScanButton } from "./QrScanButton";
  * Sending credit on to someone else, which is two transactions and is presented as two.
  *
  * `draw()` ends in `Address.sendValue(payable(msg.sender), amount)`. The credit line pays the
- * borrower and nobody else, so reaching another wallet means drawing first and then transferring —
+ * borrower and nobody else, so reaching another wallet means drawing first and then transferring,
  * an ordinary native send the credit line knows nothing about. Collapsing the two into one button
  * would be claiming a transfer feature this product does not have, and the second signature would
  * arrive as a surprise.
  *
  * **The address is checked, and the network is stated.** tCTC is Creditcoin's native coin and EVM
  * addresses are the same shape everywhere, so an Ethereum address pastes cleanly and the transfer
- * succeeds — on Creditcoin, to an address whose owner may have no Creditcoin wallet. That is the
+ * succeeds: on Creditcoin, to an address whose owner may have no Creditcoin wallet. That is the
  * expensive mistake available on this screen and the easy one to make, so the chain is named next to
  * the field rather than assumed.
  */

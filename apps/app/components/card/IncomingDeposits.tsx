@@ -15,8 +15,8 @@ import { Section, Spinner } from "../ui";
  * says exactly that. Nothing has gone wrong; guardians sign on their own schedule and the deposit
  * still lands. Calling it an error would send people looking for a problem that does not exist.
  *
- * Every figure arrives formatted from the API — the amount already scaled by the asset's own
- * decimals, the chain already named, the explorer link already built — so this holds no decimals
+ * Every figure arrives formatted from the API: the amount already scaled by the asset's own
+ * decimals, the chain already named, the explorer link already built, so this holds no decimals
  * table and no chain map.
  */
 

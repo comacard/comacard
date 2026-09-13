@@ -27,7 +27,7 @@ import {
  * These used to throw when the env var was missing, which sounds strict and is actually fragile:
  * the throw fires during *import*, so any module that transitively reached this file took the whole
  * page down, including a unit test that only wanted a chain id. Returning `undefined` keeps the
- * failure where it belongs — at the call site, which can disable a query and say why — while still
+ * failure where it belongs (at the call site, which can disable a query and say why) while still
  * never inventing an address.
  */
 const asAddress = (value: string | undefined): Address | undefined =>
@@ -100,7 +100,7 @@ export const WORMHOLE_VAULTS: Record<
 /**
  * The vault a cross-chain deposit is locked in, on the depositor's own chain.
  *
- * `lockNative` for the chain's own coin, `lockToken` for an ERC20 after an approval — the same two
+ * `lockNative` for the chain's own coin, `lockToken` for an ERC20 after an approval, the same two
  * shapes `SourceVault` has on Sepolia, so a screen can treat both paths alike.
  */
 export const wormholeVaultAbi = [
@@ -541,7 +541,7 @@ export const remoteHubAbi = [
  */
 export const WORMHOLE_CHAIN_NAMES: Record<number, string> = {
   // BSC Testnet and Avalanche Fuji predate Wormhole's 10000-block testnet ids and reuse their
-  // mainnet numbers. This file had Fuji at 10006, extrapolated from the sequence above it — 10006
+  // mainnet numbers. This file had Fuji at 10006, extrapolated from the sequence above it, 10006
   // is Holesky. These five now match `apps/worker/src/config.ts` and the indexer's chain map.
   4: "BSC Testnet",
   6: "Avalanche Fuji",
@@ -555,7 +555,7 @@ export const WORMHOLE_CHAIN_NAMES: Record<number, string> = {
  * What the chain's own coin is called, and how long its messages take.
  *
  * Both were hardcoded and both were wrong on two of the five chains. The deposit screen read
- * `native ? "ETH" : "USDC"`, so locking BNB said "Lock ETH … 0.072136 ETH on BSC Testnet" — wrong
+ * `native ? "ETH" : "USDC"`, so locking BNB said "Lock ETH … 0.072136 ETH on BSC Testnet", wrong
  * about the asset a person is being asked to part with, on the screen where they part with it. And
  * every screen promised "about fifteen minutes", which is true for the three L2s and wrong by a
  * factor of thirty for the two L1s.

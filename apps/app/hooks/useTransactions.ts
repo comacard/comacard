@@ -78,7 +78,7 @@ function creditRows(data: WalletTransactionsResult, rows: Raw[]): void {
   }
 }
 
-/** The Sepolia path — a lock, the proof that carries it across, and a default. */
+/** The Sepolia path: a lock, the proof that carries it across, and a default. */
 function attestcoinRows(data: WalletTransactionsResult, rows: Raw[]): void {
   for (const l of data.CollateralLock) {
     rows.push({
@@ -146,8 +146,8 @@ function remoteChain(wormholeChainId: number): {
 /**
  * Collateral that crossed by Wormhole.
  *
- * A deposit is two moments on two chains — the lock, and the credit that follows once the guardians
- * have signed — and both are worth a row: the gap between them is minutes, and during it the limit
+ * A deposit is two moments on two chains: the lock, and the credit that follows once the guardians
+ * have signed, and both are worth a row: the gap between them is minutes, and during it the limit
  * has not moved yet.
  */
 function remoteDepositRows(data: WalletTransactionsResult, rows: Raw[]): void {
@@ -217,7 +217,7 @@ function remoteWithdrawalRows(data: WalletTransactionsResult, rows: Raw[]): void
 }
 
 /**
- * One feed from seven sources, interleaved by block timestamp — the only ordering that means
+ * One feed from seven sources, interleaved by block timestamp, the only ordering that means
  * anything when the events come from six different chains.
  *
  * Split per carrier rather than written as one loop: it was a single function of complexity 35 by

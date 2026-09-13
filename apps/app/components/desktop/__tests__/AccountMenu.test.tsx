@@ -59,7 +59,7 @@ function open() {
     </ToastProvider>,
   );
   const user = userEvent.setup();
-  // jsdom exposes `navigator.clipboard` as a read-only getter in this version — Object.assign
+  // jsdom exposes `navigator.clipboard` as a read-only getter in this version, Object.assign
   // throws, so Object.defineProperty is the permitted adaptation of test *setup* (not
   // assertions), matching the precedent in account/__tests__/account.test.tsx. Must run AFTER
   // userEvent.setup(): user-event installs its own navigator.clipboard stub during setup(),

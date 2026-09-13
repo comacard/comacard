@@ -14,7 +14,7 @@ import { SubHeader } from "../ui/SubHeader";
  * **Titled "To my wallet", not "Spend".** This screen is what `SendPicker`'s first row opens, so it
  * carries that row's words: a title that renamed itself between the tap and the screen would read
  * as a different destination. The old title was "Spend", and it was the more flattering word and
- * the less true one — there is no merchant and no payment rail here, so the tCTC lands in the
+ * the less true one: there is no merchant and no payment rail here, so the tCTC lands in the
  * holder's own wallet, a cash advance rather than a purchase. The line under the button has always
  * said so; the title now agrees with it.
  *

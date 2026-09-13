@@ -105,15 +105,15 @@ selector rather than living in `tailwind.config.js`.
 **This app and `apps/app` both default to :3000.** Only one can have it, and the
 one that loses starts on 3001 or dies. If a page you expect looks like a
 different product entirely, check which server actually holds the port before
-debugging the page — `lsof -nP -iTCP:3000 -sTCP:LISTEN` and read the process cwd.
+debugging the page, `lsof -nP -iTCP:3000 -sTCP:LISTEN` and read the process cwd.
 Pass `--port` explicitly when running both.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+This version has breaking changes: APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+This block is written and re-added by `next dev`: verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->

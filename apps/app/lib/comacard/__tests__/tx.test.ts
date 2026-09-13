@@ -5,7 +5,7 @@ import { awaitSuccess } from "../tx";
  * The distinction this file exists for: a receipt arriving is not the transaction having worked.
  *
  * A reverted transaction produces a receipt like any other, and four screens were awaiting one and
- * then reporting success — the cross-chain lock, the faucet, the ERC20 approval before a lock, and
+ * then reporting success: the cross-chain lock, the faucet, the ERC20 approval before a lock, and
  * through `receipt.isSuccess`, every draw and repayment. A green check on a reverted draw is the
  * worst of them: it tells someone money moved when it did not.
  */

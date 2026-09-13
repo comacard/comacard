@@ -30,7 +30,7 @@ import { Button, Card, CountUp, PageHeader, Section, Spinner, type Stat, StatStr
  * first was the phone's single column split in two, which measured badly enough to be worth
  * recording. At 1440px the content ran 1368px wide (95% of the viewport), the two columns came out
  * 598px and 372px tall so the shorter one held all the data, "Repay" rendered as a 481×56 pill for
- * a five-letter label, and the card artwork — the one object on screen with a fixed size — sat in
+ * a five-letter label, and the card artwork (the one object on screen with a fixed size) sat in
  * 517px of container with 177px of air around it. docs/desktop-layout-research.md has the readings
  * and the seventeen sites they were compared against.
  *
@@ -40,7 +40,7 @@ import { Button, Card, CountUp, PageHeader, Section, Spinner, type Stat, StatStr
  * allowed, what you owe and what you have used led with none of those in a place the eye lands. Two
  * of them were not on the screen at all, and "do I owe anything" was answered by whether a box
  * existed. `StatStrip` is now the first thing under the title, which is what every dashboard
- * measured does. It also absorbs the phone's `CardHero` and `SpentTotal` — same hooks, same
+ * measured does. It also absorbs the phone's `CardHero` and `SpentTotal`, same hooks, same
  * numbers, one row instead of a headline in one column and a card in the other.
  *
  * **The rail is sized to the card.** `400px` rather than a fraction, because its contents have a
@@ -102,8 +102,8 @@ function overviewStats({
 /**
  * What the card can do, at desktop button size.
  *
- * Settling leads when there is something to settle — only a repayment that clears the balance closes
- * a cycle — but it never replaces the other two. The figure it refers to is in the strip above, so
+ * Settling leads when there is something to settle: only a repayment that clears the balance closes
+ * a cycle, but it never replaces the other two. The figure it refers to is in the strip above, so
  * this is the control alone rather than a panel restating the balance.
  */
 function CardActions({

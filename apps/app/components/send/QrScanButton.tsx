@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 /**
  * Scan a wallet address off a QR code, using the browser's own decoder.
  *
- * `BarcodeDetector` rather than a bundled decoder. It is native on Chrome and Android WebView — the
- * phones this demo runs on — and adding a QR library the day before a submission buys support for
+ * `BarcodeDetector` rather than a bundled decoder. It is native on Chrome and Android WebView, the
+ * phones this demo runs on, and adding a QR library the day before a submission buys support for
  * browsers nobody is demoing from, at the cost of a dependency that touches the camera. Where it is
  * missing the button does not render at all: a scan button that opens a viewfinder and never decodes
  * is worse than a Paste field on its own.
@@ -27,7 +27,7 @@ declare global {
 export function QrScanButton({ onFound }: { onFound: (text: string) => void }) {
   /**
    * `useSyncExternalStore` rather than an effect. Reading a browser capability is exactly what its
-   * third argument — the server snapshot — exists for: it returns `false` during SSR and the real
+   * third argument (the server snapshot) exists for: it returns `false` during SSR and the real
    * answer on the client, with no hydration mismatch, no state set inside an effect, and no frame of
    * delay. The subscribe function is a no-op because support does not change while the page is open.
    */
@@ -141,7 +141,7 @@ export function QrScanButton({ onFound }: { onFound: (text: string) => void }) {
         <div className="fixed inset-0 z-[60] flex flex-col bg-black/90">
           {/* Decorative: the viewfinder carries no information a screen reader can use, and the
               instruction below it is the accessible version of the same thing. The attribute sits on
-              the wrapper rather than the <video> because a media element counts as focusable — it is
+              the wrapper rather than the <video> because a media element counts as focusable, it is
               not, without `controls`, but hiding a container that holds no control is the same thing
               said in a way that is true whether or not controls appear later. */}
           <div aria-hidden="true" className="min-h-0 flex-1">

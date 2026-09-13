@@ -1,12 +1,12 @@
 /* eslint-disable @next/next/no-img-element -- tiny static icons that must paint the moment
    they appear; next/image defers them, and one mishandles a local SVG. The biome-ignore
    comments below have to sit directly above each tag, so a second next-line directive
-   cannot also be there — hence file scope. */
+   cannot also be there, hence file scope. */
 /**
  * The chain a token lives on, as a small mark pinned to the token's own icon.
  *
  * A corner badge rather than a second icon in the row, because the chain is not a separate thing
- * being listed — it is half of the asset's identity. USDC on Base and USDC on Arbitrum are
+ * being listed: it is half of the asset's identity. USDC on Base and USDC on Arbitrum are
  * different assets in different vaults, and two rows reading "USDC" with the same blue circle would
  * be indistinguishable in exactly the place where picking the wrong one costs money.
  *

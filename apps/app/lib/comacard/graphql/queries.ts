@@ -177,8 +177,8 @@ query WalletTransactions($wallet: String!, $limit: Int = 30) {
  *
  * It is three transactions on two chains: Creditcoin agrees and the credit is gone, the guardians
  * sign and the relay lets the vault release it, and then the borrower signs for it. The gap between
- * the last two is not the protocol waiting on anything — the money is in the vault and the borrower
- * has not claimed it — so a screen that collapses them tells someone they are done before they are.
+ * the last two is not the protocol waiting on anything: the money is in the vault and the borrower
+ * has not claimed it, so a screen that collapses them tells someone they are done before they are.
  *
  * Reading it rather than keeping the state in the component is what makes a request survive a
  * reload. Without this, leaving the screen between asking and claiming loses every trace of the

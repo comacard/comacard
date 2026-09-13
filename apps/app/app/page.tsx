@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- tiny static icons that must paint the moment
    they appear; next/image defers them, and one mishandles a local SVG. The biome-ignore
    comments below have to sit directly above each tag, so a second next-line directive
-   cannot also be there — hence file scope. */
+   cannot also be there, hence file scope. */
 "use client";
 
 import Image from "next/image";
@@ -267,7 +267,7 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
 
 function Stepper({ current, total }: { current: number; total: number }) {
   return (
-    // A step indicator is a progress bar, not a group of controls — which is
+    // A step indicator is a progress bar, not a group of controls, which is
     // both the honest role and the one that carries the numbers.
     <div
       className={styles.stepper}

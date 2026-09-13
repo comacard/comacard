@@ -33,7 +33,7 @@ import { DepositQr } from "./DepositQr";
 /**
  * Locking collateral on a chain Attestcoin cannot reach.
  *
- * Same promise as the Sepolia screen — the asset stays where it is and only a message crosses — but
+ * Same promise as the Sepolia screen (the asset stays where it is and only a message crosses) but
  * three things differ enough to be worth naming.
  *
  * **The wait is minutes, and how many depends on the chain.** The vault publishes at *finalized*
@@ -71,7 +71,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   const { assets, loading } = useRemoteCollateral();
   // `WalletProvider` is the single answer to "who is connected" (apps/app/CLAUDE.md). This screen
   // was asking `config.connectors[0]` instead, which is the first REGISTERED connector rather than
-  // the active one — it answered with no accounts, `who` came out undefined, and every read that
+  // the active one: it answered with no accounts, `who` came out undefined, and every read that
   // took it threw `Address "undefined" is invalid` before the wallet was ever opened.
   const { address } = useWallet();
   const who = address as Address | undefined;
@@ -87,8 +87,8 @@ export function LockRemoteCollateral({ id }: { id: string }) {
 
   const [amount, setAmount] = useState("0");
   const [busy, setBusy] = useState(false);
-  // Everything that can fail before the wallet is even asked — switching chains, reading the message
-  // fee, the receipt check afterwards — used to be caught and dropped, because the only error shown
+  // Everything that can fail before the wallet is even asked: switching chains, reading the message
+  // fee, the receipt check afterwards: used to be caught and dropped, because the only error shown
   // was `useWriteContract`'s. A declined chain switch left the button idle with nothing said, which
   // is indistinguishable from the click not registering.
   const [failed, setFailed] = useState<string | null>(null);

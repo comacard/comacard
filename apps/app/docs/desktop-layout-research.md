@@ -3,13 +3,13 @@
 Measured, not remembered. Every number below was read out of `getComputedStyle` in a real Chrome at
 a 1440px viewport on 12 Sep 2026, not recalled from memory or copied from a blog post. The probe
 counted every element on the page and reported the most frequent value for each property, so "16px
-×2026" means two thousand elements on stripe.com compute to a 16px font size — that is the body
+×2026" means two thousand elements on stripe.com compute to a 16px font size, that is the body
 size, not a guess at it.
 
 Two sites refused measurement and are recorded as such rather than filled in: **usa.visa.com** and
 **mastercard.us** both deny script execution to the extension, so nothing quantitative came back
-from either. **cash.app** answered with a Cloudflare interstitial. Their absence matters — the two
-card networks were the ones specifically asked about — so they are named here instead of quietly
+from either. **cash.app** answered with a Cloudflare interstitial. Their absence matters, the two
+card networks were the ones specifically asked about, so they are named here instead of quietly
 dropped.
 
 ## The raw readings
@@ -30,12 +30,12 @@ dropped.
 | plaid.com | mega-menu, 411px open | 1730 | 16, 18, 20 | 2, 4, 8, 12, 100 | 8/16/24 | Cern |
 | coinbase.com | 0px (nav is not the header) | 1600 / **1200** / 844 | 16, 14, 18, 20 | 12, 16, 56 | 8/12/16/24/48 | CoinbaseText |
 | **app.aave.com** | **48px, sticky, `#1b2030` solid** | **1240** | **14**, 16, 12 | 2, 4, 6, 8 | 4/8/12/16 | Inter |
-| **debank.com** | **65px, sticky, white, 1px border** | — | 16, 14, 40 | 8, 20, 24, pill | 16/20/24/36 | Lato |
+| **debank.com** | **65px, sticky, white, 1px border** |: | 16, 14, 40 | 8, 20, 24, pill | 16/20/24/36 | Lato |
 | privacy.com | 81px, relative, transparent | 1360 / **1280** / 800 | 16, 14 | 12, 24, 40, 100 | 8/16/24/32/40 | FK Grotesk |
 | lithic.com | 65px, relative, white | 1392 / 1184 / 940 | 16, **14** | 8, 16, 24, 160 | 4/8/12/16/24 | ABC Monument Grotesk |
-| usa.visa.com | *script execution denied* | — | — | — | — | — |
-| mastercard.us | *script execution denied* | — | — | — | — | — |
-| cash.app | *Cloudflare interstitial* | — | — | — | — | — |
+| usa.visa.com | *script execution denied* | (|) | (|) |, |
+| mastercard.us | *script execution denied* | (|) | (|) |, |
+| cash.app | *Cloudflare interstitial* | (|) | (|) |, |
 
 Grid definitions worth copying verbatim:
 
@@ -48,7 +48,7 @@ n26.com       grid-template-columns: repeat(12, minmax(0,1fr))  gap: 16px
 ```
 
 Aave's asset rows step **76px** apart (headings at y=384, 460, 536, 612…), its page title is
-**32px/700**, and its content starts at **x=164** in a 1440px viewport — a 160px gutter each side.
+**32px/700**, and its content starts at **x=164** in a 1440px viewport, a 160px gutter each side.
 
 ## What the numbers say
 
@@ -66,7 +66,7 @@ page. The three of them agree on things the marketing sites do not.
    **1000**. Nothing that is read rather than scrolled runs edge to edge.
 
 3. **Dense financial UI reads at 14px, not 16px.** Aave computes 14px on 601 elements against 122
-   at 16px — the whole app is 14px and 16px is the exception. Lithic is 16/14 nearly evenly split.
+   at 16px: the whole app is 14px and 16px is the exception. Lithic is 16/14 nearly evenly split.
    Marketing sites are 16px almost without exception, and one (wise.com) leads at 18px.
 
 4. **Radii are bimodal and the two modes mean different things.** Buttons and chips are pills
@@ -79,7 +79,7 @@ page. The three of them agree on things the marketing sites do not.
    6.1px font) are all computed from `clamp()` or a transform, never authored.
 
 6. **Fixed pixel columns are normal.** Stripe, coinbase and privacy all name column widths in px
-   rather than fractions. A panel whose contents have a natural size — a card image, a form — gets
+   rather than fractions. A panel whose contents have a natural size (a card image, a form) gets
    a px column; only the reading column gets `1fr`.
 
 ## Measured against this app
@@ -105,8 +105,8 @@ stack are all correct decisions for a 390px viewport, and all of them are wrong 
 nothing about them was re-decided.
 
 The seventh and eighth are the expensive ones. There is no page title and no summary row, so a
-screen whose entire subject is three numbers — what the limit is, what is left to spend, what is
-owed — leads with none of them in a place the eye lands first. Aave gives that job to a full-width
+screen whose entire subject is three numbers: what the limit is, what is left to spend, what is
+owed: leads with none of them in a place the eye lands first. Aave gives that job to a full-width
 panel above the columns. debank gives it to a summary row. This app gives it to a figure inside a
 card inside the left column, and puts the balance owed in a sub-panel that only exists when it is
 non-zero.
@@ -116,13 +116,13 @@ non-zero.
 | Reading | Change |
 | --- | --- |
 | content 1200–1280 | container capped at 1280, `px-10`, so 1440 yields 1200 of content |
-| fixed px rails | `grid-cols-[400px_minmax(0,1fr)]` — the rail is sized to the card artwork |
+| fixed px rails | `grid-cols-[400px_minmax(0,1fr)]`: the rail is sized to the card artwork |
 | gap 16–24 | 20px gap replaced with 24 |
 | dashboard 14px | desktop rows and labels moved onto 14/13, off the 15/16 mobile sizes |
-| container radius ≤ 8 on dashboards | kept 22px — see the note below |
+| container radius ≤ 8 on dashboards | kept 22px, see the note below |
 | buttons are not full-width | `Button` gained a `size`; desktop uses `md` (44px) in a 400px rail |
 | every page is named | `PageHeader` |
-| the summary comes first | `StatStrip` — one card, four hairline-separated tiles |
+| the summary comes first | `StatStrip`: one card, four hairline-separated tiles |
 
 The radius is the one reading deliberately not followed. Every dashboard in the set sits at 4–8px
 and this app sits at 22px, but that 22px is not an accident of the port: it is the radius of the

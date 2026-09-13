@@ -14,12 +14,12 @@ test("an all-zero series does not divide by zero", () => {
   for (const bar of screen.getAllByTestId("bar")) expect(bar.style.height).toBe("8px");
 });
 
-test("the chart is decorative — hidden from the accessibility tree", () => {
+test("the chart is decorative: hidden from the accessibility tree", () => {
   const { container } = render(<Bars values={[1, 2]} />);
   expect(container.querySelector("[data-testid='bars']")).toHaveAttribute("aria-hidden", "true");
 });
 
-test("bars carry the positive accent — growth reads as a gain, not as inert data", () => {
+test("bars carry the positive accent: growth reads as a gain, not as inert data", () => {
   render(<Bars values={[1, 2]} />);
   // `.bars .bar` in docs/mockups/sorosense-mock-2.html is a green gradient. A neutral grey bar
   // renders a growth chart as if nothing were growing.

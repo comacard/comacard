@@ -112,7 +112,7 @@ export const optimismSepolia: AppKitNetwork = {
  *
  * Wormhole gave its later testnets ids in the 10000s (Sepolia 10002, Arbitrum 10003, Base 10004,
  * Optimism 10005) but BSC Testnet and Avalanche Fuji predate that and reuse their mainnet ids, 4
- * and 6. Guessing the pattern puts Fuji at 10006, which is Holesky — a different chain whose vault
+ * and 6. Guessing the pattern puts Fuji at 10006, which is Holesky: a different chain whose vault
  * would be read at the wrong address. Both numbers here are the ones `apps/worker/src/config.ts`
  * and the indexer's chain map use.
  */
@@ -130,7 +130,7 @@ export const bscTestnet: AppKitNetwork = {
   testnet: true,
 };
 
-/** Avalanche Fuji. Wormhole **6** — see the note on `bscTestnet`. */
+/** Avalanche Fuji. Wormhole **6**: see the note on `bscTestnet`. */
 export const avalancheFuji: AppKitNetwork = {
   id: 43113,
   caipNetworkId: "eip155:43113",

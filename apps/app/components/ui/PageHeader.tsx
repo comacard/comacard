@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
  * The page's own name, above everything else on it.
  *
  * Desktop had none. The navigation bar ended and a card began, so the first thing a reader's eye
- * landed on was a rounded rectangle with no statement of what screen they were on — and with two
+ * landed on was a rounded rectangle with no statement of what screen they were on, and with two
  * destinations in the bar now, "which one am I looking at" is a real question rather than a
  * rhetorical one. Every reference names its page: Aave sets a 32px/700 title at the top of the
  * content column, and so does every dashboard measured beside it.

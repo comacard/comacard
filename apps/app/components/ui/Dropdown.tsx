@@ -2,7 +2,7 @@
 import { type ReactNode, useEffect, useRef } from "react";
 
 /**
- * Small anchored menu for the desktop account avatar. Inline (not portaled) — it is tiny and lives
+ * Small anchored menu for the desktop account avatar. Inline (not portaled), it is tiny and lives
  * inside the topbar's `relative` wrapper. Outside-click checks the menu's PARENT (the caller's
  * `.relative` wrapper that also holds the trigger), mirroring the mockup's `!closest('.acctwrap')`
  * so clicking the avatar toggles rather than double-fires. z-40: below the topbar, as in the mockup.

@@ -51,7 +51,7 @@ test("sends no figure of its own: the debt is re-read one call before the send",
   // `repay()` on chain refuses an overpayment rather than refunding it, and the 0.24 on this screen
   // is a polled copy of `accountOf`. Passing it would be right almost always and wrong exactly when
   // it matters. `useCreditLine.repay` re-reads the account and sends that, so this screen has no
-  // figure to get stale — which is why it hands over nothing at all.
+  // figure to get stale: which is why it hands over nothing at all.
   expect(repay).toHaveBeenCalledWith();
 });
 
@@ -64,7 +64,7 @@ test("an overpayment revert is explained, not reported as a failure", async () =
 
   await user.click(screen.getByRole("button", { name: /^Repay/ }));
 
-  // The contract carries both numbers, so there is no excuse for "transaction failed" — and the one
+  // The contract carries both numbers, so there is no excuse for "transaction failed", and the one
   // thing the person needs to know is that nothing was taken.
   expect(await screen.findByText(/Nothing was paid/)).toBeInTheDocument();
 });

@@ -11,7 +11,7 @@ export const TOAST_MS = 2500;
 export function ToastProvider({ children }: { children: ReactNode }) {
   // An object, not a bare string: `show` must restart the dismiss timer even when the same
   // message fires twice, and a string write that is Object.is-equal makes React bail out of
-  // the re-render — the effect below would never re-run. A fresh object is never equal.
+  // the re-render: the effect below would never re-run. A fresh object is never equal.
   const [toast, setToast] = useState<{ message: string } | null>(null);
 
   const show = useCallback((message: string) => setToast({ message }), []);

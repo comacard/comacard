@@ -68,7 +68,7 @@ beforeEach(() => {
     assets: [
       asset({}),
       // 1 ETH. The default fixture's balance is in six-decimal units, and reused here it would be
-      // a billionth of an ETH — enough to disable the button and make this test pass for the wrong
+      // a billionth of an ETH: enough to disable the button and make this test pass for the wrong
       // reason.
       asset({
         token: null,
