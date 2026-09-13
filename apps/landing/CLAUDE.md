@@ -102,6 +102,12 @@ and 404'd on every load; it was removed and nothing about the rendering changed.
 elements. That is why `.font-helvetica-neue` in `index.css` uses a descendant
 selector rather than living in `tailwind.config.js`.
 
+**This app and `apps/app` both default to :3000.** Only one can have it, and the
+one that loses starts on 3001 or dies. If a page you expect looks like a
+different product entirely, check which server actually holds the port before
+debugging the page — `lsof -nP -iTCP:3000 -sTCP:LISTEN` and read the process cwd.
+Pass `--port` explicitly when running both.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
