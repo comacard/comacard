@@ -1,11 +1,13 @@
 "use client";
 import { formatUnits } from "viem";
+import { useCollateral } from "../../hooks/useCollateral";
 import { useCreditHistory } from "../../hooks/useCreditHistory";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { useNav } from "../../hooks/useNav";
 import { Button, Card, CountUp, PageHeader, Skeleton } from "../ui";
 import { CycleList } from "./CycleList";
+import { LimitWorking } from "./LimitWorking";
 import { SpendChart } from "./SpendChart";
 
 /**
@@ -34,6 +36,8 @@ export function CreditScreen() {
   const nav = useNav();
   const isDesktop = useIsDesktop();
   const { limit, drawn, score } = useCreditLine();
+  // `collateralValueOf`, which the contract sums across both carriers.
+  const { totalValue } = useCollateral();
   const { loading } = useCreditHistory();
 
   const owes = (drawn ?? 0n) > 0n;
@@ -101,16 +105,18 @@ export function CreditScreen() {
         )}
 
         {/*
-          What the limit was earned by, and what is outstanding against it.
+          What is outstanding against the limit.
 
           The balance was not on this screen at all: `drawn` was read and used only to disable the
           Repay button, so that control sat permanently greyed with no figure and no reason, which
-          is the failure this app's own notes name twice. The score was equally absent, on the one
-          screen whose subject is how the limit is earned.
+          is the failure this app's own notes name twice.
+
+          The score used to sit here too, and now sits in `LimitWorking` below instead. It was
+          printed twice inside one 400px card, and of the two placements only that one is doing any
+          work: there it is the cause of the percentage beside it, here it was a bare figure with
+          nothing to connect it to.
         */}
         <div className="mt-3 flex items-center gap-2 text-[13px] text-muted [font-variant-numeric:tabular-nums]">
-          <span>score {score === undefined ? "—" : String(score)}</span>
-          <span className="text-faint">·</span>
           <span className={owes ? "text-neg" : ""}>
             {drawn === undefined ? "—" : `${fmt(drawn)} tCTC`} owed
           </span>
@@ -138,6 +144,9 @@ export function CreditScreen() {
           Repay
         </Button>
       </div>
+
+      {/* The working behind the figure at the top of this card. */}
+      <LimitWorking collateralValue={totalValue} limit={limit} score={score} className="mt-6" />
     </>
   );
 

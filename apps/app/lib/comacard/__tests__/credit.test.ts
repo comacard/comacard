@@ -1,6 +1,7 @@
 import { parseEther, parseUnits } from "viem";
 import {
   amountFromValue,
+  borrowableBps,
   collateralizationBps,
   collateralValue,
   limitFrom,
@@ -72,4 +73,26 @@ test("the free value round-trips into an amount of the asset", () => {
 
 test("an unpriced asset yields no amount rather than dividing by zero", () => {
   expect(amountFromValue(10n ** 18n, 18, 0n)).toBe(0n);
+});
+
+test("borrowableBps is the ratio a cardholder reads, and it multiplies through", () => {
+  // The contract asks how much collateral must back a unit of credit and answers 120.6% at score
+  // 42. A person asks how much of what they put down they can spend, which is 82.92%. Only the
+  // second multiplies through to the limit, which is what makes the panel read as an arithmetic.
+  // 8291, not 8292: integer division truncates. That 0.01% is why the Credit panel derives its
+  // percentage from the limit and the collateral it is showing rather than from this, so the three
+  // rows always multiply through exactly as rendered.
+  expect(borrowableBps(42n)).toBe(8291n);
+
+  const collateral = 50n * 10n ** 18n;
+  const viaRatio = (collateral * borrowableBps(42n)) / 10_000n;
+  const diff = limitFrom(collateral, 42n) - viaRatio;
+  expect(diff >= 0n && diff < 10n ** 16n).toBe(true);
+});
+
+test("a perfect record borrows 125% of collateral, a fresh one 66.6%", () => {
+  // The floor is 80% required collateralisation and the ceiling 150%, so the borrowable ratio runs
+  // the other way: more than the collateral at a perfect score, two thirds of it at zero.
+  expect(borrowableBps(100n)).toBe(12_500n);
+  expect(borrowableBps(0n)).toBe(6_666n);
 });

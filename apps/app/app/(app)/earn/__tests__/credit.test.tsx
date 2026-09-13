@@ -18,6 +18,15 @@ vi.mock("../../../../hooks/useIsDesktop", () => ({ useIsDesktop: () => false }))
 
 const creditLine = vi.fn();
 vi.mock("../../../../hooks/useCreditLine", () => ({ useCreditLine: () => creditLine() }));
+// `LimitWorking` needs the collateral value the limit is derived from, and `useCollateral` reaches
+// for the wallet provider this test does not mount.
+const collateral = vi.fn(() => ({
+  assets: [],
+  totalValue: 50n * 10n ** 18n,
+  loading: false,
+  error: false,
+}));
+vi.mock("../../../../hooks/useCollateral", () => ({ useCollateral: () => collateral() }));
 
 const history = vi.fn();
 vi.mock("../../../../hooks/useCreditHistory", async (importOriginal) => ({

@@ -22,6 +22,19 @@ export function collateralizationBps(score: bigint): bigint {
   return MAX_RATIO_BPS - ((MAX_RATIO_BPS - MIN_RATIO_BPS) * bounded) / MAX_SCORE;
 }
 
+/**
+ * How much of a collateral value the limit actually is, in basis points.
+ *
+ * The inverse of `collateralizationBps`, and the direction a cardholder reads. The contract asks
+ * "how much collateral must back a unit of credit" and answers 120.6% at score 42; a person asks
+ * "how much of what I put down can I spend" and the answer to that is 82.92%. Both describe the
+ * same ratio, and only the second one multiplies through to the limit on screen, which is what
+ * makes the three rows of the Credit panel read as an arithmetic rather than as three facts.
+ */
+export function borrowableBps(score: bigint): bigint {
+  return (BPS * BPS) / collateralizationBps(score);
+}
+
 /** The limit a given collateral value supports at a given score, in credit-asset wei. */
 export function limitFrom(collateralValue: bigint, score: bigint): bigint {
   return (collateralValue * BPS) / collateralizationBps(score);
