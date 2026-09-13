@@ -53,7 +53,10 @@ vi.mock("../../../hooks/useRemoteCollateral", () => ({
   }),
 }));
 const creditHistory = vi.fn();
-vi.mock("../../../hooks/useCreditHistory", () => ({ useCreditHistory: () => creditHistory() }));
+vi.mock("../../../hooks/useCreditHistory", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../hooks/useCreditHistory")>()),
+  useCreditHistory: () => creditHistory(),
+}));
 vi.mock("../../../hooks/useWalletAssets", () => ({
   useWalletAssets: () => ({
     loading: false,

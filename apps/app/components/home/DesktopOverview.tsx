@@ -16,6 +16,7 @@ import { ClaimableCollateral } from "../card/ClaimableCollateral";
 import { CollateralList } from "../card/CollateralList";
 import { IncomingDeposits } from "../card/IncomingDeposits";
 import { KycSheet } from "../card/KycSheet";
+import { SpendChart } from "../credit/SpendChart";
 import { ActivityDrawer } from "../desktop/ActivityDrawer";
 import { LockCollateralDrawer } from "../desktop/LockCollateralDrawer";
 import { Button, Card, CountUp, PageHeader, Section, Spinner } from "../ui";
@@ -175,51 +176,43 @@ export function DesktopOverview() {
           className="mb-6"
         />
 
-        <div className="grid items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
-          {/* The card itself, and the two things you can do with it. */}
-          <Card className="flex min-w-0 flex-col px-6 pb-6 pt-5 lg:sticky lg:top-[88px]">
-            {/* The card alone now. Its actions moved to the page header, beside the figure they
-                act on, so the rail stops being 196px of artwork above two buttons and ~600px of
-                permanent white space. */}
-            <CardFolderPanel account={account} />
-          </Card>
+        {/*
+          Two columns, grouped by what a thing IS rather than by what fits.
 
-          {/* What backs the card, and what it has done. */}
+          Left: the card and what backs it, which is everything you hold. Right: what has happened,
+          which is the chart and the history. The rail used to hold the card and two buttons and
+          then roughly 600px of permanent white space; giving it the asset list fills it with
+          something that belongs there, and the actions are in the page header now.
+
+          The rail no longer sticks. It sticks only when it is much shorter than the column beside
+          it, and with the asset list in it the two are close enough that pinning it would freeze a
+          long block against a scrolling one.
+        */}
+        <div className="grid items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
           <div className="flex min-w-0 flex-col gap-6">
-            <IncomingDeposits deposits={account?.pendingDeposits ?? []} />
-            {/* Above what backs the limit, because this is money that has already stopped backing it
-                and is waiting on a signature. */}
-            <ClaimableCollateral assets={remoteCollateral} />
+            <Card className="flex min-w-0 flex-col px-6 pb-6 pt-5">
+              <CardFolderPanel account={account} />
+            </Card>
+
             <CollateralList
               assets={collateral}
               remote={remoteCollateral}
               loading={remoteLoading}
               className="mt-0"
             />
+          </div>
 
-            <Section
-              title="Transactions"
-              action={
-                hasMore ? (
-                  <button
-                    type="button"
-                    onClick={() => open("activity")}
-                    className="text-[13px] font-medium text-muted transition-colors hover:text-ink"
-                  >
-                    View all
-                  </button>
-                ) : undefined
-              }
-            >
-              <Card className="px-5 py-1">
-                <ActivityList
-                  items={preview}
-                  loading={txLoading}
-                  emptyTitle="No transactions yet"
-                  emptyDescription="Locks, draws and repayments will show here once they are on chain."
-                />
-              </Card>
-            </Section>
+          {/* What the card has done. */}
+          <div className="flex min-w-0 flex-col gap-6">
+            <IncomingDeposits deposits={account?.pendingDeposits ?? []} />
+            {/* Above the record, because this is money that has already stopped backing the limit
+                and is waiting on a signature. */}
+            <ClaimableCollateral assets={remoteCollateral} />
+
+            {/* The chart sat on Credit, the screen a cardholder opens least, while the limit it is
+                a record of leads this one. Mercury's credit page puts its summary and its chart side
+                by side for the same reason: they are two readings of one thing. */}
+            <SpendChart />
 
             {/* Wallet balances sit last and small, as on Account: they pay gas, and they are not
                 what the card spends. */}
@@ -251,6 +244,38 @@ export function DesktopOverview() {
             ) : null}
           </div>
         </div>
+
+        {/*
+          Full width, below the columns, because it is the one working surface on the page.
+
+          Mercury caps its overview at 968px and runs its transactions table edge to edge at 1267,
+          and the distinction is what each page is for: an overview is read, a table is worked. It
+          also carries more per-row metadata than anything above it, so it is the block that most
+          wants the width.
+        */}
+        <Section
+          title="Transactions"
+          action={
+            hasMore ? (
+              <button
+                type="button"
+                onClick={() => open("activity")}
+                className="text-[13px] font-medium text-muted transition-colors hover:text-ink"
+              >
+                View all
+              </button>
+            ) : undefined
+          }
+        >
+          <Card className="px-5 py-1">
+            <ActivityList
+              items={preview}
+              loading={txLoading}
+              emptyTitle="No transactions yet"
+              emptyDescription="Locks, draws and repayments will show here once they are on chain."
+            />
+          </Card>
+        </Section>
       </div>
 
       <LockCollateralDrawer open={panel === "deposit"} onClose={close} />

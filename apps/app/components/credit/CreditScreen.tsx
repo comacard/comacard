@@ -1,12 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
-import { binEvents, useCreditHistory } from "../../hooks/useCreditHistory";
+import { useCreditHistory } from "../../hooks/useCreditHistory";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { useNav } from "../../hooks/useNav";
-import { Bars } from "../earn/Bars";
-import { Button, Card, CountUp, PageHeader, Segmented, Skeleton } from "../ui";
+import { Button, Card, CountUp, PageHeader, Skeleton } from "../ui";
+import { SpendChart } from "./SpendChart";
 
 /**
  * What the card has earned, which is a record rather than a yield.
@@ -27,46 +26,13 @@ import { Button, Card, CountUp, PageHeader, Segmented, Skeleton } from "../ui";
  * because only a repayment that clears the balance closes a cycle and scores.
  */
 
-const HOUR = 3_600_000;
-const DAY = 24 * HOUR;
-const RANGES = ["Day", "Week", "Month", "Year"] as const;
-type Range = (typeof RANGES)[number];
-
-const WINDOW: Record<Range, { ms: number; bars: number }> = {
-  Day: { ms: DAY, bars: 24 },
-  Week: { ms: 7 * DAY, bars: 7 },
-  Month: { ms: 30 * DAY, bars: 30 },
-  Year: { ms: 365 * DAY, bars: 12 },
-};
-
-const ctc = (value: bigint, digits = 4): string =>
-  Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: digits });
-
 export function CreditScreen() {
   const nav = useNav();
   const isDesktop = useIsDesktop();
   const { limit, drawn } = useCreditLine();
-  const { events, borrowed, repaid, cyclesClosed, loading, error } = useCreditHistory();
-  const [range, setRange] = useState<Range>("Month");
-
-  // Read after mount, never during render: a clock read while rendering bakes the server's time
-  // into the HTML and makes the render impure.
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    const tick = () => setNow(Date.now());
-    const frame = requestAnimationFrame(tick);
-    const timer = setInterval(tick, 60_000);
-    return () => {
-      cancelAnimationFrame(frame);
-      clearInterval(timer);
-    };
-  }, []);
+  const { loading } = useCreditHistory();
 
   const owes = (drawn ?? 0n) > 0n;
-  const { ms, bars } = WINDOW[range];
-  const series =
-    now === null ? new Array(bars).fill(0) : binEvents(events, "borrow", ms, bars, now);
-  const hasHistory = events.length > 0;
 
   if (loading) {
     return (
@@ -103,7 +69,7 @@ export function CreditScreen() {
           from={0}
           value={Number(formatUnits(limit ?? 0n, 18))}
           format={(n) => `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} tCTC`}
-          className="mt-2 block whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] [font-variant-numeric:tabular-nums]"
+          className="mt-2 block whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] lg:text-[28px] [font-variant-numeric:tabular-nums]"
         />
       </div>
 
@@ -145,55 +111,7 @@ export function CreditScreen() {
           <div className="mb-5">{head}</div>
         )}
 
-        <Card className="p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-[13px] font-semibold text-muted">Spend</h2>
-            {error ? null : (
-              <span className="text-[12.5px] text-muted tabular-nums">
-                {cyclesClosed} {cyclesClosed === 1 ? "cycle" : "cycles"} closed
-              </span>
-            )}
-          </div>
-
-          {error ? (
-            /* The record lives in the indexer, and an indexer that did not answer has not told us
-               there is no record. "Nothing spent yet" would be this screen asserting the one thing
-               it cannot currently see. */
-            <div className="py-7 text-center">
-              <p className="text-[13.5px] font-semibold text-ink">Record unavailable</p>
-              <p className="mt-1 text-[12.5px] text-muted">
-                The indexer did not answer. The limit and balance above are read from the chain and
-                are current.
-              </p>
-            </div>
-          ) : hasHistory ? (
-            <>
-              <Bars values={series} className="mt-4" />
-              <div className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px] text-muted tabular-nums">
-                {/* A card statement says spent and paid. "borrowed" and "repaid" are the lending
-                    product underneath, and the same figure is already called "Spent from your card"
-                    on Home: one number should not answer to two names across two screens. */}
-                <span>{ctc(borrowed)} tCTC spent</span>
-                <span>{ctc(repaid)} tCTC paid</span>
-              </div>
-            </>
-          ) : (
-            /* Empty rather than filled with an example. A chart of invented borrowing on the one
-             screen whose subject is a truthful record would undo the point of the screen. */
-            <div className="py-7 text-center">
-              <p className="text-[13.5px] font-semibold text-ink">Nothing spent yet</p>
-            </div>
-          )}
-
-          <Segmented
-            className="mt-4"
-            options={RANGES}
-            value={range}
-            onChange={setRange}
-            label="Period"
-            variant="period"
-          />
-        </Card>
+        <SpendChart />
       </div>
     </div>
   );
