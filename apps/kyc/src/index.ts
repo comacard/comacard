@@ -1,4 +1,4 @@
-import { Database } from "bun:sqlite";
+import { LATEST_SESSION_SQL, openDatabase, type SessionRow } from "./db";
 import {
   createSession,
   eventKey,
@@ -24,22 +24,7 @@ function must(name: string): string {
 }
 
 // ponytail: sqlite file on disk; move to Postgres when this runs on >1 instance.
-const db = new Database(process.env.KYC_DB_PATH ?? "kyc.sqlite", { create: true });
-db.run(`create table if not exists sessions (
-  session_id text primary key,
-  wallet text not null,
-  status text not null,
-  decision text,
-  updated_at integer not null
-)`);
-db.run("create index if not exists sessions_wallet on sessions (wallet, updated_at)");
-// Every accepted delivery is kept verbatim: idempotency key and audit trail in one.
-db.run(`create table if not exists events (
-  event_id text primary key,
-  webhook_type text not null,
-  raw text not null,
-  received_at integer not null
-)`);
+const db = openDatabase(process.env.KYC_DB_PATH ?? "kyc.sqlite");
 
 // Didit hands back the same session while one is still open for this wallet,
 // so a second request must not fail on the primary key.
@@ -56,12 +41,7 @@ const upsertStatus = db.prepare(
 const insertEvent = db.prepare(
   "insert or ignore into events (event_id, webhook_type, raw, received_at) values (?, ?, ?, ?)",
 );
-const latest = db.prepare<
-  { session_id: string; status: string; decision: string | null; updated_at: number },
-  [string]
->(
-  "select session_id, status, decision, updated_at from sessions where wallet = ? order by updated_at desc limit 1",
-);
+const latest = db.prepare<SessionRow, [string]>(LATEST_SESSION_SQL);
 
 const isAddress = (s: unknown): s is string =>
   typeof s === "string" && /^0x[0-9a-fA-F]{40}$/.test(s);
