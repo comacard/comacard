@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { APP_URL } from "./app-url";
 import { ClosingFooter } from "./components/ClosingFooter";
 import { CounterSection } from "./components/CounterSection";
 import { InsightsSection } from "./components/InsightsSection";
@@ -38,6 +39,7 @@ const TOP_EPSILON = 2;
 
 const SECTION_FEATURES = "features";
 const SECTION_STEPS = "start";
+
 const SECTION_CARDHOLDERS = "cardholders";
 const SECTION_FAQ = "faq";
 
@@ -815,13 +817,14 @@ function Nav({
               transitionTimingFunction: STAGGER_EASE,
             }}
           >
-            <button
-              type="button"
-              onClick={() => onNavigate(SECTION_STEPS)}
-              className="rounded-full bg-white px-5 py-2.5 text-sm font-medium text-gray-900"
+            <a
+              href={APP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full bg-white px-5 py-2.5 text-sm font-medium text-gray-900 no-underline"
             >
               Get Coma Card
-            </button>
+            </a>
           </div>
         </nav>
       </div>
@@ -868,15 +871,16 @@ function Nav({
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <button
-            type="button"
-            onClick={() => onNavigate(SECTION_STEPS)}
-            className={`rounded-full px-5 py-2.5 text-sm font-medium transition-colors duration-500 ${
+          <a
+            href={APP_URL}
+            target="_blank"
+            rel="noreferrer"
+            className={`rounded-full px-5 py-2.5 text-sm font-medium no-underline transition-colors duration-500 ${
               d ? "bg-[#18161B] text-white" : "bg-white text-gray-900"
             }`}
           >
             Get Coma Card
-          </button>
+          </a>
         </div>
 
         <button

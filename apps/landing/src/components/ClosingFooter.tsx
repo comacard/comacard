@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
+import { APP_URL } from "../app-url";
 
 const FAQS: { question: string; answer: string }[] = [
   {
@@ -103,7 +104,9 @@ export function ClosingFooter({ logoSrc, faqId }: { logoSrc: string; faqId?: str
               Lock your CTC once and stop choosing between holding and paying
             </p>
             <a
-              href="#start"
+              href={APP_URL}
+              target="_blank"
+              rel="noreferrer"
               className="cursor-pointer border-none bg-[#18161B] text-[0.95rem] font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
               style={{
                 padding: "14px 32px",
