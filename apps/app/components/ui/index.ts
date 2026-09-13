@@ -8,6 +8,7 @@ export { Chip } from "./Chip";
 export { badgeForSymbol, CoinBadge, type TokenSym } from "./CoinBadge";
 export { CopyButton } from "./CopyButton";
 export { CountUp } from "./CountUp";
+export { CurrencySwap } from "./CurrencySwap";
 export { DesktopNav } from "./DesktopNav";
 export { Keypad } from "./Keypad";
 export { LoadMore } from "./LoadMore";

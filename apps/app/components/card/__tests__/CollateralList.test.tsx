@@ -4,6 +4,18 @@ import type { CollateralAsset } from "../../../hooks/useCollateral";
 import type { RemoteAsset } from "../../../hooks/useRemoteCollateral";
 import { CollateralList } from "../CollateralList";
 
+// Prices are decoration on this list and reach it over HTTP. Mocking the hook keeps these tests
+// about what the rows say rather than about react-query's cache; the fallback-to-tCTC path gets a
+// test of its own below.
+const prices = vi.fn();
+vi.mock("../../../hooks/usePrices", () => ({
+  usePrices: () => ({ prices: prices(), loading: false }),
+}));
+
+beforeEach(() => {
+  prices.mockReturnValue({ USDC: 1, BNB: 726, ETH: 2522, CTC: 0.1044 });
+});
+
 const asset = (over: Partial<CollateralAsset>): CollateralAsset => ({
   token: null,
   symbol: "ETH",
@@ -37,7 +49,9 @@ test("prices each asset against its own decimals", () => {
     />,
   );
   expect(screen.getByText("1,000.00 tUSDC")).toBeInTheDocument();
-  expect(screen.getByText("1,000.0000 tCTC")).toBeInTheDocument();
+  // 1,000 tUSDC at a dollar. The point of the test is the decimals: at 18dp this reads as a
+  // trillionth of its worth, which is why `decimals` is carried per token.
+  expect(screen.getByText("$1,000.00")).toBeInTheDocument();
 });
 
 test("reports the proved amount, not the locked one, and says what is still crossing", () => {
@@ -155,4 +169,39 @@ test("keeps a placeholder while the second carrier is still coming", () => {
 test("shows nothing at all once the reads are done and there is nothing to show", () => {
   const { container } = render(<CollateralList assets={[]} remote={[]} loading={false} />);
   expect(container).toBeEmptyDOMElement();
+});
+
+test("falls back to the credit value when there is no price", () => {
+  // CoinGecko is rate limited or unreachable and `usePrices` answers with nothing. The tCTC figure
+  // is read from the chain and is known for certain, so showing it beats showing a dash.
+  prices.mockReturnValue({});
+  render(
+    <CollateralList
+      assets={[
+        asset({
+          token: "0x1",
+          symbol: "tUSDC",
+          decimals: 6,
+          locked: 1_000_000_000n,
+          proved: 1_000_000_000n,
+          price: 10n ** 18n,
+        }),
+      ]}
+    />,
+  );
+
+  expect(screen.getByText("1,000.0000 tCTC")).toBeInTheDocument();
+  expect(screen.queryByText(/^\$/)).toBeNull();
+});
+
+test("prices the asset itself, not the credit it grants", () => {
+  // These are different questions and the answers differ by a lot: the chain prices 1 tUSDC at
+  // 1 tCTC while the market prices USDC at a dollar and CTC at about ten cents. The headline on
+  // this screen already answers the credit question.
+  render(
+    <CollateralList assets={[]} remote={[remote({ credited: 10n ** 16n })]} />, // 0.01 BNB
+  );
+
+  expect(screen.getByText("$7.26")).toBeInTheDocument();
+  expect(screen.queryByText(/tCTC/)).toBeNull();
 });

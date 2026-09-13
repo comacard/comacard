@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { formatUnits } from "viem";
 import type { CollateralAsset } from "../../hooks/useCollateral";
+import { usePrices } from "../../hooks/usePrices";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
 import { NATIVE_SYMBOL } from "../../lib/comacard/contracts";
+import { formatUsd, type UsdPrices, usdOf } from "../../lib/comacard/prices";
 import { AssetIcon, badgeForSymbol, CoinBadge, LoadMore, Section, Skeleton } from "../ui";
 import type { TokenSym } from "../ui/CoinBadge";
 
@@ -24,6 +26,17 @@ import type { TokenSym } from "../ui/CoinBadge";
  * times. Rendering only what had landed meant the card appeared complete, with BNB simply missing,
  * and then grew a row underneath the reader. A short row of placeholders says "there is more" for
  * the same reason an unread figure is a dash rather than a zero.
+ *
+ * **The second figure is what the asset is worth, not what it lends.** It used to be the holding
+ * priced in tCTC, which is the credit the chain grants against it. Those are different questions and
+ * the tCTC one is already answered by the headline on this screen. So the row now reads 50.00 tUSDC
+ * and $50.00, from CoinGecko.
+ *
+ * A reader may notice that the deposits add up to more than the limit does, by a lot. That is real
+ * and it is not a bug here: the chain prices 1 tUSDC at 1 tCTC while the market prices USDC at a
+ * dollar and CTC at about ten cents, so a testnet price table is meeting a mainnet one. `prices.ts`
+ * has the longer version. Nothing on this screen makes a lending decision, so the mismatch is
+ * visible rather than load-bearing.
  *
  * **Every row carries its network, and no row is a link.** Both of those are corrections.
  *
@@ -53,23 +66,29 @@ function amount(value: bigint, decimals: number, symbol: string): string {
   return `${n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${symbol}`;
 }
 
-/** Credit-asset value of a holding: price is per WHOLE unit, so scale by the token's own decimals. */
-function valueCtc(asset: CollateralAsset, held: bigint): string {
-  const whole = Number(formatUnits(held, asset.decimals));
-  const price = Number(formatUnits(asset.price, 18));
-  return (whole * price).toLocaleString("en-US", {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
-  });
-}
+/**
+ * What the holding is worth in dollars, or its credit value when there is no price.
+ *
+ * The fallback is the old figure rather than a dash: the tCTC value is read from the chain and is
+ * known for certain, so hiding it because a third-party price endpoint is rate limited would trade a
+ * true number for an empty one.
+ */
+function valueLabel(
+  held: bigint,
+  decimals: number,
+  symbol: string,
+  creditPrice: bigint,
+  prices: UsdPrices,
+): string {
+  const whole = Number(formatUnits(held, decimals));
+  const usd = usdOf(whole, symbol, prices);
+  if (usd !== null) return formatUsd(usd);
 
-function remoteValueCtc(asset: RemoteAsset): string {
-  const whole = Number(formatUnits(asset.credited, asset.decimals));
-  const price = Number(formatUnits(asset.price, 18));
-  return (whole * price).toLocaleString("en-US", {
+  const inCtc = whole * Number(formatUnits(creditPrice, 18));
+  return `${inCtc.toLocaleString("en-US", {
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
-  });
+  })} tCTC`;
 }
 
 /**
@@ -111,7 +130,7 @@ function Row({
       </div>
       <div className="text-right">
         <div className="text-[14px] font-semibold tabular-nums">{held}</div>
-        <div className="text-[11.5px] text-muted tabular-nums">{value} tCTC</div>
+        <div className="text-[11.5px] text-muted tabular-nums">{value}</div>
       </div>
     </div>
   );
@@ -130,6 +149,7 @@ export function CollateralList({
   className?: string;
 }) {
   const [shown, setShown] = useState(PAGE);
+  const { prices } = usePrices();
 
   const held = assets.filter((a) => a.locked > 0n || a.proved > 0n);
   const heldRemote = remote.filter((a) => a.credited > 0n);
@@ -147,7 +167,7 @@ export function CollateralList({
         : ATTESTCOIN_NETWORK,
       noteWarn: asset.crossing,
       held: amount(asset.proved, asset.decimals, asset.symbol),
-      value: valueCtc(asset, asset.proved),
+      value: valueLabel(asset.proved, asset.decimals, asset.symbol, asset.price, prices),
     })),
     ...heldRemote.map((asset) => {
       const symbol = asset.native ? (NATIVE_SYMBOL[asset.wormholeChainId] ?? "ETH") : "USDC";
@@ -159,7 +179,7 @@ export function CollateralList({
         note: asset.chainName,
         noteWarn: false,
         held: amount(asset.credited, asset.decimals, symbol),
-        value: remoteValueCtc(asset),
+        value: valueLabel(asset.credited, asset.decimals, symbol, asset.price, prices),
       };
     }),
   ];
