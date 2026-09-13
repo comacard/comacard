@@ -112,20 +112,18 @@ beforeEach(() => {
   });
 });
 
-test("names the page and leads with the four figures, not with a card", () => {
+test("names the page and leads with one figure, not four and not a card", () => {
   render(<DesktopOverview />);
 
-  // Desktop used to open on a rounded rectangle with no statement of which screen it was, and with
-  // two destinations in the nav bar that is a real question.
   expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeInTheDocument();
 
-  // The screen's whole subject. Before the strip, two of these were not on the page at all and
-  // "do I owe anything" was answered by whether a box existed.
+  // One number, not a band of four at equal weight. Available, limit, balance and lifetime spend
+  // are one figure and three of its derivations, and no card product surveyed renders them as
+  // peers. The other three moved to the sub-line or to the screen that is about them.
   expect(screen.getByText("Available to spend")).toBeInTheDocument();
   expect(screen.getByText("33.3333 tCTC")).toBeInTheDocument();
-  expect(screen.getByText("Credit limit")).toBeInTheDocument();
-  expect(screen.getByText("Balance")).toBeInTheDocument();
-  expect(screen.getByText("Spent from your card")).toBeInTheDocument();
+  expect(screen.queryByText("Credit limit")).toBeNull();
+  expect(screen.queryByText("Spent from your card")).toBeNull();
 
   expect(screen.queryByText(/bucket|APY|Growth|Agent/i)).toBeNull();
 });
@@ -135,7 +133,7 @@ test("an unread figure is a dash, never a zero", () => {
   // 0 tCTC there would state something about the account that nothing has established.
   render(<DesktopOverview />);
 
-  expect(screen.getByText("—")).toBeInTheDocument();
+  expect(screen.getByText(/of — tCTC limit/)).toBeInTheDocument();
 });
 
 test("Send and Deposit are both offered, and Send goes to the full page", async () => {
@@ -158,9 +156,10 @@ test("an open balance leads with Repay without hiding Deposit", async () => {
   });
   render(<DesktopOverview />);
 
-  // The figure lives in the strip; the card holds the control alone, so the balance is stated once.
+  // The headline flips to the balance, because that is now the figure the next action depends on.
+  expect(screen.getByText("Balance")).toBeInTheDocument();
   expect(screen.getByText("1 tCTC")).toBeInTheDocument();
-  expect(screen.getByText("Repay in full to close the cycle")).toBeInTheDocument();
+  expect(screen.getByText(/repay in full to close this cycle/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Repay balance" }));
@@ -178,7 +177,7 @@ test("an unissued card reports no spendable figure rather than zero", () => {
   render(<DesktopOverview />);
 
   // 0.0000 tCTC here reads as "your card is empty", which is a claim about money that nothing knows.
-  expect(screen.getByText("Card not issued yet")).toBeInTheDocument();
+  expect(screen.getByText("Not issued yet")).toBeInTheDocument();
   expect(screen.queryByText("33.3333 tCTC")).toBeNull();
 });
 

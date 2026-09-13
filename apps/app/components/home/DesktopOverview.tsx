@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { formatUnits } from "viem";
 import { useCardAccount } from "../../hooks/useCardAccount";
 import { useCollateral } from "../../hooks/useCollateral";
-import { useCreditHistory } from "../../hooks/useCreditHistory";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { useKycStart } from "../../hooks/useKycStart";
 import { useNav } from "../../hooks/useNav";
@@ -11,7 +10,6 @@ import { usePanel } from "../../hooks/usePanel";
 import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { useTransactions } from "../../hooks/useTransactions";
 import { useWalletAssets } from "../../hooks/useWalletAssets";
-import type { ComacardAccount } from "../../lib/comacard/api";
 import { ActivityList } from "../activity/ActivityList";
 import { CardFolderPanel } from "../card/CardFolderPanel";
 import { ClaimableCollateral } from "../card/ClaimableCollateral";
@@ -20,7 +18,8 @@ import { IncomingDeposits } from "../card/IncomingDeposits";
 import { KycSheet } from "../card/KycSheet";
 import { ActivityDrawer } from "../desktop/ActivityDrawer";
 import { LockCollateralDrawer } from "../desktop/LockCollateralDrawer";
-import { Button, Card, CountUp, PageHeader, Section, Spinner, type Stat, StatStrip } from "../ui";
+import { Button, Card, CountUp, PageHeader, Section, Spinner } from "../ui";
+import { OverviewHeadline } from "./OverviewHeadline";
 
 /**
  * The desktop Overview.
@@ -36,68 +35,25 @@ import { Button, Card, CountUp, PageHeader, Section, Spinner, type Stat, StatStr
  *
  * Three things changed as a result.
  *
- * **The summary comes first.** A screen whose whole subject is what you can spend, what you are
- * allowed, what you owe and what you have used led with none of those in a place the eye lands. Two
- * of them were not on the screen at all, and "do I owe anything" was answered by whether a box
- * existed. `StatStrip` is now the first thing under the title, which is what every dashboard
- * measured does. It also absorbs the phone's `CardHero` and `SpentTotal`, same hooks, same
- * numbers, one row instead of a headline in one column and a card in the other.
+ * **One figure leads, not four.** This was a band of four tiles at identical weight, which states
+ * that available, limit, balance and lifetime spend are peers. They are one number and three of its
+ * derivations, and no banking or card product surveyed renders a row of equal KPI tiles for its
+ * primary money figures. `OverviewHeadline` leads with the figure the next action depends on, which
+ * is spending power most days and the balance inside an open cycle.
+ *
+ * **The actions sit on the title line, beside the figure they act on.** Mercury's credit page header
+ * is `Credit Card · How limits work · Request a limit increase · Pay`; Chase groups limit, balance
+ * and available credit in one panel with Make a Payment in the same view. `PageHeader` has had an
+ * `action` slot since it was written and nothing ever passed one, so the right thousand pixels of
+ * this row were empty on both desktop screens.
  *
  * **The rail is sized to the card.** `400px` rather than a fraction, because its contents have a
  * natural width (a 340px card image) and a fluid column just pads it. Stripe, coinbase and privacy
  * all name their column widths in pixels for the same reason.
  *
- * **It sticks.** The rail is roughly a third of the right-hand stack's height, and left to scroll it
- * spends most of the page as blank space beside the rows that explain it. `items-start` is what
- * allows that: a stretched grid item is as tall as its row and has nothing to stick within.
+ * **It sticks.** `items-start` is what allows that: a stretched grid item is as tall as its row and
+ * has nothing to stick within.
  */
-
-const ctc = (value: bigint | null | undefined): string | null =>
-  value === null || value === undefined
-    ? null
-    : `${Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: 4 })} tCTC`;
-
-/**
- * The four figures, built outside the component so the arrangement below stays readable.
- *
- * `spendable` comes off the backend rather than being derived from `available` here: it is the
- * minimum of available credit and whatever else gates the card, and re-deriving that in the client
- * is how a screen promises credit the card will refuse. It is the same field the phone's hero reads.
- */
-function overviewStats({
-  account,
-  limit,
-  drawn,
-  borrowed,
-  historyUnread,
-}: {
-  account: ComacardAccount | null;
-  limit: bigint | undefined;
-  drawn: bigint | undefined;
-  borrowed: bigint;
-  historyUnread: boolean;
-}): Stat[] {
-  const unissued = account !== null && !account.kyc.verified;
-  const spendable = account?.card.spendableCtc;
-  const owes = (drawn ?? 0n) > 0n;
-  return [
-    {
-      label: "Available to spend",
-      value: unissued || spendable === undefined ? null : `${spendable} tCTC`,
-      hint: unissued ? "Card not issued yet" : undefined,
-    },
-    { label: "Credit limit", value: ctc(limit) },
-    {
-      label: "Balance",
-      value: ctc(drawn),
-      tone: owes ? "neg" : "ink",
-      hint: owes ? "Repay in full to close the cycle" : undefined,
-    },
-    // What has ever come out of the card, counted from Draw events and never from the wallet: tCTC
-    // that arrived from a faucet was never spent here.
-    { label: "Spent from your card", value: historyUnread ? null : ctc(borrowed) },
-  ];
-}
 
 /**
  * What the card can do, at desktop button size.
@@ -153,8 +109,7 @@ export function DesktopOverview() {
   const { account, loading: accountLoading, refresh } = useCardAccount();
   const { assets: collateral } = useCollateral();
   const { assets: remoteCollateral, loading: remoteLoading } = useRemoteCollateral();
-  const { limit, drawn, available, availableLoading } = useCreditLine();
-  const { borrowed, loading: historyLoading, error: historyError } = useCreditHistory();
+  const { limit, drawn, available, score, availableLoading } = useCreditLine();
   const { assets } = useWalletAssets();
   const { loading: txLoading, items: transactions } = useTransactions();
   const { verify, url: kycUrl, close: closeKyc, starting } = useKycStart();
@@ -171,37 +126,28 @@ export function DesktopOverview() {
   const preview = transactions.slice(0, 8);
   const hasMore = transactions.length > 8;
 
-  const stats = overviewStats({
-    account,
-    limit,
-    drawn,
-    borrowed,
-    // A dead indexer reports no spending, which is not the same as no spending having happened.
-    historyUnread: historyLoading || historyError,
-  });
-
   return (
     <>
       <div className="stagger">
+        {/*
+          The figure and the verb on one line, which is what every card product surveyed does.
+
+          Mercury's credit page header reads `Credit Card · How limits work · Request a limit
+          increase · Pay`; Chase groups credit limit, balance and available credit in one Account
+          Summary panel with Make a Payment in the same view. The failure mode when a balance and
+          its action are separated is documented: a UX study of Bank of America's card flow found
+          people copying an amount from one page and pasting it into another because the pay button
+          was neither adjacent nor primary.
+
+          `PageHeader`'s `action` slot has existed and been unused since it was written, leaving the
+          right thousand pixels of this row empty on both desktop screens.
+        */}
         <PageHeader
           title="Overview"
-          description="Your card, what backs it, and everything it has done."
           className="mb-5"
-        />
-
-        {/* The strip's own first read, not the wallet's: the four figures come from the card
-            account, the credit line and the indexer, and gating them on an unrelated query is how a
-            resolved number ends up behind a skeleton. After that first read each tile decides for
-            itself, and an unknown one prints a dash rather than a zero. */}
-        <StatStrip stats={stats} loading={accountLoading} className="mb-6" />
-
-        <div className="grid items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
-          {/* The card itself, and the two things you can do with it. */}
-          <Card className="flex min-w-0 flex-col px-6 pb-6 pt-5 lg:sticky lg:top-[88px]">
-            <CardFolderPanel account={account} className="mb-5" />
-
-            {needsVerification ? (
-              <Button size="md" onClick={verify} disabled={starting}>
+          action={
+            needsVerification ? (
+              <Button size="md" block={false} onClick={verify} disabled={starting}>
                 {starting ? "Opening…" : "Verify identity"}
               </Button>
             ) : (
@@ -213,7 +159,29 @@ export function DesktopOverview() {
                 onRepay={() => nav.forward("/pay")}
                 onDeposit={() => open("deposit")}
               />
-            )}
+            )
+          }
+        />
+
+        {/* One figure, and which one depends on whether a cycle is open. Replaces four tiles of
+            equal weight, which said that available, limit, balance and lifetime spend are peers. */}
+        <OverviewHeadline
+          spendable={account?.card.spendableCtc}
+          limit={limit}
+          drawn={drawn}
+          score={score}
+          loading={accountLoading}
+          unissued={needsVerification}
+          className="mb-6"
+        />
+
+        <div className="grid items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
+          {/* The card itself, and the two things you can do with it. */}
+          <Card className="flex min-w-0 flex-col px-6 pb-6 pt-5 lg:sticky lg:top-[88px]">
+            {/* The card alone now. Its actions moved to the page header, beside the figure they
+                act on, so the rail stops being 196px of artwork above two buttons and ~600px of
+                permanent white space. */}
+            <CardFolderPanel account={account} />
           </Card>
 
           {/* What backs the card, and what it has done. */}
