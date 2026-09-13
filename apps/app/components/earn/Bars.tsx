@@ -1,3 +1,5 @@
+import { cn } from "../../lib/utils";
+
 /**
  * The bar chart shared by the simulator and the funded Growth card. Values are normalized against
  * the series maximum; the 8px floor keeps a zero bar visible. Decorative: the numbers a user needs
@@ -12,6 +14,11 @@
  * Geometry and the green gradient mirror `.bars .bar` in `docs/mockups/sorosense-mock-2.html`,
  * growth reads as positive, so the chart carries the same semantic accent as every other
  * gain figure on these screens.
+ *
+ * The classes go through `cn()` rather than a template string because `h-[118px]` is a default a
+ * caller has to be able to beat. Tailwind emits utilities in numeric order rather than in the order
+ * a class attribute lists them, so an override appended to a plain string loses silently, which is
+ * a bug this repo has already paid for once.
  */
 export function Bars({ values, className = "" }: { values: number[]; className?: string }) {
   const max = values.reduce((m, v) => (v > m ? v : m), 0);
@@ -19,7 +26,7 @@ export function Bars({ values, className = "" }: { values: number[]; className?:
     <div
       data-testid="bars"
       aria-hidden="true"
-      className={`my-3.5 flex h-[118px] items-end gap-1 ${className}`}
+      className={cn("my-3.5 flex h-[118px] items-end gap-1", className)}
     >
       {values.map((v, i) => (
         <div

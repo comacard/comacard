@@ -117,8 +117,13 @@ export function CreditScreen() {
           nothing to connect it to.
         */}
         <div className="mt-3 flex items-center gap-2 text-[13px] text-muted [font-variant-numeric:tabular-nums]">
-          <span className={owes ? "text-neg" : ""}>
-            {drawn === undefined ? "—" : `${fmt(drawn)} tCTC`} owed
+          {/* "Balance", not "owed", and not a new word either: `SpentTotal` and `OverviewHeadline`
+              have both said Balance all along, so this screen was the one speaking differently
+              about the same figure. The label stays muted and only the number takes the tone, the
+              same way the other two render it. */}
+          <span>Balance</span>
+          <span className={owes ? "text-neg" : "text-ink-2"}>
+            {drawn === undefined ? "—" : `${fmt(drawn)} tCTC`}
           </span>
         </div>
       </div>
@@ -145,8 +150,15 @@ export function CreditScreen() {
         </Button>
       </div>
 
-      {/* The working behind the figure at the top of this card. */}
-      <LimitWorking collateralValue={totalValue} limit={limit} score={score} className="mt-6" />
+      {/* The working behind the figure at the top of this card. `mt-auto` on desktop drops it to
+          the foot of the rail, which is as tall as the record beside it; on mobile the card is only
+          as tall as its content, so the plain margin applies. */}
+      <LimitWorking
+        collateralValue={totalValue}
+        limit={limit}
+        score={score}
+        className="mt-6 lg:mt-auto"
+      />
     </>
   );
 
@@ -162,21 +174,39 @@ export function CreditScreen() {
         />
       ) : null}
 
-      <div className="lg:grid lg:grid-cols-[400px_minmax(0,1fr)] lg:items-start lg:gap-6">
+      {/*
+        Two rows rather than two columns of unequal length.
+
+        The rail and the record used to be a column each, and with this much content the rail ran
+        out 46px above the record and left a ragged edge down the middle of the screen. Stretching
+        the short one to match was tried and is worse: the gap simply moves inside the card, and a
+        400px card with a hole in the middle of it reads as broken rather than as spacious.
+
+        So the limit and the chart share the top row and end level because the grid makes them, and
+        the cycles run the full width underneath. The chart is the one that stretches, which is the
+        right way round: a plot with more height is a better plot, where a list with more height is
+        just a list with a hole under it.
+
+        `items-stretch` is the grid default and is what does this, so `items-start` had to go.
+      */}
+      <div className="lg:grid lg:grid-cols-[400px_minmax(0,1fr)] lg:gap-6">
         {isDesktop ? (
           <Card className="flex min-w-0 flex-col px-6 pb-6 pt-1">{head}</Card>
         ) : (
           <div className="mb-5">{head}</div>
         )}
 
-        <div className="flex min-w-0 flex-col gap-6">
-          <SpendChart />
+        <SpendChart />
 
-          {/* The screen's actual subject. "Repay cleanly and the same collateral buys a bigger
+        {/* The screen's actual subject. "Repay cleanly and the same collateral buys a bigger
               limit" is a claim about cycles, and until now a cardholder could not see how many
-              they had completed or which ones counted. */}
-          <CycleList />
-        </div>
+              they had completed or which ones counted.
+
+              It takes the slack, not the chart. Space below a list of cycles reads as room for the
+              next one; the same space inside a chart reads as a chart that failed to draw, and a
+              plot stretched to 500px would make one spending day tower over a month of honest
+              zeroes. */}
+        <CycleList className="mt-6 lg:col-span-2 lg:mt-0" />
       </div>
     </div>
   );

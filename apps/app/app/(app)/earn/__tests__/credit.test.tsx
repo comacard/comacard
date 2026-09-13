@@ -116,7 +116,11 @@ test("an unread limit is a dash, never a zero", () => {
   render(<EarnPage />);
 
   expect(screen.getByText("—")).toBeInTheDocument();
-  expect(screen.queryByText("0 tCTC")).toBeNull();
+  // The balance under it is a genuine zero and is entitled to say so. What must not appear is a
+  // zero standing in for the limit, so the one on screen has to be the one labelled Balance.
+  const zeros = screen.queryAllByText("0 tCTC");
+  expect(zeros).toHaveLength(1);
+  expect(zeros[0]?.previousElementSibling?.textContent).toBe("Balance");
 });
 
 test("the score and the balance are both on the screen", () => {
@@ -127,5 +131,5 @@ test("the score and the balance are both on the screen", () => {
   render(<EarnPage />);
 
   expect(screen.getByText(/score 42/)).toBeInTheDocument();
-  expect(screen.getByText(/13 tCTC owed/)).toBeInTheDocument();
+  expect(screen.getByText("13 tCTC")).toBeInTheDocument();
 });

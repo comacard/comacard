@@ -67,7 +67,9 @@ export function SpendChart({ className = "" }: { className?: string }) {
   const hasHistory = events.length > 0;
 
   return (
-    <Card className={cn("p-5", className)}>
+    // A column, so that when the grid stretches this card to the height of the limit rail beside
+    // it, the extra height reaches the plot rather than pooling in a blank strip under it.
+    <Card className={cn("flex min-w-0 flex-col p-5", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-3">
           <h2 className="text-[13px] font-semibold text-muted">Spend</h2>
@@ -98,7 +100,12 @@ export function SpendChart({ className = "" }: { className?: string }) {
         </div>
       ) : hasHistory ? (
         <>
-          <Bars values={series} className="mt-4" />
+          {/* `h-full` inside a `flex-1` wrapper rather than a height of its own: the plot is
+              whatever the card has left after the header and the two figures under it. The 150px
+              floor is what it stands at on mobile, where nothing stretches the card. */}
+          <div className="flex min-h-[150px] flex-1 flex-col justify-end">
+            <Bars values={series} className="mt-4 h-full" />
+          </div>
           <div className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px] text-muted tabular-nums">
             {/* A card statement says spent and paid. "borrowed" and "repaid" are the lending
                 product underneath. */}
