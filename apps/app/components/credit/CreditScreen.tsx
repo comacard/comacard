@@ -7,8 +7,8 @@ import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { useNav } from "../../hooks/useNav";
 import { Button, Card, CountUp, PageHeader, Skeleton } from "../ui";
 import { CycleList } from "./CycleList";
+import { LimitHistoryCard } from "./LimitHistoryCard";
 import { LimitWorking } from "./LimitWorking";
-import { SpendChart } from "./SpendChart";
 
 /**
  * What the card has earned, which is a record rather than a yield.
@@ -199,7 +199,15 @@ export function CreditScreen() {
           <div className="mb-5">{head}</div>
         )}
 
-        <SpendChart />
+        {/*
+          The limit's own history, where the spend chart used to be.
+
+          `SpendChart` renders on Overview as well, so this screen was drawing the same bars as the
+          one before it. Two screens with one chart is one of them not having found its subject:
+          Overview is what the card can do now, and this screen is what earned it. Spend stayed
+          there. The figure that actually moves when a cycle closes is here.
+        */}
+        <LimitHistoryCard />
 
         {/* The screen's actual subject. "Repay cleanly and the same collateral buys a bigger
               limit" is a claim about cycles, and until now a cardholder could not see how many

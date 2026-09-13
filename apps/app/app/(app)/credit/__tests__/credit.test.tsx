@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { CreditEvent } from "../../../../hooks/useCreditHistory";
 import CreditPage from "../page";
 
 /**
@@ -34,14 +33,17 @@ vi.mock("../../../../hooks/useCreditHistory", async (importOriginal) => ({
   useCreditHistory: () => history(),
 }));
 
-const event = (over: Partial<CreditEvent> = {}): CreditEvent => ({
-  id: "1",
-  kind: "borrow",
-  amount: 240_000_000_000_000_000n,
-  at: Math.floor(Date.now() / 1000) - 3600,
-  txHash: "0xabc",
-  settled: false,
-  ...over,
+// The chart on this screen is the limit's own history now, not spend. Spend stayed on Overview.
+const limits = vi.fn();
+vi.mock("../../../../hooks/useLimitHistory", () => ({ useLimitHistory: () => limits() }));
+
+const point = (limit: bigint, at: number) => ({
+  id: `p-${at}`,
+  limit,
+  available: limit,
+  score: 42n,
+  at,
+  txHash: `0x${at}`,
 });
 
 function empty() {
@@ -52,6 +54,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   creditLine.mockReturnValue({ score: 42n, limit: 497_512_437_810_945_273n, drawn: 0n });
   history.mockReturnValue(empty());
+  limits.mockReturnValue({ points: [], all: [], loading: false, error: false });
 });
 
 test("leads with the limit, not with a yield", () => {
@@ -66,25 +69,53 @@ test("leads with the limit, not with a yield", () => {
 test("an empty record renders empty", () => {
   render(<CreditPage />);
 
-  expect(screen.getByText("Nothing spent yet")).toBeInTheDocument();
-  // No bars at all rather than a flat row of stubs, which reads as broken.
-  expect(screen.queryByTestId("bars")).toBeNull();
+  expect(screen.getByText("No limit yet")).toBeInTheDocument();
+  expect(screen.queryByRole("img", { name: /Limit history/ })).toBeNull();
 });
 
-test("a real record draws the bars and totals what happened", () => {
-  history.mockReturnValue({
-    events: [event(), event({ id: "2", kind: "repay", settled: true })],
-    borrowed: 240_000_000_000_000_000n,
-    repaid: 240_000_000_000_000_000n,
-    cyclesClosed: 1,
+test("one event is a fact, not a trend, so it is not drawn as one", () => {
+  // A single point has nothing to slope against. Drawing it would put a shape on the screen whose
+  // whole job is to prove the limit moved, which is the opposite of what one event establishes.
+  limits.mockReturnValue({
+    points: [point(33n * 10n ** 18n, 1_700_000_000)],
+    all: [],
     loading: false,
     error: false,
   });
   render(<CreditPage />);
 
-  expect(screen.getByTestId("bars")).toBeInTheDocument();
-  expect(screen.getByText("1 cycle closed")).toBeInTheDocument();
-  expect(screen.getByText(/0\.24 tCTC spent/)).toBeInTheDocument();
+  expect(screen.getByText("Nothing has moved it yet")).toBeInTheDocument();
+  expect(screen.queryByRole("img", { name: /Limit history/ })).toBeNull();
+});
+
+test("two events or more draw the history, with both ends named", () => {
+  limits.mockReturnValue({
+    points: [
+      point(33n * 10n ** 18n, 1_700_000_000),
+      point(41n * 10n ** 18n, 1_700_090_000),
+      point(46n * 10n ** 18n, 1_700_100_000),
+    ],
+    all: [],
+    loading: false,
+    error: false,
+  });
+  render(<CreditPage />);
+
+  expect(screen.getByText("3 changes")).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: /Limit history/ })).toBeInTheDocument();
+  // Where it started and where it is now, because a chart with no figures on it is decoration.
+  expect(screen.getByText("33 tCTC")).toBeInTheDocument();
+  expect(screen.getByText("46 tCTC")).toBeInTheDocument();
+});
+
+test("a failed read says so rather than drawing an account that never moved", () => {
+  // The distinction this repository keeps having to relearn: no history and no answer are different
+  // facts, and a chart is incapable of showing the second.
+  limits.mockReturnValue({ points: [], all: [], loading: false, error: true });
+  render(<CreditPage />);
+
+  expect(screen.getByText("History unavailable")).toBeInTheDocument();
+  expect(screen.queryByText("No limit yet")).toBeNull();
 });
 
 test("offers the two halves of a cycle, and dims the half that has nothing to do", async () => {

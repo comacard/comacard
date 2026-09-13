@@ -103,6 +103,31 @@ query CreditHistory($wallet: String!, $limit: Int = 25) {
 `;
 
 /**
+ * Every point at which this account's limit moved, oldest first.
+ *
+ * The limit had no history until the indexer kept one. It is read live from `limitOf` because
+ * repricing collateral moves every limit at once with no event per account, so the chain is the
+ * only place the current figure is right. That makes it the wrong place to ask what the limit was
+ * last week, and `ScoreChanged` is the event that answers it.
+ *
+ * **Ascending, unlike every other query here.** The rest are feeds and want newest first. This one
+ * is a series, and a series read backwards has to be reversed before it can be drawn.
+ *
+ * `changed` is the indexer's own comparison against the previous row. `refreshScore` is
+ * permissionless and re-emits unconditionally, so two rows can carry identical figures; keep every
+ * row for a ledger, draw a line only from the ones where something moved.
+ */
+export const SCORE_HISTORY = `
+query ScoreHistory($wallet: String!, $limit: Int = 200) {
+  ScoreChange(
+    where: { account_id: { _eq: $wallet } }
+    order_by: { timestamp: asc }
+    limit: $limit
+  ) { id score creditLimit available changed timestamp txHash }
+}
+`;
+
+/**
  * Protocol-wide numbers.
  *
  * `collateralPrice` and `pricedAt` are in `apps/indexer/schema.graphql` but are deliberately NOT
