@@ -3,9 +3,9 @@ import * as real from "./wallet-reown";
 
 export { USER_CLOSED_MODAL, WalletError } from "./wallet-error";
 
-// `real` is Reown AppKit (`wallet-reown.ts`). `wallet-real.ts` is the previous Stellar
-// Wallets Kit implementation, kept unwired for reference while the vault seam is still
-// Stellar-shaped.
+// `real` is Reown AppKit (`wallet-reown.ts`). The Stellar Wallets Kit implementation this seam
+// was originally written against is gone — it was unreachable from `wallet.ts` after the move to
+// Reown, and the three `@stellar/*` packages in the manifest existed only to satisfy it.
 
 /**
  * Next inlines NEXT_PUBLIC_* at build time, so in a production build this reads `"" === "1"` and every
