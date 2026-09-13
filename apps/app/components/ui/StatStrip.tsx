@@ -1,3 +1,4 @@
+import { cn } from "../../lib/utils";
 import { Card } from "./Card";
 import { Skeleton } from "./Skeleton";
 
@@ -39,7 +40,7 @@ export function StatStrip({
   className?: string;
 }) {
   return (
-    <Card className={`grid grid-cols-2 lg:grid-cols-4 ${className}`}>
+    <Card className={cn("grid grid-cols-2 lg:grid-cols-4", className)}>
       {stats.map((stat, i) => (
         <div
           key={stat.label}

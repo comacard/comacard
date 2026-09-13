@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { cn } from "../../lib/utils";
 
 /**
  * A loading placeholder block: a light shimmer sweeps across a soft-grey shape. Sizing/shape comes
@@ -7,6 +8,6 @@ import type { CSSProperties } from "react";
  */
 export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
   return (
-    <div data-testid="skeleton" aria-hidden style={style} className={`skeleton ${className}`} />
+    <div data-testid="skeleton" aria-hidden style={style} className={cn("skeleton", className)} />
   );
 }

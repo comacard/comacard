@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/utils";
 
 /**
  * The page's own name, above everything else on it.
@@ -25,7 +26,7 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div className={`flex items-start justify-between gap-4 ${className}`}>
+    <div className={cn("flex items-start justify-between gap-4", className)}>
       <div className="min-w-0">
         <h1 className="text-[26px] font-semibold leading-none tracking-[-.02em]">{title}</h1>
         {description ? <p className="mt-1.5 text-[13.5px] text-muted">{description}</p> : null}
