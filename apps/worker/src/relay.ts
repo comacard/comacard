@@ -149,6 +149,8 @@ export async function watch(wallet: Wallet): Promise<never> {
   // `getLogs` from block zero times out or 413s on these RPCs, so every scan is
   // a window rather than the whole chain.
   const windows = new Map<WormholeChainId, number>();
+  // Per chain, the sequences seen but not yet signed. Outlives the window.
+  const waiting = new Map<WormholeChainId, Set<bigint>>();
   const chains = Object.keys(vaults).map(Number) as WormholeChainId[];
   const hubLog = new Contract(config.collateralHub, HUB_RELEASE_ABI, creditcoin());
   let releaseCursor: number | undefined;
@@ -156,7 +158,9 @@ export async function watch(wallet: Wallet): Promise<never> {
   for (;;) {
     for (const chainId of chains) {
       try {
-        windows.set(chainId, await sweep(chainId, hub, delivered, windows.get(chainId)));
+        const pending = waiting.get(chainId) ?? new Set<bigint>();
+        waiting.set(chainId, pending);
+        windows.set(chainId, await sweep(chainId, hub, delivered, pending, windows.get(chainId)));
       } catch (error) {
         // One chain's RPC being unhappy must not stop the others.
         console.error(`${vaults[chainId].name}:`, (error as Error).message);
@@ -173,26 +177,52 @@ export async function watch(wallet: Wallet): Promise<never> {
   }
 }
 
+/**
+ * What to offer this round on one chain: everything the window turned up, plus
+ * everything seen earlier that is still unsigned.
+ *
+ * The window alone was not enough. A sweep advanced its cursor to `head + 1`
+ * whether or not a deposit in it had been delivered, so a sequence whose
+ * guardians had not signed yet fell outside every later window and was never
+ * read again. BSC and Fuji sign in under a minute and usually won that race;
+ * Base, Arbitrum and Optimism publish at finalized consistency and never could.
+ *
+ * `waiting` is memory only, and it does not need to be more: re-offering a
+ * delivered message is harmless because the hub rejects a VAA it has consumed,
+ * and a restart rescans the lookback window anyway.
+ */
+export function queueFor(
+  found: Iterable<bigint>,
+  waiting: Set<bigint>,
+  isDelivered: (sequence: bigint) => boolean,
+): bigint[] {
+  for (const sequence of found) if (!isDelivered(sequence)) waiting.add(sequence);
+  for (const sequence of [...waiting]) if (isDelivered(sequence)) waiting.delete(sequence);
+  return [...waiting];
+}
+
 /** Delivers whatever is ready on one chain. Returns where to resume. */
 async function sweep(
   chainId: WormholeChainId,
   hub: Contract,
   delivered: Set<string>,
+  waiting: Set<bigint>,
   cursor: number | undefined,
 ): Promise<number> {
   const { JsonRpcProvider } = await import("ethers");
   const head = await new JsonRpcProvider(vaults[chainId].rpc).getBlockNumber();
   const from = Math.max(0, cursor ?? head - config.relayLookbackBlocks);
 
-  for (const deposit of await pendingDeposits(chainId, from, head)) {
-    const key = `${chainId}-${deposit.sequence}`;
-    if (delivered.has(key)) continue;
+  const found = (await pendingDeposits(chainId, from, head)).map((d) => d.sequence);
+  const isDelivered = (sequence: bigint) => delivered.has(`${chainId}-${sequence}`);
 
-    const vaa = await fetchVaaIfSigned(chainId, vaults[chainId].vault, deposit.sequence);
-    if (!vaa) continue; // guardians still working; try again next round
+  for (const sequence of queueFor(found, waiting, isDelivered)) {
+    const vaa = await fetchVaaIfSigned(chainId, vaults[chainId].vault, sequence);
+    if (!vaa) continue; // guardians still working; it stays in `waiting`
 
-    await submit(chainId, deposit.sequence, vaa, hub);
-    delivered.add(key);
+    await submit(chainId, sequence, vaa, hub);
+    delivered.add(`${chainId}-${sequence}`);
+    waiting.delete(sequence);
   }
   return head + 1;
 }

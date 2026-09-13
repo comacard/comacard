@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { JsonRpcProvider, Wallet } from "ethers";
 import { creditcoin, vaults, type WormholeChainId } from "../src/config";
+import { queueFor } from "../src/relay";
 
 /**
  * A release travels from Creditcoin out to the chain holding the collateral,
@@ -32,5 +33,35 @@ describe("release signing", () => {
     // a release to the wrong place while still looking like it worked.
     expect(relays.size).toBe(Object.keys(vaults).length);
     expect(rpcs.size).toBe(Object.keys(vaults).length);
+  });
+});
+
+describe("queueFor", () => {
+  const nothingDelivered = () => false;
+
+  test("a sequence whose VAA is unsigned survives a window that has moved past it", () => {
+    const waiting = new Set<bigint>();
+    // Round one: the block is in the window, but the guardians have not signed.
+    expect(queueFor([1n], waiting, nothingDelivered)).toEqual([1n]);
+    // Round two: the window has advanced and turns up nothing. It is still offered.
+    expect(queueFor([], waiting, nothingDelivered)).toEqual([1n]);
+  });
+
+  test("delivering one drops it and leaves the rest", () => {
+    const waiting = new Set<bigint>();
+    queueFor([1n, 2n], waiting, nothingDelivered);
+    expect(queueFor([], waiting, (s) => s === 1n)).toEqual([2n]);
+  });
+
+  test("an already delivered sequence is never queued", () => {
+    const waiting = new Set<bigint>();
+    expect(queueFor([7n], waiting, (s) => s === 7n)).toEqual([]);
+    expect(waiting.size).toBe(0);
+  });
+
+  test("seeing the same sequence twice queues it once", () => {
+    const waiting = new Set<bigint>();
+    queueFor([3n], waiting, nothingDelivered);
+    expect(queueFor([3n], waiting, nothingDelivered)).toEqual([3n]);
   });
 });
