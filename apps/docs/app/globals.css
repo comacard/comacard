@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f2f2f2;
+  --color-card: #ffffff;
+  --color-ink: #151819;
+  --color-ink-2: #3a3f41;
+  --color-muted: #7f8583;
+  --color-faint: #a8adab;
+  --color-line: #e6e6e6;
+  --color-accent: #009b42;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+  The documents are markdown written for a repository, so the styling has to carry every element
+  they use rather than the handful a designed page would. Scoped to `.doc` so the shell around it
+  is styled normally.
+*/
+.doc {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-ink-2);
+}
+.doc h1 {
+  margin: 0 0 6px;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+  text-wrap: balance;
+}
+.doc h2 {
+  margin: 44px 0 12px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-line);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  text-wrap: balance;
+}
+.doc h3 {
+  margin: 30px 0 8px;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--color-ink);
+}
+.doc p,
+.doc ul,
+.doc ol {
+  margin: 0 0 16px;
+}
+.doc ul,
+.doc ol {
+  padding-left: 22px;
+}
+.doc li {
+  margin-bottom: 6px;
+}
+.doc li::marker {
+  color: var(--color-faint);
+}
+.doc a {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--color-faint);
+  text-underline-offset: 3px;
+}
+.doc a:hover {
+  text-decoration-color: var(--color-ink);
+}
+.doc strong {
+  font-weight: 650;
+  color: var(--color-ink);
+}
+.doc code {
+  border-radius: 5px;
+  padding: 2px 5px;
+  background: rgba(17, 19, 22, 0.055);
+  font-size: 0.88em;
+}
+/* Wide content scrolls inside its own box. The page body must never scroll sideways. */
+.doc pre {
+  overflow-x: auto;
+  margin: 0 0 18px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--color-card);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.doc pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+.doc blockquote {
+  margin: 0 0 16px;
+  border-left: 3px solid var(--color-line);
+  padding-left: 16px;
+  color: var(--color-muted);
+}
+.doc hr {
+  margin: 34px 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+}
+.doc table {
+  display: block;
+  overflow-x: auto;
+  margin: 0 0 18px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.doc th,
+.doc td {
+  border-bottom: 1px solid var(--color-line);
+  padding: 9px 14px 9px 0;
+  text-align: left;
+  vertical-align: top;
+}
+.doc th {
+  color: var(--color-muted);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.doc img {
+  max-width: 100%;
+}
