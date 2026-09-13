@@ -4,5 +4,6 @@ import type { ReactNode } from "react";
 // CSS animation replays each time a sub-screen opens, the new page slides in
 // from the right. See .page-enter in globals.css.
 export default function FlowTemplate({ children }: { children: ReactNode }) {
-  return <div className="page-enter">{children}</div>;
+  // `flex-1` passes the layout's column height through to the screen, which fills it.
+  return <div className="page-enter flex flex-1 flex-col">{children}</div>;
 }

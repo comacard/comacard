@@ -361,7 +361,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
 
   if (claimed) {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center">
           <TransactionStatus
             status="confirmed"
@@ -400,7 +400,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
    */
   if ((requested || awaitingGuardians !== null || mine !== null) && asset.releasable <= 0n) {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center">
           <TransactionStatus status="confirmed" size="large" />
           {awaitingGuardians || mine ? (
@@ -452,7 +452,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
   // borrower has not taken is the most actionable thing on this screen.
   if (asset.releasable > 0n) {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <SubHeader title={`Withdraw ${symbol}`} />
         <Row asset={asset} symbol={symbol} />
 
@@ -491,7 +491,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+    <div className="flex flex-1 flex-col">
       <SubHeader title={`Withdraw ${symbol}`} />
       <Row asset={asset} symbol={symbol} />
 

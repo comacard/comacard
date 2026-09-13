@@ -69,7 +69,7 @@ export function LockCollateral({ sym }: { sym: string }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <SubHeader title="Lock collateral" />
         <Skeleton className="h-16 w-full rounded-[16px]" />
         <Skeleton className="mt-3 h-[300px] w-full rounded-[16px]" />
@@ -81,7 +81,7 @@ export function LockCollateral({ sym }: { sym: string }) {
   // Locking the wrong asset is not recoverable from this screen.
   if (!asset) {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <SubHeader title="Lock collateral" />
         <p className="mt-6 text-center text-[13px] text-muted">
           {sym.toUpperCase()} is not accepted as collateral.
@@ -139,7 +139,7 @@ export function LockCollateral({ sym }: { sym: string }) {
    */
   if (txStatus === "confirmed") {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center">
           <TransactionStatus
             status="confirmed"
@@ -161,7 +161,7 @@ export function LockCollateral({ sym }: { sym: string }) {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+    <div className="flex flex-1 flex-col">
       <SubHeader title={`Lock ${asset.symbol}`} />
 
       <div className="mb-3 flex items-center gap-3 rounded-[16px] border border-line bg-white px-4 py-3 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">

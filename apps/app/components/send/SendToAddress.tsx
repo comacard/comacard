@@ -100,7 +100,7 @@ export function SendToAddress() {
 
   if (step === "done") {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center">
           <TransactionStatus
             status="confirmed"
@@ -118,7 +118,7 @@ export function SendToAddress() {
 
   if (step === "address") {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <SubHeader title="To another wallet" />
 
         <div
@@ -173,7 +173,7 @@ export function SendToAddress() {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+    <div className="flex flex-1 flex-col">
       <SubHeader title="To another wallet" />
 
       <p className="mb-1 text-center text-[13px] text-muted">

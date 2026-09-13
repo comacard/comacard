@@ -99,7 +99,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <SubHeader title="Lock collateral" />
         <Skeleton className="h-16 w-full rounded-[16px]" />
         <Skeleton className="mt-3 h-[300px] w-full rounded-[16px]" />
@@ -109,7 +109,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
 
   if (!asset?.vault || asset.evmChainId === null) {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <SubHeader title="Lock collateral" />
         <p className="mt-6 text-center text-[13px] text-muted">
           That asset is not accepted as collateral.
@@ -236,7 +236,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
 
   if (done) {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center">
           <TransactionStatus
             status="confirmed"
@@ -265,7 +265,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+    <div className="flex flex-1 flex-col">
       <SubHeader title={`Lock ${symbol}`} />
 
       <div className="mb-3 flex items-center gap-3 rounded-[16px] border border-line bg-white px-4 py-3 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">

@@ -128,7 +128,7 @@ export function PayScreen() {
 
   if (txStatus === "confirmed") {
     return (
-      <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+      <div className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col items-center justify-center">
           <TransactionStatus
             status="confirmed"
@@ -149,7 +149,7 @@ export function PayScreen() {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-92px)] flex-col">
+    <div className="flex flex-1 flex-col">
       <SubHeader title="Repay" />
 
       {owed <= 0n ? (
