@@ -124,8 +124,6 @@ export function DesktopOverview() {
 
   const needsVerification = account !== null && !account.kyc.verified;
   const owes = (drawn ?? 0n) > 0n;
-  const preview = transactions.slice(0, 8);
-  const hasMore = transactions.length > 8;
 
   return (
     <>
@@ -188,64 +186,81 @@ export function DesktopOverview() {
           it, and with the asset list in it the two are close enough that pinning it would freeze a
           long block against a scrolling one.
         */}
+        {/*
+          One grid with the blocks as its own children, rather than a grid of two independent flex
+          columns.
+
+          Two columns stacking themselves meant the second block in each started wherever the first
+          one happened to end: with a single asset held, "Assets held" sat 11px above "In your
+          wallet" and the two headings visibly failed to line up. Rows are the fix, and they are a
+          fix by construction rather than by the two columns happening to balance.
+
+          Every block names its column explicitly rather than relying on auto-placement, because
+          three of these return null when they have nothing to say. `CollateralList` with no held
+          assets would otherwise leave its cell free and the wallet card would slide into the rail.
+
+          `items-start`, deliberately, not `items-stretch`. A held-asset card with one row in it
+          would gain 30px of blank space under that row, and an empty strip inside a bordered box
+          reads as a row that failed to load.
+        */}
         <div className="grid items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
-          <div className="flex min-w-0 flex-col gap-6">
-            <Card className="flex min-w-0 flex-col px-6 pb-6 pt-5">
-              <CardFolderPanel account={account} />
-            </Card>
+          {/* Full width and above everything: money in transit, rather than part of either column's
+              subject. Both render nothing when there is none. */}
+          <IncomingDeposits deposits={account?.pendingDeposits ?? []} className="lg:col-span-2" />
+          {/* This is money that has already stopped backing the limit and is waiting on a
+              signature. */}
+          <ClaimableCollateral assets={remoteCollateral} className="lg:col-span-2" />
 
-            <CollateralList
-              assets={collateral}
-              remote={remoteCollateral}
-              loading={remoteLoading}
-              className="mt-0"
-            />
-          </div>
+          <Card className="flex min-w-0 flex-col px-6 pb-6 pt-5 lg:col-start-1">
+            <CardFolderPanel account={account} />
+          </Card>
 
-          {/* What the card has done. */}
-          <div className="flex min-w-0 flex-col gap-6">
-            <IncomingDeposits deposits={account?.pendingDeposits ?? []} />
-            {/* Above the record, because this is money that has already stopped backing the limit
-                and is waiting on a signature. */}
-            <ClaimableCollateral assets={remoteCollateral} />
-
-            {/* The chart sat on Credit, the screen a cardholder opens least, while the limit it is
+          {/* The chart sat on Credit, the screen a cardholder opens least, while the limit it is
                 a record of leads this one. Mercury's credit page puts its summary and its chart side
                 by side for the same reason: they are two readings of one thing. */}
-            <SpendChart />
+          {/* The chart sat on Credit, the screen a cardholder opens least, while the limit it is a
+              record of leads this one. Mercury's credit page puts its summary and its chart side by
+              side for the same reason: they are two readings of one thing. */}
+          <SpendChart className="lg:col-start-2" />
 
-            {/* Wallet balances sit last and small, as on Account: they pay gas, and they are not
-                what the card spends. */}
-            {assets.length > 0 ? (
-              <Section title="In your wallet">
-                <Card className="px-5 py-1">
-                  {assets.map((asset, i) => (
-                    <div
-                      key={asset.token}
-                      className={`flex items-baseline justify-between gap-3 py-3 ${
-                        i === 0 ? "" : "border-t border-line"
-                      }`}
-                    >
-                      <span className="text-[13.5px] font-medium">{asset.name}</span>
-                      <span className="text-[13.5px] font-semibold tabular-nums">
-                        {asset.amount === undefined ? (
-                          // Unread, not empty. Same rule as every other figure on this screen.
-                          `— ${asset.symbol}`
-                        ) : (
-                          <CountUp
-                            value={Number(formatUnits(asset.amount, asset.decimals))}
-                            format={(n) =>
-                              `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${asset.symbol}`
-                            }
-                          />
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                </Card>
-              </Section>
-            ) : null}
-          </div>
+          <CollateralList
+            assets={collateral}
+            remote={remoteCollateral}
+            loading={remoteLoading}
+            className="mt-0 lg:col-start-1"
+          />
+
+          {/* Wallet balances sit last and small, as on Account: they pay gas, and they are not
+              what the card spends. */}
+          {assets.length > 0 ? (
+            <Section title="In your wallet" className="lg:col-start-2">
+              <Card className="px-5 py-1">
+                {assets.map((asset, i) => (
+                  <div
+                    key={asset.token}
+                    className={`flex items-baseline justify-between gap-3 py-3 ${
+                      i === 0 ? "" : "border-t border-line"
+                    }`}
+                  >
+                    <span className="text-[13.5px] font-medium">{asset.name}</span>
+                    <span className="text-[13.5px] font-semibold tabular-nums">
+                      {asset.amount === undefined ? (
+                        // Unread, not empty. Same rule as every other figure on this screen.
+                        `— ${asset.symbol}`
+                      ) : (
+                        <CountUp
+                          value={Number(formatUnits(asset.amount, asset.decimals))}
+                          format={(n) =>
+                            `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${asset.symbol}`
+                          }
+                        />
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </Card>
+            </Section>
+          ) : null}
         </div>
 
         {/*
@@ -256,23 +271,22 @@ export function DesktopOverview() {
           also carries more per-row metadata than anything above it, so it is the block that most
           wants the width.
         */}
-        <Section
-          title="Transactions"
-          action={
-            hasMore ? (
-              <button
-                type="button"
-                onClick={() => open("activity")}
-                className="text-[13px] font-medium text-muted transition-colors hover:text-ink"
-              >
-                View all
-              </button>
-            ) : undefined
-          }
-        >
+        <Section title="Transactions">
           <Card className="px-5 py-1">
+            {/*
+              Paged in place rather than truncated at eight with a "View all" that left the page.
+
+              Every other list on this product pages itself: `CollateralList` and `CycleList` both
+              take a page and a "Load more" under it, and this was the one that answered a request
+              for more rows by opening a drawer instead. The drawer is still there, and the
+              navigation bar's own Activity link is how it opens.
+
+              `pageSize` rather than a slice, so the count lives in one place and the button appears
+              only while there is something left to show.
+            */}
             <ActivityList
-              items={preview}
+              items={transactions}
+              pageSize={8}
               loading={txLoading}
               emptyTitle="No transactions yet"
               emptyDescription="Locks, draws and repayments will show here once they are on chain."

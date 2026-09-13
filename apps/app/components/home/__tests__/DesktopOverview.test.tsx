@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render as rtlRender, screen, waitFor } from "@testing-library/react";
+import { render as rtlRender, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ActivityItem } from "../../../lib/comacard/activity";
 import { DesktopOverview } from "../DesktopOverview";
 
 /**
@@ -66,9 +67,12 @@ vi.mock("../../../hooks/useWalletAssets", () => ({
     priceError: false,
   }),
 }));
-vi.mock("../../../hooks/useTransactions", () => ({
-  useTransactions: () => ({ loading: false, error: false, items: [] }),
+const transactions = vi.fn(() => ({
+  loading: false,
+  error: false,
+  items: [] as ActivityItem[],
 }));
+vi.mock("../../../hooks/useTransactions", () => ({ useTransactions: () => transactions() }));
 vi.mock("../../../hooks/useKycStart", () => ({
   useKycStart: () => ({
     verify: vi.fn(),
@@ -257,4 +261,35 @@ test("Send is live as soon as the figure beside it is, not when the slowest read
   const send = screen.getByRole("button", { name: "Send" });
   expect(send).toBeInTheDocument();
   expect(send).toBeEnabled();
+});
+
+test("the transaction feed pages in place rather than sending the reader to a drawer", async () => {
+  // It used to slice to eight and offer "View all", which closed the page the reader was on and
+  // opened a drawer over it. Every other list on this product pages itself, and the one that did
+  // not was the longest of them. The drawer still exists; the navigation bar's Activity link opens
+  // it.
+  const user = userEvent.setup();
+  transactions.mockReturnValue({
+    loading: false,
+    error: false,
+    items: Array.from({ length: 11 }, (_, i) => ({
+      id: i,
+      cat: "you" as const,
+      kind: "Spent",
+      detail: `${i + 1}.00 tCTC from your credit limit`,
+      when: "3h ago",
+    })),
+  });
+  render(<DesktopOverview />);
+
+  // Scoped to the section, because the Activity drawer is mounted on this page too and holds the
+  // same rows. An unscoped query would read the drawer's copy and pass whatever this one did.
+  const feed = within(screen.getByRole("heading", { name: "Transactions" }).closest("section")!);
+
+  expect(screen.queryByRole("button", { name: "View all" })).toBeNull();
+  expect(feed.getByText("8.00 tCTC from your credit limit")).toBeInTheDocument();
+  expect(feed.queryByText("9.00 tCTC from your credit limit")).toBeNull();
+
+  await user.click(feed.getByRole("button", { name: /Load more/ }));
+  expect(feed.getByText("11.00 tCTC from your credit limit")).toBeInTheDocument();
 });

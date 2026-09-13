@@ -129,3 +129,89 @@ and this app sits at 22px, but that 22px is not an accident of the port: it is t
 card artwork, the bottom sheet and the pill buttons, and it is what makes the product look like a
 piece of consumer hardware rather than a trading terminal. Copying Aave's 4px would make the app
 look like Aave. The reading is recorded so the choice is visible as a choice.
+
+## The second pass, 13 September 2026
+
+The first pass rebuilt Overview. Credit was left as it was, and five agents were then run over both
+screens to find what the rebuild had missed. What follows is what they found and what came of it,
+including the things that were tried and thrown away, because a rejected approach that is not
+written down gets tried again.
+
+### Screens nobody could reach
+
+`(flow)` routes redirect on desktop, and the redirect list named `/deposit/` as a prefix. That
+matched `/deposit/x/[id]`, the cross-chain deposit screen, and sent it to the drawer the link had
+been clicked in. A desktop cross-chain deposit went in a circle and nothing reported an error.
+
+`lib/comacard/desktopRoutes.ts` now holds both lists as one function, so a caller cannot consult one
+and forget the other, and it is tested as a function rather than by rendering a layout once per
+path.
+
+### A magic number copied twenty-one times
+
+`min-h-[calc(100dvh-92px)]` appeared in seven files. The 92 is `pt-[52px]` plus `pb-10` on the
+`(flow)` layout, added up by hand, and nothing connected the two. Changing that padding would have
+left every flow screen the wrong height with no error and nothing to grep for.
+
+The layout is `min-h-dvh` with `border-box`, so its content box is already exactly `100dvh - 92px`.
+It is now a flex column and the screens inside are `flex-1`, which measures the same thing without
+naming it. Measured at 1800x1044: `/send/me`, `/pay`, `/send/to`, `/deposit/x/[id]` and
+`/withdraw/[sym]` all report 952px, the figure the calc produced, with no page scroll.
+
+### Two columns cannot line themselves up
+
+Both desktop screens were a grid of two independent flex columns. Each column stacked its own
+blocks, so the second block in each started wherever the first happened to end.
+
+On Credit the rail ran out 46px above the record. On Overview, with a single asset held, "Assets
+held" sat 11px above "In your wallet" and the two headings visibly failed to line up.
+
+**Stretching the short column to match was tried first and is worse.** Both Credit columns then
+measured 811px and the page filled the viewport, but the empty space simply moved inside the cards:
+a hole between the buttons and the footer of a 400px card. A card with a gap in the middle of it
+reads as broken rather than as spacious. This is the approach not to try again.
+
+What shipped instead is rows:
+
+- **Credit**: the limit and the chart share the top row and end level because the grid makes them,
+  and the cycles run the full width underneath. The chart is the block that stretches, which is the
+  right way round: a plot with more height is a better plot, where a list with more height is just a
+  list with a hole under it. At 1636x898 both top-row cards run 181 to 504 and the plot went from
+  118px to 191px.
+- **Overview**: the blocks are the grid's own children rather than two nested columns, each naming
+  its column explicitly. Explicitly, because three of them return null when they have nothing to
+  say, and auto-placement would have slid the wallet card into the rail the moment no assets were
+  held. `items-start` here rather than `items-stretch`, for the reason above: a held-asset card with
+  one row would gain 30px of blank space under it.
+
+### Figures that were animations rather than figures
+
+`CountUp` started at zero and walked up. Measured in the browser that walk did not always complete:
+the Credit limit rendered "0 tCTC" against a chain reporting 41.4594, and "In your wallet" showed
+"0 tCTC" against a wallet holding 7,998.
+
+It could not have been caught by a test, and that is the part worth keeping: the component disabled
+its own animation under `NODE_ENV=test`, so the test environment always saw the right value while
+the browser did not. A component that behaves differently under test is a component whose production
+behaviour is untested. It now mounts at its value, and a settle timer guarantees the figure lands
+even if the tween is stranded.
+
+### Overrides that lose silently
+
+Tailwind emits utilities in numeric order, not in the order a class attribute lists them: `.mt-0` is
+emitted at line 744 of the built CSS and `.mt-4` at 772. So a component that builds its classes with
+a template string and appends the caller's `className` does not let the caller win, it lets the
+larger number win.
+
+`cn()` with `extendTailwindMerge` is the fix, and the custom radius scale has to be declared to it
+or `rounded-card rounded-none` does not resolve either. `Bars` was converted when its `h-[118px]`
+needed to be beaten by a caller.
+
+### Still open
+
+- `StatStrip` draws its dividers by index arithmetic rather than in CSS.
+- The shell constants are still duplicated: `h-16` on the navigation bar against `top-[88px]`
+  elsewhere.
+- `.stagger > *` animates direct children to `opacity: 1`, and an animation beats a utility class,
+  so anything placed inside a stagger wrapper is permanently visible. Left until last deliberately:
+  it is load-bearing on both screens and changing it moves everything at once.
