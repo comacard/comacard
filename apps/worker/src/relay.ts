@@ -35,13 +35,12 @@ const HUB_RELEASE_ABI = [
 ];
 
 /**
- * Waits for a transaction and insists it actually succeeded.
+ * Waits for a transaction and returns its receipt.
  *
- * `wait()` resolves to null when no receipt is available yet and does not throw,
- * so `await tx.wait()` on its own reports a delivery that never happened. That
- * is worse than a failure: the sweep marks the message delivered, never retries
- * it, and a borrower's withdrawal sits unexecuted with nothing in the log but a
- * success line.
+ * ethers already throws CALL_EXCEPTION on a reverted receipt, and only resolves
+ * to null when asked for zero confirmations, so neither check below should ever
+ * fire. They narrow the type and fail loudly if either assumption stops holding.
+ * They do not make a receipt proof of delivery: see deliverRelease.
  */
 async function confirmed(tx: {
   wait: () => Promise<{ status?: number | null; hash: string } | null>;
@@ -145,7 +144,6 @@ export async function pendingDeposits(
 export async function watch(wallet: Wallet): Promise<never> {
   const hub = new Contract(config.collateralHub, HUB_ABI, wallet);
   const delivered = new Set<string>();
-  const attempts = new Map<string, number>();
   // `getLogs` from block zero times out or 413s on these RPCs, so every scan is
   // a window rather than the whole chain.
   const windows = new Map<WormholeChainId, number>();
@@ -154,6 +152,7 @@ export async function watch(wallet: Wallet): Promise<never> {
   const chains = Object.keys(vaults).map(Number) as WormholeChainId[];
   const hubLog = new Contract(config.collateralHub, HUB_RELEASE_ABI, creditcoin());
   let releaseCursor: number | undefined;
+  const releasesWaiting = new Set<bigint>();
 
   for (;;) {
     for (const chainId of chains) {
@@ -169,7 +168,13 @@ export async function watch(wallet: Wallet): Promise<never> {
 
     // The way back. Same isolation: a failure here must not stop deposits.
     try {
-      releaseCursor = await sweepReleases(hubLog, wallet, delivered, attempts, releaseCursor);
+      releaseCursor = await sweepReleases(
+        hubLog,
+        wallet,
+        delivered,
+        releasesWaiting,
+        releaseCursor,
+      );
     } catch (error) {
       console.error("releases:", (error as Error).message);
     }
@@ -246,23 +251,6 @@ async function submit(
 }
 
 /**
- * Hands a release to whichever relay it belongs to.
- *
- * Only `AlreadyConsumed` from the relay counts as delivered, never a receipt
- * from the transaction that sent it. A receipt is not proof: BSC testnet's
- * public RPC is load-balanced, and a send there returned a status-1 receipt for
- * a transaction that no node has. Trusting it marked a withdrawal delivered and
- * stopped retrying, which is the one outcome worse than a visible failure. The
- * chain's own record settles it on the next sweep, and until it does the message
- * is offered again.
- *
- * Which chain that is is not in the event — the asset id is a hash. The signed
- * payload names it, and a relay refuses one addressed elsewhere with WrongChain,
- * so offering it to each in turn costs a revert and settles it. That refusal is
- * new: the first relays accepted any release from the hub, and this loop is what
- * surfaced it.
- */
-/**
  * Reads the destination chain out of a signed release.
  *
  * A VAA is a header then a body: version(1) guardianSetIndex(4) sigCount(1),
@@ -270,7 +258,7 @@ async function submit(
  * emitterChain(2) emitterAddress(32) sequence(8) consistency(1), then payload.
  * The payload is the abi-encoded release, whose second word is the chain.
  *
- * Returns null when it cannot be read as a release at all — a message published
+ * Returns null when it cannot be read as a release at all: a message published
  * before the payload carried its destination decodes as nothing, and there is no
  * relay anywhere that will take it.
  */
@@ -299,7 +287,7 @@ const RELEASE_VERSION = 2;
  * Delivers a release to the one relay it is addressed to.
  *
  * Addressed, not guessed. An earlier version offered every relay in turn and
- * took whichever accepted — which was how the missing destination check in
+ * took whichever accepted, which was how the missing destination check in
  * ReleaseRelay surfaced, and also five reverted transactions per message once it
  * was fixed. The payload names its chain; there is no reason to ask the others.
  */
@@ -317,19 +305,18 @@ async function deliverRelease(
   // release is the one message that travels the other way. Left as it was,
   // `executeRelease` was sent to Creditcoin addressed to a contract that only
   // exists on the far chain: no code there, so it cost gas, returned status 1,
-  // and did nothing — which is also why receipts for these could never be
+  // and did nothing. That is also why receipts for these could never be
   // found on the chain they were supposedly sent to.
   const signer = wallet.connect(new JsonRpcProvider(vaults[chainId].rpc));
   const relay = new Contract(vaults[chainId].relay, RELAY_ABI, signer);
   try {
     const tx = await relay.getFunction("executeRelease")(vaa);
     const receipt = await confirmed(tx);
-    // "submitted", not "delivered", and the wording is not pedantry. Both the
-    // Fuji and Arbitrum public RPCs have returned a status-1 receipt for a
-    // transaction that `eth_getTransactionReceipt` then reports as unknown, so a
-    // receipt from the node that accepted it is not proof of anything. The relay
-    // answering AlreadyConsumed on the next sweep is, and until it does this
-    // message is offered again.
+    // "submitted", not "delivered". A status-1 receipt does not prove the relay
+    // ran: a call to an address with no code also succeeds and costs gas, which
+    // is exactly what the wrong-chain signer produced before bb55a6b. The relay
+    // answering AlreadyConsumed on a later round is the proof, and until it does
+    // this message is offered again.
     console.log(`release #${sequence} submitted to ${vaults[chainId].name} ${receipt.hash}`);
     return "sent";
   } catch (error) {
@@ -364,7 +351,7 @@ async function sweepReleases(
   hubLog: Contract,
   wallet: Wallet,
   delivered: Set<string>,
-  attempts: Map<string, number>,
+  waiting: Set<bigint>,
   cursor: number | undefined,
 ): Promise<number> {
   const head = await creditcoin().getBlockNumber();
@@ -379,41 +366,35 @@ async function sweepReleases(
     logs.push(...(await hubLog.queryFilter(filter(), start, end)));
   }
 
-  for (const log of logs) {
-    const sequence = (log as unknown as { args: [string, string, bigint, bigint] }).args[3];
-    const key = `release-${sequence}`;
-    if (delivered.has(key)) continue;
+  // The retention deposits got in a38d3a0, for the same reason. The cursor moves
+  // past every release in this window whether or not its VAA was signed, so
+  // without `waiting` an unsigned release was read once and then only again
+  // after a restart.
+  const found = logs.map(
+    (log) => (log as unknown as { args: [string, string, bigint, bigint] }).args[3],
+  );
+  const isDelivered = (sequence: bigint) => delivered.has(`release-${sequence}`);
 
+  for (const sequence of queueFor(found, waiting, isDelivered)) {
     const vaa = await fetchVaaIfSigned(
       config.creditcoinWormholeChainId,
       config.collateralHub,
       sequence,
     );
-    if (!vaa) continue;
+    if (!vaa) continue; // guardians still working; it stays in `waiting`
 
     const outcome = await deliverRelease(vaa, sequence, wallet);
-    if (outcome === "delivered") {
-      delivered.add(key);
-      continue;
-    }
+    // Sent or failed: offered again next round. No budget, because a relay out
+    // of gas would otherwise abandon a release after three rounds, silently.
+    if (outcome === "sent") continue;
+
     if (outcome === "undeliverable") {
-      // Not a release any relay can read — published before the payload carried
-      // its destination. Said once, not retried, because no number of attempts
-      // will change it.
-      console.error(`release #${sequence} names no chain we serve — skipping`);
-      delivered.add(key);
-      continue;
+      // Published before the payload carried its destination, so no relay can
+      // read it. Said once and dropped, because no number of rounds changes that.
+      console.error(`release #${sequence} names no chain we serve, skipping`);
     }
-    // "sent": a transaction went out and the relay will confirm it next sweep,
-    // or it will be offered again. The budget guards against that never ending.
-    const tried = (attempts.get(key) ?? 0) + 1;
-    attempts.set(key, tried);
-    if (tried >= config.relayMaxAttempts) {
-      console.error(
-        `release #${sequence} still unconfirmed after ${tried} rounds — needs a person`,
-      );
-      delivered.add(key);
-    }
+    delivered.add(`release-${sequence}`);
+    waiting.delete(sequence);
   }
   return head + 1;
 }

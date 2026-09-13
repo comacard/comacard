@@ -38,17 +38,20 @@ L2s finalize against Ethereum and take fifteen to twenty.
 
 ## A send is not a delivery
 
-Two RPC behaviours that produce false successes, both measured on these chains:
-
-- **`tx.wait()` resolves to `null` without throwing** when no receipt is available. Awaiting it alone
-  reports a delivery that never happened — worse than a failure, because the sweep marks it done and
-  never retries.
-- **A status-1 receipt is not proof.** The Fuji and Arbitrum public RPCs both returned one for
-  transactions `eth_getTransactionReceipt` afterwards reported as unknown.
+**A status-1 receipt does not prove anything ran.** A call to an address with no code succeeds and
+costs gas. Until bb55a6b the worker signed releases with a wallet bound to Creditcoin, so
+`executeRelease` went to the relay's address on Creditcoin, where there is no code: status 1, no logs,
+nothing executed, and a log line saying "submitted".
 
 So the worker treats a send as *submitted*, and only the relay answering `AlreadyConsumed` as
 *delivered*. Anything here that confirms a user action from a receipt alone has the same hole; the
 honest test is reading back the state the transaction was supposed to change.
+
+This section used to blame the Fuji and Arbitrum public RPCs for returning receipts they could not
+find afterwards, and said `tx.wait()` resolves to `null` without throwing. Both were wrong, and both
+were copied into `apps/app/lib/comacard/tx.ts`. The receipts were real and sat on Creditcoin, the
+chain the transactions were actually sent to. ethers' `wait()` throws on a revert and only returns
+`null` when asked for zero confirmations.
 
 ## `getLogs` fails differently on every chain
 

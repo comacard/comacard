@@ -110,7 +110,7 @@ Every cross-chain bug this repo has had passed through here at least once.
 | --- | --- | --- | --- | --- | --- | --- |
 | **EVM chain id** | 11155111 | 84532 | 421614 | 11155420 | 97 | 43113 |
 | **Wormhole chain id** | 10002 | 10004 | 10003 | 10005 | **4** | **6** |
-| **Attestcoin chainKey** | 1 | (|) | (|) |, |
+| **Attestcoin chainKey** | 1 | none | none | none | none | none |
 
 BSC and Fuji predate Wormhole's 10000-block testnet scheme and keep their mainnet ids. Extrapolating
 the sequence puts Fuji at `10006`, which is **Holesky**: a different chain, and the app shipped that
@@ -143,10 +143,10 @@ precision above ~9e15. Decode with `BigInt`, never `Number`.
 
 **A receipt is not a success, and a success is not always proof.** A reverted transaction produces a
 receipt like any other, and wagmi's `receipt.isSuccess` means the *query* resolved, not that the
-transaction did: four screens reported reverts as green checks before this was caught. Worse, the
-Fuji and Arbitrum public RPCs both return status-1 receipts for transactions `eth_getTransactionReceipt`
-afterwards reports as unknown, and `tx.wait()` in ethers resolves to `null` without throwing. On
-those chains the only honest test is reading back the state the transaction was meant to change.
+transaction did: four screens reported reverts as green checks before this was caught. Worse, a
+call to an address with no code also returns status 1 and executes nothing, which is how the worker
+reported a day of releases as sent while delivering none: it was signing them on the wrong chain. The
+only honest test is reading back the state the transaction was meant to change.
 `apps/app/lib/comacard/tx.ts` is that rule written once.
 
 **The Envio deployment id is not the commit hash.** `2621060` built `24e4861`. They are the same

@@ -34,10 +34,6 @@ export const config = {
   /** The same, for the Wormhole vaults. */
   relayLookbackBlocks: Number(process.env.RELAY_LOOKBACK_BLOCKS ?? 5_000),
 
-  /** How many sweeps a release may go unaccepted before the worker stops
-   *  offering it. Past this it needs a person, not another transaction. */
-  relayMaxAttempts: Number(process.env.RELAY_MAX_ATTEMPTS ?? 3),
-
   /** Largest range a public RPC will answer. Base Sepolia refuses anything over
    *  10,000 with a 413; Creditcoin times out well before that. */
   logWindowBlocks: Number(process.env.LOG_WINDOW_BLOCKS ?? 9_000),

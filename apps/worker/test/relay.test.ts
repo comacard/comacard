@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { JsonRpcProvider, Wallet } from "ethers";
 import { creditcoin, vaults, type WormholeChainId } from "../src/config";
 import { queueFor } from "../src/relay";
@@ -63,5 +64,25 @@ describe("queueFor", () => {
     const waiting = new Set<bigint>();
     queueFor([3n], waiting, nothingDelivered);
     expect(queueFor([3n], waiting, nothingDelivered)).toEqual([3n]);
+  });
+});
+
+/**
+ * Deposits kept unsigned sequences across rounds from a38d3a0; releases did not,
+ * and read an unsigned release once. queueFor itself is tested above, so this
+ * only holds that sweepReleases goes through it rather than trusting that the
+ * edit which wired it landed.
+ */
+describe("release sweeping", () => {
+  const source = readFileSync(new URL("../src/relay.ts", import.meta.url), "utf8");
+  const body = source.split("async function sweepReleases(")[1]?.split("\n}\n")[0] ?? "";
+
+  test("an unsigned release is carried into later rounds, as a deposit is", () => {
+    expect(body).toContain("queueFor(");
+    expect(body).toContain("waiting.delete(sequence)");
+  });
+
+  test("a release that keeps failing is not dropped after a few rounds", () => {
+    expect(body).not.toContain("attempts");
   });
 });
