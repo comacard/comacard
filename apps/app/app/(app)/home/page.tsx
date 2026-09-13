@@ -97,7 +97,7 @@ function MobileHome() {
                 reaching for the same button twice should find it in the same place. */}
             <ActionPill
               primary
-              onClick={() => nav.forward("/spend")}
+              onClick={() => nav.forward("/send")}
               // Disabled while the limit is unknown, but not silently: four seconds of a greyed
               // control with no explanation reads as a refusal rather than a read in flight.
               disabled={creditLoading || (available ?? 0n) === 0n}

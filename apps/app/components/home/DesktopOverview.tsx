@@ -209,7 +209,7 @@ export function DesktopOverview() {
                 owes={owes}
                 canSpend={(available ?? 0n) > 0n}
                 checking={creditLoading}
-                onSpend={() => nav.forward("/spend")}
+                onSpend={() => nav.forward("/send")}
                 onRepay={() => nav.forward("/pay")}
                 onDeposit={() => open("deposit")}
               />

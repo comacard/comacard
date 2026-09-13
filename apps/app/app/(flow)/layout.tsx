@@ -25,7 +25,13 @@ import { useIsDesktop } from "../../hooks/useIsDesktop";
  * column is the only desktop-specific thing they need.
  */
 const RENDERS_ON_DESKTOP = (path: string): boolean =>
-  path.startsWith("/deposit/x/") || path.startsWith("/withdraw/x/");
+  path.startsWith("/deposit/x/") ||
+  path.startsWith("/withdraw/x/") ||
+  // `/send`, `/send/me` and `/send/to`. Send became a picker rather than a keypad, and there is no
+  // desktop drawer to redirect it to — a desktop visitor clicking Send would land back on Home,
+  // which is the loop `/deposit/x/[id]` was in before this list existed.
+  path === "/send" ||
+  path.startsWith("/send/");
 
 const PANEL_ROUTES: { match: (path: string) => boolean; to: string }[] = [
   {

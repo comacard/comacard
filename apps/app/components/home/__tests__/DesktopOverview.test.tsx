@@ -140,7 +140,7 @@ test("Spend and Deposit are both offered, and Spend goes to the full page", asyn
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Spend" }));
   // No desktop drawer exists for it, and the keypad takes a physical keyboard.
-  expect(push).toHaveBeenCalledWith("/spend");
+  expect(push).toHaveBeenCalledWith("/send");
 });
 
 test("an open balance leads with Repay without hiding Deposit", async () => {

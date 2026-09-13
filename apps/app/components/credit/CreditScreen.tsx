@@ -111,7 +111,7 @@ export function CreditScreen() {
           rather than hidden when nothing is owed: a control that vanishes teaches nobody that it
           is the second half. */}
       <div className="flex gap-3">
-        <Button size={isDesktop ? "md" : "lg"} onClick={() => nav.forward("/spend")}>
+        <Button size={isDesktop ? "md" : "lg"} onClick={() => nav.forward("/send")}>
           Spend
         </Button>
         <Button
