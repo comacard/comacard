@@ -1,9 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { type Address, formatUnits, parseUnits } from "viem";
 import { useConfig, useSwitchChain, useWriteContract } from "wagmi";
-import { readContract } from "wagmi/actions";
+import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteCollateral";
@@ -21,6 +21,15 @@ import {
   wormholeVaultAbi,
 } from "../../lib/comacard/contracts";
 import { amountFromValue, releasableValue } from "../../lib/comacard/credit";
+import {
+  EMPTY_PENDING,
+  forgetPending,
+  pendingFor,
+  pendingSnapshot,
+  rememberPending,
+  sequenceFromReceipt,
+  subscribePending,
+} from "../../lib/comacard/pendingRelease";
 import { awaitSuccess } from "../../lib/comacard/tx";
 import { CREDITCOIN_WORMHOLE_ID, fetchSignedVaa } from "../../lib/comacard/vaa";
 import {
@@ -116,6 +125,13 @@ export function ReleaseCollateral({ id }: { id: string }) {
   const [claimed, setClaimed] = useState(false);
   /** "fetching the signature" / "submitting it", so step two can report rather than just spin. */
   const [relaying, setRelaying] = useState<"idle" | "fetching" | "submitting">("idle");
+  /**
+   * Requests this browser has made and not yet seen arrive, read once after mount.
+   *
+   * State rather than a call during render: `localStorage` during render makes the render impure
+   * and would differ between the server's HTML and the client's first paint.
+   */
+  const pending = useSyncExternalStore(subscribePending, pendingSnapshot, () => EMPTY_PENDING);
 
   const asset = assets.find((a) => a.id.toLowerCase() === id.toLowerCase()) ?? null;
 
@@ -132,7 +148,18 @@ export function ReleaseCollateral({ id }: { id: string }) {
   // held ones, so a zero balance reaches here as a real asset and would otherwise be offered a
   // keypad that can only ever produce a disabled button. An approved-but-unclaimed release still
   // counts as something to do, even once the collateral has left the hub's books.
-  if (!asset || (asset.credited <= 0n && asset.releasable <= 0n)) {
+  /**
+   * A release this browser started and nothing on chain reports yet.
+   *
+   * `requestRelease` debits the hub at once and `releasable` only fills in when the signature is
+   * submitted, so between the two both figures read zero and the guard below concluded there was
+   * nothing here. That fired on a live withdrawal, with the money already out of the hub and the
+   * VAA already signed: the screen said "Nothing of yours is held" and hid the button that
+   * finishes it.
+   */
+  const mine = asset ? pendingFor(pending, asset.id) : null;
+
+  if (!asset || (asset.credited <= 0n && asset.releasable <= 0n && !mine)) {
     return (
       <div className="stagger">
         <SubHeader title="Withdraw" />
@@ -191,6 +218,22 @@ export function ReleaseCollateral({ id }: { id: string }) {
         chainId: CREDITCOIN_CHAIN_ID,
       });
       await awaitSuccess(config, sent, CREDITCOIN_CHAIN_ID);
+
+      // The sequence is in the receipt's `LogMessagePublished`, not in a return value: a contract's
+      // return is not in a receipt at all, and `writeContractAsync` hands back only a hash.
+      const receipt = await waitForTransactionReceipt(config, {
+        hash: sent,
+        chainId: CREDITCOIN_CHAIN_ID,
+      });
+      const sequence = sequenceFromReceipt(receipt.logs);
+      if (sequence !== null) {
+        rememberPending({
+          assetId: asset.id,
+          sequence: sequence.toString(),
+          amount: entered.toString(),
+        });
+      }
+
       setRequested(true);
       refresh();
       refreshWithdrawals();
@@ -213,17 +256,16 @@ export function ReleaseCollateral({ id }: { id: string }) {
   const onRelay = async () => {
     const chainId = asset?.evmChainId;
     const deployment = asset ? WORMHOLE_VAULTS[asset.wormholeChainId] : undefined;
-    if (!asset || !awaitingGuardians || !chainId || !deployment || !REMOTE_HUB) return;
+    // Either source will do. The indexer is authoritative when it has caught up; the local note is
+    // what makes this work in the first minute, which is when somebody is actually looking.
+    const sequence = awaitingGuardians?.sequence ?? (mine ? BigInt(mine.sequence) : null);
+    if (!asset || sequence === null || !chainId || !deployment || !REMOTE_HUB) return;
     if (relaying !== "idle") return;
 
     setFailed(null);
     try {
       setRelaying("fetching");
-      const vaa = await fetchSignedVaa(
-        CREDITCOIN_WORMHOLE_ID,
-        REMOTE_HUB,
-        awaitingGuardians.sequence,
-      );
+      const vaa = await fetchSignedVaa(CREDITCOIN_WORMHOLE_ID, REMOTE_HUB, sequence);
       if (!vaa) {
         setFailed(
           `The guardians have not signed this yet. On ${asset.chainName} that takes ${crossingTime(asset.wormholeChainId)}. Try again shortly.`,
@@ -242,6 +284,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
       });
       await awaitSuccess(config, sent, chainId);
 
+      forgetPending(asset.id);
       refresh();
       refreshWithdrawals();
     } catch (cause) {
@@ -249,6 +292,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
       // The worker beat us to it. Nothing is wrong and the collateral is now claimable, so refresh
       // rather than report: the next render is step 3.
       if (/AlreadyConsumed/.test(message)) {
+        forgetPending(asset.id);
         refresh();
         refreshWithdrawals();
         return;
@@ -354,14 +398,18 @@ export function ReleaseCollateral({ id }: { id: string }) {
    * `AlreadyConsumed` and this screen moves to step 3 either way, because step 3 keys off
    * `releasable` on the vault rather than off who submitted what.
    */
-  if ((requested || awaitingGuardians !== null) && asset.releasable <= 0n) {
+  if ((requested || awaitingGuardians !== null || mine !== null) && asset.releasable <= 0n) {
     return (
       <div className="flex min-h-[calc(100dvh-92px)] flex-col">
         <div className="flex flex-1 flex-col items-center justify-center">
           <TransactionStatus status="confirmed" size="large" />
-          {awaitingGuardians ? (
+          {awaitingGuardians || mine ? (
             <p className="mt-4 text-[15px] font-semibold tabular-nums">
-              {fmt(awaitingGuardians.amount, awaitingGuardians.decimals)} {symbol} on its way
+              {fmt(
+                awaitingGuardians ? awaitingGuardians.amount : BigInt(mine?.amount ?? "0"),
+                asset.decimals,
+              )}{" "}
+              {symbol} on its way
             </p>
           ) : null}
           <p className="mt-3 max-w-[300px] text-center text-[13px] leading-snug text-muted">
@@ -374,7 +422,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
         </div>
 
         <div className="mt-auto">
-          {awaitingGuardians ? (
+          {awaitingGuardians || mine ? (
             <Button onClick={onRelay} disabled={relaying !== "idle" || switching}>
               {switching ? (
                 `Switching to ${asset.chainName}…`
@@ -388,7 +436,7 @@ export function ReleaseCollateral({ id }: { id: string }) {
             </Button>
           ) : null}
           <p className="mt-2 text-center text-[12px] leading-snug text-muted">
-            {awaitingGuardians
+            {awaitingGuardians || mine
               ? "We relay this for you. If it has not moved, you can do it yourself: the relay checks the signature, not who sent it."
               : "Come back to this screen and the button to take it will be here."}
           </p>

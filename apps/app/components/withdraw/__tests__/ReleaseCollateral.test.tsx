@@ -298,3 +298,55 @@ test("the worker getting there first is not an error", async () => {
   // A success wearing an error's clothes: the release landed, just not from this wallet.
   await waitFor(() => expect(screen.queryByText(/AlreadyConsumed/)).toBeNull());
 });
+
+test("a request in flight is not an empty screen", () => {
+  // Found on Axel's live withdrawal. `requestRelease` debits the hub at once and `releasable` only
+  // fills in when the signature is submitted, so for that window both read zero and the guard
+  // concluded there was nothing here: "Nothing of yours is held on BSC Testnet", with the money
+  // already out of the hub and the VAA already signed, and the button that finishes it hidden.
+  remote.mockReturnValue({
+    assets: [{ ...ASSET, credited: 0n, releasable: 0n }],
+    loading: false,
+    refresh: vi.fn(),
+  });
+  withdrawals.mockReturnValue({ items: [], loading: false, error: false, refresh: vi.fn() });
+  window.localStorage.setItem(
+    "soro.release.pending.v1",
+    JSON.stringify([
+      { assetId: "0xabc", sequence: "8", amount: "10000000000000000", at: Date.now() },
+    ]),
+  );
+
+  render(<ReleaseCollateral id="0xabc" />);
+
+  expect(screen.queryByText(/Nothing of yours is held/i)).toBeNull();
+  expect(screen.getByRole("button", { name: /send it on yourself/i })).toBeInTheDocument();
+  window.localStorage.clear();
+});
+
+test("the local note carries the sequence when the indexer has not caught up", async () => {
+  const user = userEvent.setup();
+  remote.mockReturnValue({
+    assets: [{ ...ASSET, credited: 0n, releasable: 0n }],
+    loading: false,
+    refresh: vi.fn(),
+  });
+  // Indexer empty. This is the first minute after a request, which is when somebody is looking.
+  withdrawals.mockReturnValue({ items: [], loading: false, error: false, refresh: vi.fn() });
+  window.localStorage.setItem(
+    "soro.release.pending.v1",
+    JSON.stringify([
+      { assetId: "0xabc", sequence: "8", amount: "10000000000000000", at: Date.now() },
+    ]),
+  );
+  const fetchMock = vi.fn(async () => Response.json({ vaaBytes: "AQID" }));
+  vi.stubGlobal("fetch", fetchMock);
+
+  render(<ReleaseCollateral id="0xabc" />);
+  await user.click(screen.getByRole("button", { name: /send it on yourself/i }));
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+  const [url] = fetchMock.mock.calls[0] as unknown as [string];
+  expect(url).toMatch(/\/8$/);
+  window.localStorage.clear();
+});
