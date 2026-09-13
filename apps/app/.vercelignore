@@ -1,0 +1,20 @@
+# Vercel uploads this directory alone, so `.env` arrives as a symlink pointing at `../../.env`,
+# which is not in the upload and is gitignored anyway. Next stats it during `next build` and the
+# build dies with `ENOENT: no such file or directory, stat '/vercel/path0/.env'`, which names the
+# file without explaining that the problem is the target rather than the link.
+#
+# Excluding it is the fix rather than a workaround: on Vercel the values come from the project's
+# environment variables, so the file has no job there. It stays tracked in git because locally it
+# is how `next dev` finds the repository-root `.env` without a flag.
+.env
+
+# `.vercelignore` replaces `.gitignore` for uploads rather than adding to it, so everything that
+# must not travel has to be named here too.
+node_modules
+.next
+.turbo
+coverage
+test-results
+playwright-report
+*.tsbuildinfo
+.DS_Store
