@@ -36,9 +36,9 @@ Both adapters register the `eip155` namespace and installing the pair breaks con
 silently.
 
 `lib/wallet.ts` is the seam: four functions (`connect`, `getAddress`, `getWalletId`, `disconnect`)
-that `WalletProvider` and every screen already consume. It was five: `signTransaction` took an XDR,
-was there for a mock vault client that no longer exists, and no screen ever called it. Swapping
-ethers for wagmi touched no component because of it. New code can use wagmi hooks directly.
+that `WalletProvider` and every screen already consume. It was five: `signTransaction` took an
+envelope format nothing here produces, was there for a mock vault client that no longer exists, and
+no screen ever called it. Swapping ethers for wagmi touched no component because of it. New code can use wagmi hooks directly.
 
 **Everything from `@reown/*` and `wagmi/actions` is imported dynamically**, and that is load-bearing,
 not style. `WalletProvider` is a client component, so Next evaluates it on the server too, and a

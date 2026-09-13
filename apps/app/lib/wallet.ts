@@ -6,9 +6,9 @@ export { USER_CLOSED_MODAL, WalletError } from "./wallet-error";
 // `real` is Reown AppKit (`wallet-reown.ts`); `e2e` is a stub that signs without a prompt.
 //
 // Four functions, not five. `signTransaction` used to sit here and is gone: its only caller was a
-// mock vault client from the product this app was ported from, it took an XDR that nothing in this
-// codebase produces, and no screen ever called it. Creditcoin writes do not come through this seam
-// at all, they are `writeContract` calls in `lib/comacard/contracts.ts`.
+// mock vault client from the product this app was ported from, it took an envelope format that
+// nothing in this codebase produces, and no screen ever called it. Creditcoin writes do not come
+// through this seam at all, they are `writeContract` calls in `lib/comacard/contracts.ts`.
 
 /**
  * Next inlines NEXT_PUBLIC_* at build time, so in a production build this reads `"" === "1"` and every
