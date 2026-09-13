@@ -65,29 +65,3 @@ export async function expectDesktopHome(page: Page): Promise<void> {
   // Nothing from the product this was ported from should survive on this screen.
   await expect(page.getByText(/\b(bucket|APY|sentinel)\b/i)).toHaveCount(0);
 }
-
-/**
- * Desktop deposit: the hero "Deposit" opens a right drawer (role=dialog "Deposit"), not a route.
- * Pick the coin inside the drawer, fill the <input> (not the numpad), Deposit → the one-time consent
- * Dialog → success stays in the drawer until the final action. Caller must already be on desktop
- * /home.
- */
-export async function depositViaDrawer(
-  page: Page,
-  coin: "tUSDC" | "tUSDT" | "ETH",
-  amount: string,
-): Promise<void> {
-  await page.getByRole("button", { name: "Deposit" }).click();
-  const drawer = page.getByRole("dialog", { name: "Deposit" });
-  await expect(drawer).toBeVisible();
-  await drawer.getByRole("button", { name: new RegExp(`^${coin}`) }).click();
-  await expect(drawer.getByText(`Deposit ${coin}`)).toBeVisible();
-  await drawer.getByLabel("Amount").fill(amount);
-  await drawer.getByRole("button", { name: "Deposit" }).click();
-  const consent = page.getByRole("dialog", { name: "Approve automatic earning" });
-  await expect(consent).toBeVisible();
-  await consent.getByRole("button", { name: "Agree & sign" }).click();
-  await expect(drawer.getByText("Deposit Success")).toBeVisible();
-  await drawer.getByRole("button", { name: "Back to Home" }).click();
-  await expect(drawer).toBeHidden();
-}

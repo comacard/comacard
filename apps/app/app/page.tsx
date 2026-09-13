@@ -228,7 +228,11 @@ function ConnectScreen({
           </div>
           <div className={styles.tourCopy}>
             <h1>Connect your wallet</h1>
-            <p>Link your wallet to start earning in the app.</p>
+            {/* "open your card", not "start earning". The old line promised a yield this product
+                does not pay, on the last screen before somebody decides. It survived the sweep that
+                removed the ported product's name because the name was what the sweep looked for and
+                the promise is not a name. */}
+            <p>Link your wallet to open your card.</p>
             <Stepper current={3} total={TOUR.length + 1} />
           </div>
         </section>
