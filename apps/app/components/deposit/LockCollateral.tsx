@@ -70,7 +70,7 @@ export function LockCollateral({ sym }: { sym: string }) {
   if (loading) {
     return (
       <div className="flex flex-1 flex-col">
-        <SubHeader title="Lock collateral" />
+        <SubHeader title="Deposit" />
         <Skeleton className="h-16 w-full rounded-[16px]" />
         <Skeleton className="mt-3 h-[300px] w-full rounded-[16px]" />
       </div>
@@ -82,7 +82,7 @@ export function LockCollateral({ sym }: { sym: string }) {
   if (!asset) {
     return (
       <div className="flex flex-1 flex-col">
-        <SubHeader title="Lock collateral" />
+        <SubHeader title="Deposit" />
         <p className="mt-6 text-center text-[13px] text-muted">
           {sym.toUpperCase()} is not accepted as collateral.
         </p>
@@ -162,7 +162,7 @@ export function LockCollateral({ sym }: { sym: string }) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <SubHeader title={`Lock ${asset.symbol}`} />
+      <SubHeader title={`Deposit ${asset.symbol}`} />
 
       <div className="mb-3 flex items-center gap-3 rounded-[16px] border border-line bg-white px-4 py-3 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
         <CoinBadge token={badgeForSymbol(asset.symbol)} size={34} />
@@ -246,7 +246,7 @@ export function LockCollateral({ sym }: { sym: string }) {
                 {busy ? (
                   <PendingLabel status={txStatus === "confirming" ? "confirming" : "signing"} />
                 ) : (
-                  `Lock ${asset.symbol}`
+                  "Deposit"
                 )}
               </Button>
             ) : (

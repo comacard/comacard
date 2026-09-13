@@ -74,7 +74,7 @@ export function DepositQr({
               // Q corrects a quarter of the code, which is the level to use when the thing being
               // scanned is a screen someone is holding at an angle.
               level="Q"
-              title={`Lock ${amount} on ${chainName}`}
+              title={`Deposit ${amount} on ${chainName}`}
             />
           </div>
 

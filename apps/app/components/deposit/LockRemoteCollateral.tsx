@@ -9,7 +9,6 @@ import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteColl
 import { useWallet } from "../../hooks/useWallet";
 import { quickAmount } from "../../lib/comacard/amount";
 import {
-  crossingTime,
   erc20Abi,
   NATIVE_SYMBOL,
   wormholeCoreAbi,
@@ -100,7 +99,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   if (loading) {
     return (
       <div className="flex flex-1 flex-col">
-        <SubHeader title="Lock collateral" />
+        <SubHeader title="Deposit" />
         <Skeleton className="h-16 w-full rounded-[16px]" />
         <Skeleton className="mt-3 h-[300px] w-full rounded-[16px]" />
       </div>
@@ -110,7 +109,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
   if (!asset?.vault || asset.evmChainId === null) {
     return (
       <div className="flex flex-1 flex-col">
-        <SubHeader title="Lock collateral" />
+        <SubHeader title="Deposit" />
         <p className="mt-6 text-center text-[13px] text-muted">
           That asset is not accepted as collateral.
         </p>
@@ -243,13 +242,6 @@ export function LockRemoteCollateral({ id }: { id: string }) {
             size="large"
             href={hash && asset.explorer ? `${asset.explorer}/tx/${hash}` : undefined}
           />
-          {/* The one thing this screen exists to say. Without it the wait that follows looks like a
-              deposit that did not work. */}
-          <p className="mt-5 max-w-[280px] text-center text-[13px] leading-snug text-muted">
-            Your {symbol} is locked on {asset.chainName}. It takes{" "}
-            {crossingTime(asset.wormholeChainId)} to be signed across to Creditcoin, and your limit
-            moves then.
-          </p>
         </div>
         <Button
           onClick={() => {
@@ -266,7 +258,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <SubHeader title={`Lock ${symbol}`} />
+      <SubHeader title={`Deposit ${symbol}`} />
 
       <div className="mb-3 flex items-center gap-3 rounded-[16px] border border-line bg-white px-4 py-3 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
         <AssetIcon chainName={asset.chainName}>
@@ -321,13 +313,9 @@ export function LockRemoteCollateral({ id }: { id: string }) {
             // the signature it is waiting on.
             <PendingLabel status="signing" />
           ) : (
-            `Lock ${symbol}`
+            "Deposit"
           )}
         </Button>
-        <p className="mt-2 text-center text-[12px] leading-snug text-muted">
-          Signed across to Creditcoin in {crossingTime(asset.wormholeChainId)}. Your {symbol} stays
-          on {asset.chainName}.
-        </p>
 
         {/*
           Native only, and only once there is an amount and a fee.
