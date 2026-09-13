@@ -10,6 +10,7 @@ import {
   wormholeCoreAbi,
   wormholeVaultAbi,
 } from "../lib/comacard/contracts";
+import { pollInterval } from "../lib/comacard/polling";
 import {
   arbitrumSepolia,
   avalancheFuji,
@@ -181,7 +182,12 @@ export function useRemoteCollateral(): {
   const result = useQuery({
     queryKey: ["comacard", "remote-collateral", wallet],
     enabled: Boolean(wallet && REMOTE_HUB),
-    refetchInterval: 30_000,
+    /* Fast while a lock is still being signed across, slow when the list is settled. The wait is
+       under a minute on BSC and Fuji and fifteen to twenty on the three L2s, so the fast rate is
+       the one that matters for the first pair and merely harmless for the second. */
+    refetchInterval: (query) =>
+      pollInterval((query.state.data?.assets ?? []).some((a) => a.pending)),
+    refetchOnWindowFocus: true,
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a fetch-with-cancellation effect body; the branching is the cancelled/error/empty handling the pattern requires
     queryFn: async (): Promise<{ assets: RemoteAsset[]; totalValue: bigint }> => {
       const who = wallet as Address;

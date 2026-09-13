@@ -2,6 +2,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { type ComacardAccount, comacardApiEnabled, getAccount } from "../lib/comacard/api";
+import { pollInterval } from "../lib/comacard/polling";
 import { useWallet } from "./useWallet";
 
 /**
@@ -41,10 +42,18 @@ export function useCardAccount() {
   const query = useQuery({
     queryKey: [...KEY, address ?? null],
     enabled: canFetch,
-    // The card's own state, not a market figure. Refetching it on every focus is what the explicit
-    // `refresh` after a Didit round trip is for.
-    refetchOnWindowFocus: false,
-    staleTime: 30_000,
+    /*
+      This did not refetch at all, and that is what made the screen look frozen: a deposit landing
+      is a change on somebody else's clock, and `pendingDeposits` is the only place the app learns
+      it happened. A holder watching the Incoming card saw it spin until they reloaded the page.
+
+      Focus counts as a reason to re-ask now. The old comment said the explicit `refresh` after a
+      Didit round trip covered that, which is true of KYC and of nothing else on this response.
+    */
+    refetchInterval: (query) =>
+      pollInterval((query.state.data?.account?.pendingDeposits ?? []).length > 0),
+    refetchOnWindowFocus: true,
+    staleTime: 10_000,
     queryFn: async (): Promise<{ account: ComacardAccount | null; error: string | null }> => {
       const result = await getAccount(address as string);
       // Resolved rather than thrown: a backend that answered "no account" and a backend that could

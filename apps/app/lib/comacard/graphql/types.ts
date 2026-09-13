@@ -125,7 +125,7 @@ export type WalletTransactionsResult = {
     creditedAt: string | null;
     lockTxHash: string;
     creditTxHash: string | null;
-    asset: { wormholeChainId: number; decimals: number } | null;
+    asset: { wormholeChainId: number; decimals: number; token: string } | null;
   }[];
   RemoteWithdrawal: {
     id: string;
@@ -134,6 +134,6 @@ export type WalletTransactionsResult = {
     withdrawnAt: string | null;
     requestTxHash: string;
     withdrawTxHash: string | null;
-    asset: { wormholeChainId: number; decimals: number } | null;
+    asset: { wormholeChainId: number; decimals: number; token: string } | null;
   }[];
 };

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Address } from "viem";
 import {
   useAccount,
@@ -20,6 +20,7 @@ import {
   sourceVaultAbi,
   testTokenAbi,
 } from "../lib/comacard/contracts";
+import { POLL_ACTIVE, pollInterval } from "../lib/comacard/polling";
 import { awaitSuccess } from "../lib/comacard/tx";
 
 /**
@@ -56,13 +57,46 @@ export function useCreditLine() {
   // firing at `undefined` and surfacing a confusing RPC error.
   const enabled = Boolean(address && CREDIT_LINE && SOURCE_VAULT);
 
+  /*
+    `locked` is read first because it paces the four reads below it.
+
+    Nothing here is pushed. A deposit finishing its crossing, a relay delivering a message, an
+    operator approving a release: every one of them moves these figures without telling the browser,
+    so a screen that asks once is a screen that is right once. The limit sat at zero for hours after
+    a deposit landed because nothing re-asked.
+
+    The pace is the state rather than the clock. `locked > proved` means Attestcoin is still
+    carrying something across, which is exactly when somebody is watching the screen, so the reads
+    speed up while that is true and go quiet again when it is not. A Creditcoin call takes about
+    four seconds and there are four of them here, so a flat fast interval would keep a request in
+    flight more or less permanently for a figure that usually does not move for hours.
+  */
+  const locked = useReadContract({
+    address: SOURCE_VAULT,
+    abi: sourceVaultAbi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: SEPOLIA_CHAIN_ID,
+    query: { enabled, refetchInterval: POLL_ACTIVE, refetchOnWindowFocus: true },
+  });
+
+  /*
+    The pacing flag is state rather than a derived const, and that is a language constraint rather
+    than a preference: `accountOf` is read below and `query` has to exist above it, so the value
+    cannot be computed inline. The effect at the end of this hook sets it, so each round is paced by
+    what the previous round saw. That is the correct lag: the round that first reads them equal is
+    the round that stops hurrying.
+  */
+  const [crossing, setCrossing] = useState(false);
+  const query = { enabled, refetchInterval: pollInterval(crossing), refetchOnWindowFocus: true };
+
   const limit = useReadContract({
     address: CREDIT_LINE,
     abi: creditLineAbi,
     functionName: "limitOf",
     args: address ? [address] : undefined,
     chainId: CREDITCOIN_CHAIN_ID,
-    query: { enabled },
+    query,
   });
 
   const available = useReadContract({
@@ -71,7 +105,7 @@ export function useCreditLine() {
     functionName: "availableOf",
     args: address ? [address] : undefined,
     chainId: CREDITCOIN_CHAIN_ID,
-    query: { enabled },
+    query,
   });
 
   const score = useReadContract({
@@ -80,7 +114,7 @@ export function useCreditLine() {
     functionName: "scoreOf",
     args: address ? [address] : undefined,
     chainId: CREDITCOIN_CHAIN_ID,
-    query: { enabled },
+    query,
   });
 
   /**
@@ -96,16 +130,7 @@ export function useCreditLine() {
     functionName: "accountOf",
     args: address ? [address] : undefined,
     chainId: CREDITCOIN_CHAIN_ID,
-    query: { enabled },
-  });
-
-  const locked = useReadContract({
-    address: SOURCE_VAULT,
-    abi: sourceVaultAbi,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    chainId: SEPOLIA_CHAIN_ID,
-    query: { enabled },
+    query,
   });
 
   const { writeContractAsync, data: hash, isPending, error, reset } = useWriteContract();
@@ -293,6 +318,23 @@ export function useCreditLine() {
           : isPending
             ? "signing"
             : null;
+
+  /*
+    What paces the reads above, set from what they last returned.
+
+    `locked` is the Sepolia vault's balance for this wallet and `accountOf.collateral` is what
+    Attestcoin has proved on Creditcoin. While the first is larger, something is crossing and
+    somebody is probably watching the screen for it to land.
+
+    Not `useMemo`: the reads above have to see the flag, and state is what survives from one render
+    to the next. It only writes when the boolean actually flips, so this settles in one extra render
+    per transition rather than looping.
+  */
+  const proved = account.data?.collateral ?? 0n;
+  const isCrossing = (locked.data ?? 0n) > proved;
+  useEffect(() => {
+    setCrossing((was) => (was === isCrossing ? was : isCrossing));
+  }, [isCrossing]);
 
   return {
     address,

@@ -130,14 +130,35 @@ function attestcoinRows(data: WalletTransactionsResult, rows: Raw[]): void {
   }
 }
 
-/** Chain name, native symbol and explorer for a Wormhole chain id, in one read. */
-function remoteChain(wormholeChainId: number): {
+/** The zero address is how a vault names its own chain's coin. Anything else is an ERC20. */
+const NATIVE_TOKEN = "0x0000000000000000000000000000000000000000";
+
+/**
+ * Chain name, asset symbol and explorer for one remote asset, in one read.
+ *
+ * **The symbol has to come from the asset, not from the chain.** This used to return
+ * `NATIVE_SYMBOL[chainId]` unconditionally, so every ERC20 that crossed was labelled with the coin
+ * its chain pays gas in: a 12 USDC deposit from Base Sepolia read "12.00 ETH now backs your credit
+ * limit" in the feed, which is a different asset and, at that moment, about forty thousand dollars
+ * of difference. The chain has more than one asset and the code assumed it had one, which is the
+ * mistake this repository's notes say it keeps making.
+ *
+ * The ERC20 branch answering "USDC" is a shortcut, and it is the same shortcut `CollateralList` and
+ * `DesktopOverview` already take: every non-native asset listed on the hub today is USDC. The
+ * indexer's `RemoteAsset` carries the address but no symbol, so telling a second stablecoin apart
+ * would need an address map that does not exist yet. Listing one is the point at which to build it.
+ */
+function remoteChain(
+  wormholeChainId: number,
+  token?: string,
+): {
   sym: string;
   chain: string;
   evmChainId: number | undefined;
 } {
+  const native = token === undefined || token.toLowerCase() === NATIVE_TOKEN;
   return {
-    sym: NATIVE_SYMBOL[wormholeChainId] ?? "ETH",
+    sym: native ? (NATIVE_SYMBOL[wormholeChainId] ?? "ETH") : "USDC",
     chain: WORMHOLE_CHAIN_NAMES[wormholeChainId] ?? "another chain",
     evmChainId: WORMHOLE_VAULTS[wormholeChainId]?.evmChainId,
   };
@@ -155,7 +176,7 @@ function remoteDepositRows(data: WalletTransactionsResult, rows: Raw[]): void {
     // A mid-sync read: the deposit row landed and its asset row has not. Without decimals the
     // amount cannot be shown, and assuming 18 misprices a 6-decimal stablecoin by a trillion.
     if (d.asset === null) continue;
-    const { sym, chain, evmChainId } = remoteChain(d.asset.wormholeChainId);
+    const { sym, chain, evmChainId } = remoteChain(d.asset.wormholeChainId, d.asset.token);
     const shown = amount(d.amount, sym, d.asset.decimals);
     rows.push({
       at: Number(d.lockedAt) * 1000,
@@ -189,7 +210,7 @@ function remoteDepositRows(data: WalletTransactionsResult, rows: Raw[]): void {
 function remoteWithdrawalRows(data: WalletTransactionsResult, rows: Raw[]): void {
   for (const w of data.RemoteWithdrawal) {
     if (w.asset === null) continue;
-    const { sym, chain, evmChainId } = remoteChain(w.asset.wormholeChainId);
+    const { sym, chain, evmChainId } = remoteChain(w.asset.wormholeChainId, w.asset.token);
     const shown = amount(w.amount, sym, w.asset.decimals);
     rows.push({
       at: Number(w.requestedAt) * 1000,

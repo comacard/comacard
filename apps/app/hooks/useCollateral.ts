@@ -9,6 +9,7 @@ import {
   sourceVaultAbi,
   testTokenAbi,
 } from "../lib/comacard/contracts";
+import { pollInterval } from "../lib/comacard/polling";
 import { useWallet } from "./useWallet";
 
 /**
@@ -50,7 +51,16 @@ export type CollateralAsset = {
   available: bigint;
   /** Credit-asset wei per ONE WHOLE unit, 18dp. */
   price: bigint;
-  /** True while a lock has not finished crossing. */
+  /**
+   * True while a lock has not finished crossing, and only then.
+   *
+   * It used to be `locked > proved`, which is true of two states that have nothing to do with each
+   * other. One is a fresh deposit waiting on Attestcoin. The other is a deposit that crossed, was
+   * used as collateral, and has since been released: `approveTokenRelease` debits the proof at
+   * approval time while the tokens stay in the vault until the holder claims them, so `proved`
+   * falls to zero while `locked` does not. The screen reported 50 tUSDC as "still crossing" for
+   * hours after it had finished crossing and been cleared to leave.
+   */
   crossing: boolean;
   /** True when the token exposes `TestToken.faucet`, so a zero balance is not a dead end. */
   faucetable: boolean;
@@ -85,7 +95,17 @@ export function useCollateral(): {
   const result = useQuery({
     queryKey: ["comacard", "collateral", wallet],
     enabled: Boolean(wallet && CREDIT_LINE && SOURCE_VAULT),
-    refetchInterval: 30_000,
+    /*
+      Paced by what the last answer said, not by a fixed clock.
+
+      `refetchInterval` takes the query, so this reads the assets it just fetched: while any of them
+      is still crossing, somebody is watching the screen for it to land and ten seconds is the right
+      answer. When none is, this is a list that changes when its owner does something, and a minute
+      is plenty.
+    */
+    refetchInterval: (query) =>
+      pollInterval((query.state.data?.assets ?? []).some((a) => a.crossing)),
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<{ assets: CollateralAsset[]; totalValue: bigint }> => {
       const who = wallet as Address;
       const line = CREDIT_LINE as Address;
@@ -194,7 +214,9 @@ export function useCollateral(): {
             proved,
             available,
             price,
-            crossing: locked > proved,
+            // Not `locked > proved` alone. An approved release leaves tokens in the vault with
+            // nothing proved against them, which is the same arithmetic and the opposite meaning.
+            crossing: locked > proved && releasable === 0n,
             faucetable: faucetLimit,
             releasable,
           };
@@ -216,7 +238,8 @@ export function useCollateral(): {
         price: nativePrice,
         // Sepolia ETH has no faucet this app can call: it comes from Google Cloud's, off-site.
         faucetable: false,
-        crossing: nativeLocked > nativeProved,
+        // Same rule as the tokens above: an approved release is not a crossing.
+        crossing: nativeLocked > nativeProved && nativeReleasable === 0n,
         releasable: nativeReleasable,
       };
 

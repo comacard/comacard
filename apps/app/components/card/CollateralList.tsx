@@ -162,9 +162,23 @@ export function CollateralList({
       badge: BADGE[asset.symbol] ?? ("CTC" as TokenSym),
       chainName: "Sepolia",
       symbol: asset.symbol,
+      /*
+        Three states, not two, and the third used to be printed as the first.
+
+        Crossing is a deposit Attestcoin has not proved yet. Cleared is a release the operator has
+        approved: the proof is already debited and the tokens are waiting in the vault for the
+        holder to claim them. Both satisfy `locked > proved`, and reporting the second as "still
+        crossing" told somebody their money was on its way in when it was on its way out.
+
+        "Ready to withdraw" is the sentence `ReleaseSepolia` already shows for this exact state, so
+        this is the app's existing word rather than a new one, and it is not a warning: there is
+        nothing wrong, there is something to collect.
+      */
       note: asset.crossing
         ? `${amount(asset.locked - asset.proved, asset.decimals, asset.symbol)} still crossing`
-        : ATTESTCOIN_NETWORK,
+        : asset.releasable > 0n
+          ? `${amount(asset.releasable, asset.decimals, asset.symbol)} ready to withdraw`
+          : ATTESTCOIN_NETWORK,
       noteWarn: asset.crossing,
       held: amount(asset.proved, asset.decimals, asset.symbol),
       value: valueLabel(asset.proved, asset.decimals, asset.symbol, asset.price, prices),

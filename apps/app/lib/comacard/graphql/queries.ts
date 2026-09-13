@@ -159,7 +159,7 @@ query WalletTransactions($wallet: String!, $limit: Int = 30) {
     limit: $limit
   ) {
     id amount lockedAt creditedAt lockTxHash creditTxHash
-    asset { wormholeChainId decimals }
+    asset { wormholeChainId decimals token }
   }
   RemoteWithdrawal(
     where: { account: { _eq: $wallet } }
@@ -167,7 +167,7 @@ query WalletTransactions($wallet: String!, $limit: Int = 30) {
     limit: $limit
   ) {
     id amount requestedAt withdrawnAt requestTxHash withdrawTxHash
-    asset { wormholeChainId decimals }
+    asset { wormholeChainId decimals token }
   }
 }
 `;
