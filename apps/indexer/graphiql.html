@@ -68,7 +68,7 @@
 
       // Every Envio deployment gets its own URL, so this has to be replaceable
       // without editing the file. ?endpoint= wins, then whatever was used last.
-      const FALLBACK = 'https://indexer.dev.hyperindex.xyz/5d01570/v1/graphql';
+      const FALLBACK = 'https://indexer.dev.hyperindex.xyz/8c13372/v1/graphql';
       const url = new URLSearchParams(location.search).get('endpoint')
         || localStorage.getItem('comacard.endpoint')
         || FALLBACK;
