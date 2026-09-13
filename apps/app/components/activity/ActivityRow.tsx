@@ -1,4 +1,4 @@
-import type { ActivityItem } from "../../lib/vault/data";
+import type { ActivityItem } from "../../lib/comacard/activity";
 
 function humanize(item: ActivityItem): { title: string; description: string } {
   switch (item.kind) {

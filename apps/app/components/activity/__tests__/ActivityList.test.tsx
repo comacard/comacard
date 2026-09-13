@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import type { ActivityItem } from "../../../lib/vault/data";
+import type { ActivityItem } from "../../../lib/comacard/activity";
 import { ActivityList } from "../ActivityList";
 
 const items: ActivityItem[] = [

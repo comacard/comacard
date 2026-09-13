@@ -23,4 +23,3 @@ export { SHELL } from "./shell";
 export { Toast } from "./Toast";
 export { TopBlur } from "./TopBlur";
 export { TransactionStatus, TX_LABEL, type TxStatus } from "./TransactionStatus";
-export { TransferStatus } from "./TransferStatus";

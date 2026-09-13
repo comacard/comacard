@@ -2,7 +2,6 @@
    they appear; next/image defers them, and one mishandles a local SVG. The biome-ignore
    comments below have to sit directly above each tag, so a second next-line directive
    cannot also be there — hence file scope. */
-import type { Currency } from "@sorosense/vault-client";
 
 /**
  * The stablecoin whose brand logo represents each currency bucket, plus CTC. CTC is Creditcoin's
@@ -11,6 +10,10 @@ import type { Currency } from "@sorosense/vault-client";
  */
 export type TokenSym = "USDC" | "USDT" | "EURC" | "CETES" | "CTC" | "ETH";
 
+/** The three fiat codes the Stellar port shipped with. Declared here rather than imported from the
+ *  vault client: it is three string literals, and importing them was the last thing tying a live UI
+ *  component to that package. Only `currency` callers reach this map, and none remain in Comacard. */
+type Currency = "USD" | "EUR" | "MXN";
 const CURRENCY_TOKEN: Record<Currency, TokenSym> = { USD: "USDC", EUR: "EURC", MXN: "CETES" };
 
 // Official token logos under /public/tokens (USDC → Circle SVG, USDT → Tether, EURC → Circle,

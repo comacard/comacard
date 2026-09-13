@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ActivityItem } from "../../../lib/vault/data";
+import type { ActivityItem } from "../../../lib/comacard/activity";
 import { ActivityDrawer } from "../ActivityDrawer";
 
 /**

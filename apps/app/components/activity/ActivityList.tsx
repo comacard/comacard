@@ -1,4 +1,4 @@
-import type { ActivityItem } from "../../lib/vault/data";
+import type { ActivityItem } from "../../lib/comacard/activity";
 import { Skeleton } from "../ui";
 import { ActivityRow } from "./ActivityRow";
 

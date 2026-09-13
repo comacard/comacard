@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { switzer } from "../lib/fonts";
 import { ToastProvider } from "../providers/ToastProvider";
-import { VaultProvider } from "../providers/VaultProvider";
 import { WalletProvider } from "../providers/WalletProvider";
 import { Web3Provider } from "../providers/Web3Provider";
 
@@ -35,9 +34,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <Web3Provider cookies={cookies}>
           <WalletProvider>
-            <VaultProvider>
-              <ToastProvider>{children}</ToastProvider>
-            </VaultProvider>
+            <ToastProvider>{children}</ToastProvider>
           </WalletProvider>
         </Web3Provider>
       </body>

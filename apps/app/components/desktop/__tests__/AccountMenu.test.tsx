@@ -1,8 +1,6 @@
-import { MockVaultClient } from "@sorosense/vault-client";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "../../../providers/ToastProvider";
-import { VaultProvider } from "../../../providers/VaultProvider";
 import { AccountMenu } from "../AccountMenu";
 
 const push = vi.fn();
@@ -54,13 +52,11 @@ beforeEach(() => {
   });
 });
 
-function open(client = new MockVaultClient()) {
+function open() {
   render(
-    <VaultProvider client={client}>
-      <ToastProvider>
-        <AccountMenu />
-      </ToastProvider>
-    </VaultProvider>,
+    <ToastProvider>
+      <AccountMenu />
+    </ToastProvider>,
   );
   const user = userEvent.setup();
   // jsdom exposes `navigator.clipboard` as a read-only getter in this version — Object.assign

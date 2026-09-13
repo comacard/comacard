@@ -51,6 +51,7 @@ export default function AccountPage() {
         <div className="pb-1.5 pt-3.5 text-center">
           <Identicon address={address} />
           <button
+            type="button"
             onClick={copy}
             className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#EAEAEA] px-3 font-mono text-[13px] font-medium text-ink-2 transition-colors hover:bg-line"
           >
@@ -75,7 +76,11 @@ export default function AccountPage() {
         <section className="mt-5">
           <h2 className="ml-1 mb-2.5 text-sm font-medium text-muted">General</h2>
           <div>
-            <button onClick={() => nav.forward("/transactions")} className={mobilePanel}>
+            <button
+              type="button"
+              onClick={() => nav.forward("/transactions")}
+              className={mobilePanel}
+            >
               <svg
                 width="22"
                 height="22"

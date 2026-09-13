@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { usePendingExit } from "../../hooks/usePendingExit";
 import { useTransactions } from "../../hooks/useTransactions";
 import { ActivityList } from "../activity/ActivityList";
 import { Segmented } from "../ui";
@@ -46,7 +45,6 @@ export function ActivityDrawer({
   onReview: () => void;
 }) {
   const { loading, items } = useTransactions();
-  const pend = usePendingExit();
   const [tab, setTab] = useState<Tab>("All");
   const cat = TAB_CAT[tab];
   const shown = cat === null ? items : items.filter((a) => a.group === cat);
@@ -56,11 +54,13 @@ export function ActivityDrawer({
       <div className="flex items-center justify-between border-b border-line px-[22px] pb-3.5 pt-5">
         <span className="text-[17px] font-semibold">Activity</span>
         <button
+          type="button"
           aria-label="Close"
           onClick={onClose}
           className="grid h-[34px] w-[34px] place-items-center rounded-full bg-pill text-ink-2"
         >
           <svg
+            aria-hidden="true"
             width="17"
             height="17"
             viewBox="0 0 24 24"
@@ -80,7 +80,10 @@ export function ActivityDrawer({
             items={shown}
             loading={loading}
             onReview={onReview}
-            reviewed={!pend}
+            // Always reviewed: `usePendingExit` was the SoroSense safe-exit seam, and this product has no
+            // proposal for anyone to approve. Leaving the flag wired to a deleted hook would have been
+            // the only reason to keep that hook alive.
+            reviewed
             divider={false}
             emptyTitle={empty.title}
             emptyDescription={empty.description}
