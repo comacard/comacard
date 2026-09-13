@@ -42,11 +42,20 @@ export function CountUp({
   useEffect(() => {
     const from = fromRef.current;
     const to = value;
+    /**
+     * One question, asked the same way in the browser and under test.
+     *
+     * This also checked `NODE_ENV === "test"`, which meant the component disabled its own animation
+     * whenever a test ran: every assertion saw the settled figure while the browser could see a
+     * stalled one, and the bug that stranded a limit at "0 tCTC" was structurally untestable.
+     * `vitest.setup.ts` already shims `matchMedia` to report reduced motion, so the test
+     * environment still reads final text by default, and a test that wants the animated path can
+     * now stub `matchMedia` to get it.
+     */
     const reduce =
-      process.env.NODE_ENV === "test" ||
-      (typeof window !== "undefined" &&
-        typeof window.matchMedia === "function" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (
       from === to ||
       reduce ||
@@ -67,7 +76,28 @@ export function CountUp({
       else fromRef.current = to;
     };
     rafRef.current = requestAnimationFrame(tick);
+
+    /**
+     * The figure lands on `value` whether or not the animation finishes.
+     *
+     * Added because a real one did not. Mounted with a placeholder 0 and then handed the true
+     * balance, this component stayed at 0 indefinitely in the dev browser: the Credit limit read
+     * "0 tCTC" against a chain reporting 41.4594, and the wallet rows read "0 tCTC" against 7,998.
+     * Removing the placeholder mount fixed both, and I could not reproduce the stall from reading
+     * the code, so this is a guarantee rather than a diagnosis. On a screen that states what
+     * somebody's money is, an animation that can strand a figure part-way is not acceptable even
+     * if the cause is unclear.
+     *
+     * It fires one frame past the end of the tween, so a completed animation overwrites itself with
+     * the value it already reached and nothing is visible.
+     */
+    const settle = setTimeout(() => {
+      setDisplay(to);
+      fromRef.current = to;
+    }, dur + 80);
+
     return () => {
+      clearTimeout(settle);
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [value]);

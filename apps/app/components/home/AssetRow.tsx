@@ -14,6 +14,9 @@ import { CoinBadge } from "../ui";
  * read every time they open the app; `asset.network` is still carried for screens that do.
  */
 const amountText = (asset: WalletAsset): string => {
+  // A balance that has not been read is a dash. Printing "0.00 tCTC" for it states that the wallet
+  // is empty, which is a claim about someone's money made by a row that never got an answer.
+  if (asset.amount === undefined) return `— ${asset.symbol}`;
   const n = toNumber(asset.amount, asset.decimals);
   // Four decimals for anything small enough that two would round it to nothing.
   const digits = n > 0 && n < 1 ? 4 : 2;

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { CountUp } from "../CountUp";
 
 /**
@@ -43,4 +43,32 @@ test("a changed value lands on the new figure", () => {
 
   rerender(<CountUp value={42} format={(n) => `${Math.round(n)}`} />);
   expect(screen.getByText("42")).toBeInTheDocument();
+});
+
+test("a stranded animation still settles on the value", async () => {
+  // The guarantee, not the diagnosis. A real instance of this component sat at a placeholder zero
+  // indefinitely in the browser while holding a value of 41.4594, and the stall could not be
+  // reproduced from reading the code. On a screen that states what somebody's money is, an
+  // animation that can strand a figure part-way is unacceptable whether or not the cause is known.
+  vi.useFakeTimers();
+  // rAF that never calls back: the exact shape of the failure, with the tween started and never
+  // advanced.
+  vi.stubGlobal("requestAnimationFrame", () => 1);
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener() {},
+    removeEventListener() {},
+  }));
+
+  const { rerender } = render(<CountUp value={0} format={(n) => `${Math.round(n)}`} />);
+  rerender(<CountUp value={7998} format={(n) => `${Math.round(n)}`} />);
+
+  // The settle runs in a timer, so React needs the update flushed inside `act`.
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(screen.getByText("7998")).toBeInTheDocument();
+
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
 });

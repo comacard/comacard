@@ -25,7 +25,16 @@ export type WalletAsset = {
   /** Rendered in the row's chip, so the user can see which chain a balance lives on. */
   network: string;
   /** 18-decimal base units, kept as bigint because wei does not survive Number(). */
-  amount: bigint;
+  /**
+   * Base units, or undefined when the balance has not been read.
+   *
+   * **Not `0n`.** This was `ctc.data?.value ?? 0n`, and the list renders from a hardcoded
+   * two-element array, so the rows appear whether or not either read landed. A failed or idle read
+   * therefore printed "0 tCTC" next to a wallet holding 7,998 of them, which is the exact rule the
+   * root CLAUDE.md states: an unread figure is a dash, never a zero, because a zero is a claim
+   * about someone's money.
+   */
+  amount: bigint | undefined;
   decimals: number;
   /** null when the price read failed; the row renders "unavailable" rather than 0. */
   usd: number | null;
@@ -44,6 +53,7 @@ export function useWalletAssets(): {
   totalUsd: number | null;
   prices: Prices | null;
   priceError: boolean;
+  balanceError: boolean;
 } {
   // Deliberately `useWallet()` and not wagmi's `useAccount()`. WalletProvider is the app's single
   // answer to "who is connected": it is what AuthGate gates on and what every screen already reads,
@@ -65,11 +75,14 @@ export function useWalletAssets(): {
   });
   const prices = priceQuery.data ?? null;
 
-  const value = (amount: bigint, priceUsd: number | null): number | null =>
-    priceUsd === null ? null : (Number((amount * 10_000n) / WEI) / 10_000) * priceUsd;
+  const value = (amount: bigint | undefined, priceUsd: number | null): number | null =>
+    amount === undefined || priceUsd === null
+      ? null
+      : (Number((amount * 10_000n) / WEI) / 10_000) * priceUsd;
 
-  const ctcAmount = ctc.data?.value ?? 0n;
-  const ethAmount = eth.data?.value ?? 0n;
+  // Undefined survives all the way to the row, which renders a dash for it.
+  const ctcAmount = ctc.data?.value;
+  const ethAmount = eth.data?.value;
 
   const assets: WalletAsset[] = [
     {
@@ -102,6 +115,8 @@ export function useWalletAssets(): {
 
   return {
     loading: !!address && (ctc.isLoading || eth.isLoading || priceQuery.isLoading),
+    /** True when a balance read failed outright, as opposed to not having happened yet. */
+    balanceError: ctc.isError || eth.isError,
     assets,
     totalUsd,
     prices,
