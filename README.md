@@ -11,6 +11,7 @@ Built on [Creditcoin](https://creditcoin.org) with the
 | | |
 | --- | --- |
 | **Try it** | **[app.comacard.xyz](https://app.comacard.xyz)** |
+| Docs | [docs.comacard.xyz](https://docs.comacard.xyz) |
 | About | [comacard.xyz](https://comacard.xyz) |
 
 Bring a wallet with testnet funds. The faucets for every supported chain are in
@@ -58,7 +59,11 @@ and two calls.
 | | |
 | --- | --- |
 | App | [app.comacard.xyz](https://app.comacard.xyz) |
+| Docs | [docs.comacard.xyz](https://docs.comacard.xyz) |
 | Landing | [comacard.xyz](https://comacard.xyz) |
+
+The docs site renders the markdown in this repository rather than a copy of it, so a page
+there and the file it came from cannot drift. Each page names its source and links to it.
 
 **Services** on Railway
 
@@ -198,6 +203,7 @@ apps/
   kyc/        KYC service, Didit sessions and webhook intake
   app/        Cardholder app: Next.js and wagmi. KYC, draw, repay
   landing/    Marketing site
+  docs/       Documentation site, rendering this repository's own markdown
   worker/     The daemon: proves Sepolia locks, relays Wormhole messages
   indexer/    Envio indexer, both chains behind one GraphQL endpoint
   web/        An empty scaffold. Nothing runs there

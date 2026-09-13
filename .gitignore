@@ -69,3 +69,11 @@ tmp/
 
 # kyc service state
 kyc.sqlite*
+
+# Vercel project links, one per deployed app.
+#
+# `.env*` is NOT repeated here, though `vercel link` adds it. The secrets block above already
+# ignores `.env` and `.env.*` and then makes one exception for `apps/app/.env`, the symlink Next
+# reads. An unanchored `.env*` after that exception matches at every level and cancels it, which
+# would quietly drop the app's environment from a fresh clone.
+.vercel
