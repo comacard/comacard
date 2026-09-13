@@ -477,4 +477,39 @@ contract CreditLifecycleTest is Test {
         vm.expectRevert(CreditErrors.ZeroAmount.selector);
         line.upgradeToAndCall(impl, abi.encodeCall(line.initializeV2, (operator, 0)));
     }
+
+    /// A second draw must not move the due date.
+    ///
+    /// The date is set only when `drawn` goes from zero, so drawing again adds
+    /// to the debt and leaves the clock where it was. Without that guard a
+    /// borrower postpones default indefinitely by drawing one wei whenever it
+    /// approaches — the debt would never be closeable and the score would never
+    /// record a default.
+    ///
+    /// Worth pinning rather than trusting: the same shape of bug reached
+    /// production in the KYC service this evening, where a card's expiry was
+    /// derived from a timestamp that moved every time a session started.
+    function test_aSecondDrawDoesNotPostponeTheDueDate() public {
+        line.seed(alice, 100 ether, 10, 10, 200);
+
+        vm.prank(alice);
+        line.draw(1 ether);
+        uint64 dueAt = line.accountOf(alice).dueAt;
+        uint64 drawnAt = line.accountOf(alice).drawnAt;
+        assertGt(dueAt, 0);
+
+        vm.warp(block.timestamp + 20 days);
+        vm.prank(alice);
+        line.draw(1 ether);
+
+        assertEq(line.accountOf(alice).dueAt, dueAt, "due date moved");
+        assertEq(line.accountOf(alice).drawnAt, drawnAt, "cycle start moved");
+        assertEq(line.accountOf(alice).drawn, 2 ether);
+
+        // And the position is still closeable on the original schedule.
+        vm.warp(uint256(dueAt) + 1);
+        line.markDefaulted(alice);
+        assertEq(line.accountOf(alice).drawn, 0);
+        assertEq(line.accountOf(alice).defaultCount, 1);
+    }
 }
