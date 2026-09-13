@@ -1,5 +1,6 @@
 import { chainLogo } from "../../../components/ui/ChainBadge";
-import { WORMHOLE_CHAIN_NAMES, WORMHOLE_VAULTS } from "../contracts";
+import { badgeForSymbol } from "../../../components/ui/CoinBadge";
+import { NATIVE_SYMBOL, WORMHOLE_CHAIN_NAMES, WORMHOLE_VAULTS } from "../contracts";
 
 /**
  * The three numbering systems that meet in this app do not agree, and two of the five Wormhole ids
@@ -47,4 +48,27 @@ test("an L2 resolves to its own mark, never to Ethereum's", () => {
   expect(chainLogo("Arbitrum Sepolia")).toContain("arbitrum");
   expect(chainLogo("Optimism Sepolia")).toContain("optimism");
   expect(chainLogo("Sepolia")).toContain("ethereum");
+});
+
+test("the native coin is the chain's own, never ETH by default", () => {
+  // The deposit picker, the collateral list and both lock screens read this. They used to write
+  // `native ? "ETH" : "USDC"`, so BSC's BNB and Fuji's AVAX were both announced as ETH — on the
+  // screens that ask someone to part with them, and on the row that says what backs their limit.
+  expect(NATIVE_SYMBOL[4]).toBe("BNB");
+  expect(NATIVE_SYMBOL[6]).toBe("AVAX");
+  expect(NATIVE_SYMBOL[10004]).toBe("ETH");
+});
+
+test("BNB and AVAX have their own marks rather than falling back to CTC", () => {
+  // `badgeForSymbol` returns CTC for anything it does not know, so a missing entry does not break —
+  // it puts Creditcoin's logo on someone else's money, which is worse than a broken image.
+  expect(badgeForSymbol("BNB")).toBe("BNB");
+  expect(badgeForSymbol("AVAX")).toBe("AVAX");
+  expect(badgeForSymbol("WOMBAT")).toBe("CTC");
+});
+
+test("every native coin the hub lists can be named and badged", () => {
+  for (const [id, name] of Object.entries(NATIVE_SYMBOL)) {
+    expect(badgeForSymbol(name), `${id} → ${name}`).not.toBe("CTC");
+  }
 });

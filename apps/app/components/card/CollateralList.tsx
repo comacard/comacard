@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatUnits } from "viem";
 import type { CollateralAsset } from "../../hooks/useCollateral";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
+import { NATIVE_SYMBOL } from "../../lib/comacard/contracts";
 import { AssetIcon, badgeForSymbol, CoinBadge, Section } from "../ui";
 import type { TokenSym } from "../ui/CoinBadge";
 
@@ -84,7 +85,7 @@ export function CollateralList({
         ))}
 
         {heldRemote.map((asset, i) => {
-          const symbol = asset.native ? "ETH" : "USDC";
+          const symbol = asset.native ? (NATIVE_SYMBOL[asset.wormholeChainId] ?? "ETH") : "USDC";
           return (
             <Link
               key={asset.id}

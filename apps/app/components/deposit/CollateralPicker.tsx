@@ -3,6 +3,7 @@ import { formatUnits } from "viem";
 import { type CollateralAsset, useCollateral } from "../../hooks/useCollateral";
 import { useNav } from "../../hooks/useNav";
 import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
+import { NATIVE_SYMBOL } from "../../lib/comacard/contracts";
 import { AssetIcon, badgeForSymbol, Card, CoinBadge, Skeleton } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
 
@@ -110,7 +111,9 @@ export function CollateralPicker() {
               </div>
             ) : (
               remote.map((asset, i) => {
-                const symbol = asset.native ? "ETH" : "USDC";
+                const symbol = asset.native
+                  ? (NATIVE_SYMBOL[asset.wormholeChainId] ?? "ETH")
+                  : "USDC";
                 return (
                   <button
                     key={asset.id}

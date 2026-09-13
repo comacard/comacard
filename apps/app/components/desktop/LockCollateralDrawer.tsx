@@ -5,7 +5,7 @@ import { useSwitchChain } from "wagmi";
 import { type CollateralAsset, useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { useRemoteCollateral } from "../../hooks/useRemoteCollateral";
-import { explorerTx, SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
+import { explorerTx, NATIVE_SYMBOL, SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
 import { collateralValue, limitFrom } from "../../lib/comacard/credit";
 import {
   AssetIcon,
@@ -148,7 +148,7 @@ export function LockCollateralDrawer({ open, onClose }: { open: boolean; onClose
                 From another chain
               </div>
               {remote.map((row) => {
-                const sym = row.native ? "ETH" : "USDC";
+                const sym = row.native ? (NATIVE_SYMBOL[row.wormholeChainId] ?? "ETH") : "USDC";
                 return (
                   <a
                     key={row.id}

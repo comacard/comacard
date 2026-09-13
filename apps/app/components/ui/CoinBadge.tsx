@@ -4,11 +4,11 @@
    cannot also be there — hence file scope. */
 
 /**
- * The stablecoin whose brand logo represents each currency bucket, plus CTC. CTC is Creditcoin's
- * native coin, and ETH, the collateral asset. Neither is a currency bucket, so neither has a
+ * The stablecoin whose brand logo represents each currency bucket, plus the native coins. CTC is
+ * Creditcoin's own; ETH, BNB and AVAX are the collateral assets of the chains collateral arrives from. Neither is a currency bucket, so neither has a
  * `Currency` mapping below: both are reachable only by passing `token` explicitly.
  */
-export type TokenSym = "USDC" | "USDT" | "EURC" | "CETES" | "CTC" | "ETH";
+export type TokenSym = "USDC" | "USDT" | "EURC" | "CETES" | "CTC" | "ETH" | "BNB" | "AVAX";
 
 /** The three fiat codes the Stellar port shipped with. Declared here rather than imported from the
  *  vault client: it is three string literals, and importing them was the last thing tying a live UI
@@ -27,6 +27,10 @@ const FILE: Record<TokenSym, string> = {
   CETES: "/tokens/cetes.png",
   CTC: "/tokens/ctc.png",
   ETH: "/tokens/eth.svg",
+  // Not every chain pays in ether. BSC's native coin is BNB and Fuji's is AVAX, and falling back to
+  // the CTC mark for them put Creditcoin's logo on someone else's money.
+  BNB: "/tokens/bnb.png",
+  AVAX: "/tokens/avax.png",
 };
 
 /**
@@ -39,6 +43,8 @@ const FILE: Record<TokenSym, string> = {
 export function badgeForSymbol(symbol: string): TokenSym {
   const bare = symbol.replace(/^t/, "").toUpperCase();
   if (bare === "WETH" || bare === "ETH") return "ETH";
+  if (bare === "BNB") return "BNB";
+  if (bare === "AVAX") return "AVAX";
   if (bare === "USDC") return "USDC";
   if (bare === "USDT") return "USDT";
   if (bare === "EURC") return "EURC";
