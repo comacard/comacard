@@ -1,4 +1,4 @@
-import { AbiCoder, Contract, Wallet } from "ethers";
+import { AbiCoder, Contract, JsonRpcProvider, Wallet } from "ethers";
 
 import { config, creditcoin, vaults, type WormholeChainId } from "./config";
 
@@ -282,7 +282,15 @@ async function deliverRelease(
   if (destination === null || !(destination in vaults)) return "undeliverable";
 
   const chainId = destination as WormholeChainId;
-  const relay = new Contract(vaults[chainId].relay, RELAY_ABI, wallet);
+  // On the destination chain, not on Creditcoin. `wallet` arrives bound to
+  // Creditcoin because that is where the hub and every deposit lands, and a
+  // release is the one message that travels the other way. Left as it was,
+  // `executeRelease` was sent to Creditcoin addressed to a contract that only
+  // exists on the far chain: no code there, so it cost gas, returned status 1,
+  // and did nothing — which is also why receipts for these could never be
+  // found on the chain they were supposedly sent to.
+  const signer = wallet.connect(new JsonRpcProvider(vaults[chainId].rpc));
+  const relay = new Contract(vaults[chainId].relay, RELAY_ABI, signer);
   try {
     const tx = await relay.getFunction("executeRelease")(vaa);
     const receipt = await confirmed(tx);
