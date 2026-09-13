@@ -17,6 +17,25 @@ indexer.onEvent(
 
     const account = await getOrCreateAccount(context, id, timestamp);
 
+    // Kept as a row as well as folded into Account, so the limit has a history
+    // and not only a current value.
+    context.ScoreChange.set({
+      id: logId(event.chainId, event.transaction.hash, event.logIndex),
+      account_id: id,
+      score: event.params.score,
+      creditLimit: event.params.limit,
+      available: event.params.available,
+      // Account still holds the previous event's values at this point, which is
+      // what makes a repeated refreshScore detectable without another read.
+      changed:
+        account.score !== event.params.score ||
+        account.creditLimit !== event.params.limit ||
+        account.available !== event.params.available,
+      blockNumber: BigInt(event.block.number),
+      timestamp,
+      txHash: event.transaction.hash,
+    });
+
     context.Account.set({
       ...account,
       score: event.params.score,

@@ -31,3 +31,19 @@ test("no far-chain handler gives up when the request is not indexed yet", () => 
 test("the request handler collects anything parked before it", () => {
   expect(handler).toContain("collectParkedStages(context");
 });
+
+const creditLine = readFileSync(new URL("../src/handlers/CreditLine.ts", import.meta.url), "utf8");
+
+/**
+ * The limit over time lives only in ScoreChange rows. Folding the event into
+ * Account alone keeps the current value and discards every earlier one, which is
+ * how #14 started, and a patch that silently misses this handler would put it
+ * back with every chain still reporting synced.
+ */
+test("every ScoreChanged is kept as a row, not only folded into Account", () => {
+  const scoreChanged =
+    creditLine.split('event: "ScoreChanged"')[1]?.split("indexer.onEvent")[0] ?? "";
+  expect(scoreChanged).toContain("context.ScoreChange.set(");
+  expect(scoreChanged).toContain("changed:");
+  expect(scoreChanged).toContain("context.Account.set(");
+});

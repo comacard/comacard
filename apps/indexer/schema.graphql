@@ -40,6 +40,7 @@ type Account {
   draws: [Draw!]! @derivedFrom(field: "account")
   repayments: [Repayment!]! @derivedFrom(field: "account")
   defaults: [Default!]! @derivedFrom(field: "account")
+  scoreChanges: [ScoreChange!]! @derivedFrom(field: "account")
 }
 
 "A collateral lock or unlock observed on the source chain."
@@ -279,5 +280,37 @@ type PendingReleaseStage {
   """
   stage: String!
   at: BigInt!
+  txHash: String!
+}
+
+"""
+One ScoreChanged event: the score, limit and available credit the contract
+reported for an account at the moment something changed them. Read in order,
+it is the limit over time.
+
+The credit line emits it on every lock and unlock proof from either carrier
+(the hub calls refreshScore after crediting a Wormhole deposit or accepting a
+release), on history imports, draws, repayments, release holds and defaults.
+
+Two things it does not do. It does not fire when collateral is repriced:
+setCollateralPrice, setTokenPrice and setAssetPrice move every limit at once
+without an event per account, so a line drawn from these rows is flat across a
+repricing and steps at that account's next transaction. And refreshScore is
+permissionless and re-emits unconditionally, so two rows can carry the same
+values. `changed` is false on those: keep every row for a ledger, and draw the
+line from the rows where it is true.
+"""
+type ScoreChange {
+  id: ID! # chainId-txHash-logIndex
+  account: Account!
+  score: BigInt!
+  creditLimit: BigInt!
+  available: BigInt!
+  """
+  False when score, limit and available all equal the previous row's.
+  """
+  changed: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
   txHash: String!
 }
