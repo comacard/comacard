@@ -48,6 +48,7 @@ const token = (over: Partial<CollateralAsset>): CollateralAsset => ({
   price: 10n ** 18n, // 1 tCTC per whole token
   crossing: false,
   faucetable: true,
+  releasable: 0n,
   ...over,
 });
 

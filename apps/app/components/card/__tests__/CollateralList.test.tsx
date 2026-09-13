@@ -28,6 +28,7 @@ const asset = (over: Partial<CollateralAsset>): CollateralAsset => ({
   price: 10n ** 21n, // 1000 tCTC per whole unit
   crossing: false,
   faucetable: false,
+  releasable: 0n,
   ...over,
 });
 

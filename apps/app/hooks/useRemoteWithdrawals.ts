@@ -32,6 +32,14 @@ export type RemoteWithdrawal = {
   /** Set once the guardians have signed and the relay has approved it on the far chain. */
   approvedAt: number | null;
   approveTxHash: string | null;
+  /**
+   * Wormhole's sequence number for the release message.
+   *
+   * The query already asked for it and the type dropped it on the floor. It is what identifies the
+   * signed VAA, so without it the app can only wait for the worker to relay; with it the holder can
+   * fetch the signature and submit it themselves.
+   */
+  sequence: bigint;
 };
 
 type Row = {
@@ -84,6 +92,10 @@ export function useRemoteWithdrawals(): {
                 requestTxHash: row.requestTxHash,
                 approvedAt: row.approvedAt === null ? null : Number(row.approvedAt),
                 approveTxHash: row.approveTxHash,
+                // Decimal string on the wire like every other figure here, and it is a uint64:
+                // Number() is safe up to 2^53 and this will not get there, but BigInt costs nothing
+                // and the rule in this codebase is that wire numbers are never Number().
+                sequence: BigInt(row.sequence),
               },
             ],
       );

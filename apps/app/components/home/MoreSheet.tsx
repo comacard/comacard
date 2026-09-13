@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import type { CollateralAsset } from "../../hooks/useCollateral";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
 import { NATIVE_SYMBOL } from "../../lib/comacard/contracts";
 import { BottomSheet } from "../ui";
@@ -85,14 +86,26 @@ export function MoreSheet({
   open,
   onClose,
   remote,
+  sepolia = [],
   onNavigate,
 }: {
   open: boolean;
   onClose: () => void;
   remote: RemoteAsset[];
+  /** Attestcoin collateral. Listed too now, because it was reachable from nowhere at all. */
+  sepolia?: CollateralAsset[];
   onNavigate: (href: string) => void;
 }) {
   const withdrawable = remote.filter((a) => a.credited > 0n || a.releasable > 0n);
+  /**
+   * Sepolia holdings, listed whether or not anything is cleared for release.
+   *
+   * The Wormhole rows above are filtered because they are always actionable; these are listed
+   * unfiltered because the screen behind them has something to say either way. Leaving them out
+   * until an operator had approved something is how a cardholder ends up with 50 tUSDC backing
+   * their limit and no page in the app that mentions getting it back.
+   */
+  const sepoliaHeld = sepolia.filter((a) => a.proved > 0n || a.releasable > 0n);
   const go = (href: string) => {
     onClose();
     onNavigate(href);
@@ -118,6 +131,25 @@ export function MoreSheet({
                 />
               );
             })}
+          </>
+        ) : null}
+
+        {sepoliaHeld.length > 0 ? (
+          <>
+            {withdrawable.length === 0 ? (
+              <h2 className="mb-1 px-3 text-[12px] font-semibold text-muted">Withdraw</h2>
+            ) : null}
+            {sepoliaHeld.map((asset) => (
+              <Row
+                key={asset.token ?? "native"}
+                icon={icon("M12 19V5M5 12l7-7 7 7")}
+                title={`Take back ${asset.symbol}`}
+                description={
+                  asset.releasable > 0n ? "Cleared, ready to take" : "Held on Ethereum Sepolia"
+                }
+                onClick={() => go(`/withdraw/${asset.slug}`)}
+              />
+            ))}
           </>
         ) : null}
 

@@ -66,34 +66,50 @@ export const AVALANCHE_FUJI_CHAIN_ID = avalancheFuji.id as number;
  * EVM `84532`. The hub speaks the first, wagmi speaks the second, and a screen that switches the
  * wallet has to translate between them, so both live in one row.
  */
+/**
+ * Where a deposit is locked on each chain, and who relays a release back to it.
+ *
+ * `relay` is the `ReleaseRelay` that holds `OPERATOR_ROLE` on that chain's vault. It is here rather
+ * than in a table of its own because a sixth list of chains is how this project has produced bugs
+ * before: `chains.test.ts` asserts every entry has both, and every one of these was verified against
+ * `vault.operator()` on its own chain on 13 September 2026.
+ *
+ * `ReleaseRelay.executeRelease` takes no access modifier, so this address is something the holder
+ * calls, not something only the worker calls. See `lib/comacard/vaa.ts`.
+ */
 export const WORMHOLE_VAULTS: Record<
   number,
-  { evmChainId: number; vault: Address; explorer: string }
+  { evmChainId: number; vault: Address; explorer: string; relay: Address }
 > = {
   10004: {
     evmChainId: BASE_SEPOLIA_CHAIN_ID,
     vault: "0x7439dff6270C2B52B00B7Fc5CA94c56d5b166Daf",
     explorer: "https://sepolia.basescan.org",
+    relay: "0x4ab591d70462c69792E35d7C61f118BEFd45e62e",
   },
   10003: {
     evmChainId: ARBITRUM_SEPOLIA_CHAIN_ID,
     vault: "0x029ae4fffE7DBD8dF7450E12d25a840A818f7F30",
     explorer: "https://sepolia.arbiscan.io",
+    relay: "0xFcb45153DbA2fAd0864E1e24293C33AB99b507eB",
   },
   10005: {
     evmChainId: OPTIMISM_SEPOLIA_CHAIN_ID,
     vault: "0xCaBFa324576c655D0276647A7f0aF5e779123e0B",
     explorer: "https://sepolia-optimism.etherscan.io",
+    relay: "0xE3965709c657748501bB33a55AEFdE7F9622FD5E",
   },
   4: {
     evmChainId: BSC_TESTNET_CHAIN_ID,
     vault: "0x9d8B6852705dD7585B3907244d603547a4eA32d6",
     explorer: "https://testnet.bscscan.com",
+    relay: "0x740B0c07c3291FECF5e852F86652Ffbb575A2378",
   },
   6: {
     evmChainId: AVALANCHE_FUJI_CHAIN_ID,
     vault: "0x7D68B54a6eDd92F9e6f17E75dbE4d9838cD88a1b",
     explorer: "https://testnet.snowtrace.io",
+    relay: "0xDE88C384AC8347F8C8B78C7DDE40432B95F629E1",
   },
 };
 
@@ -684,3 +700,29 @@ export const ZERO_TOKEN = `0x${"0".repeat(64)}` as Hex;
 export function nativeAssetId(wormholeChainId: number): Hex {
   return keccak256(encodePacked(["uint16", "bytes32"], [wormholeChainId, ZERO_TOKEN]));
 }
+
+/**
+ * `executeRelease` only, which is the whole of what a holder needs from a relay.
+ *
+ * **No access modifier on it, deliberately.** The relay verifies that the message was emitted by
+ * our hub on Creditcoin and refuses anything else, and `consumedVaa` stops the same signature being
+ * used twice. So the safety is in the payload rather than in the sender, and the holder submitting
+ * their own release is exactly as safe as the worker doing it. Whichever arrives first wins; the
+ * loser reverts with `AlreadyConsumed`.
+ */
+export const releaseRelayAbi = [
+  {
+    type: "function",
+    name: "executeRelease",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "vaa", type: "bytes" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "HUB_CHAIN_ID",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint16" }],
+  },
+] as const;

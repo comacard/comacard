@@ -113,3 +113,21 @@ test("ids are distinct per chain, which is the whole reason they are keyed this 
   const ids = Object.keys(LIVE_NATIVE_IDS).map((c) => nativeAssetId(Number(c)));
   expect(new Set(ids).size).toBe(ids.length);
 });
+
+test("every chain with a vault has a relay, and it is not the vault", () => {
+  // A sixth list of chains is how this project has produced bugs before, so the relay lives in the
+  // vault table rather than beside it. Each of these was read back from `vault.operator()` on its
+  // own chain on 13 September 2026: the relay holds OPERATOR_ROLE, which is what makes a release
+  // something the guardians authorise rather than something we do.
+  for (const [chain, deployment] of Object.entries(WORMHOLE_VAULTS)) {
+    expect(deployment.relay, `chain ${chain}`).toMatch(/^0x[a-fA-F0-9]{40}$/);
+    expect(deployment.relay).not.toBe(deployment.vault);
+  }
+});
+
+test("no relay is reused across two chains", () => {
+  // One relay serving two chains would mean a release signed for one could be executed on the
+  // other, which is the first of the five bugs the root CLAUDE.md records.
+  const relays = Object.values(WORMHOLE_VAULTS).map((v) => v.relay.toLowerCase());
+  expect(new Set(relays).size).toBe(relays.length);
+});

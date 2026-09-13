@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ReleaseCollateral } from "../ReleaseCollateral";
 
 /**
@@ -51,17 +52,28 @@ vi.mock("../../../hooks/useWallet", () => ({
   useWallet: () => ({ address: "0x56A2950ddE6B1040d1DCC4b4C4Fc314Bd56eFB0E", isConnected: true }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), back: vi.fn() }) }));
+const writeContractAsync = vi.fn(async () => "0xsent");
 vi.mock("wagmi", () => ({
   useConfig: () => ({ connectors: [] }),
   useSwitchChain: () => ({ switchChainAsync: vi.fn(), isPending: false }),
   useWriteContract: () => ({
-    writeContractAsync: vi.fn(),
+    writeContractAsync,
     data: undefined,
     error: null,
     reset: vi.fn(),
   }),
 }));
-vi.mock("wagmi/actions", () => ({ readContract: vi.fn() }));
+// `REMOTE_HUB` comes from NEXT_PUBLIC_REMOTE_COLLATERAL_HUB, which vitest does not load, so it is
+// undefined here and every handler that needs it returns early without saying why. The rest of the
+// module is kept: the chain tables and ABIs are the real ones on purpose.
+vi.mock("../../../lib/comacard/contracts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/comacard/contracts")>()),
+  REMOTE_HUB: "0x9D77f5E1D5Afe5258cA16F808DC5BA1E9F68437f",
+}));
+vi.mock("wagmi/actions", () => ({
+  readContract: vi.fn(async () => 0n),
+  waitForTransactionReceipt: vi.fn(async () => ({ status: "success" })),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -201,4 +213,88 @@ test("an unreachable indexer costs persistence, never a false claim", () => {
 
   expect(screen.getByRole("button", { name: /Withdraw BNB/ })).toBeInTheDocument();
   expect(screen.queryByText(/on its way/)).toBeNull();
+});
+
+/** Requested, signed by nobody yet, and nothing relayed. The state step two exists for. */
+const AWAITING = {
+  id: "w1",
+  assetId: "0xabc",
+  amount: 10n ** 16n,
+  decimals: 18,
+  wormholeChainId: 4,
+  requestedAt: 1,
+  requestTxHash: "0x1",
+  approvedAt: null,
+  approveTxHash: null,
+  sequence: 8n,
+};
+
+test("step two is a button, not a wait on our worker", async () => {
+  const user = userEvent.setup();
+  // This screen used to say "nothing for you to do" here and leave the holder waiting on a daemon
+  // that has been down for a day at a time (#12). `ReleaseRelay.executeRelease` carries no access
+  // modifier: it verifies the message came from our hub on Creditcoin and refuses anything else,
+  // so it was never ours to gate.
+  withdrawals.mockReturnValue({
+    items: [AWAITING],
+    loading: false,
+    error: false,
+    refresh: vi.fn(),
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ vaaBytes: "AQID" })),
+  );
+  render(<ReleaseCollateral id="0xabc" />);
+
+  await user.click(screen.getByRole("button", { name: /send it on yourself/i }));
+
+  await waitFor(() =>
+    expect(writeContractAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "executeRelease", chainId: 97 }),
+    ),
+  );
+});
+
+test("an unsigned release says wait, rather than reporting a failure", async () => {
+  const user = userEvent.setup();
+  withdrawals.mockReturnValue({
+    items: [AWAITING],
+    loading: false,
+    error: false,
+    refresh: vi.fn(),
+  });
+  // 404 is the normal state for the first thirty seconds on BSC. It is patience, not a problem,
+  // and a screen that reported it as an error would send someone looking for a fault.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response("", { status: 404 })),
+  );
+  render(<ReleaseCollateral id="0xabc" />);
+
+  await user.click(screen.getByRole("button", { name: /send it on yourself/i }));
+
+  expect(await screen.findByText(/have not signed this yet/i)).toBeInTheDocument();
+  expect(writeContractAsync).not.toHaveBeenCalled();
+});
+
+test("the worker getting there first is not an error", async () => {
+  const user = userEvent.setup();
+  withdrawals.mockReturnValue({
+    items: [AWAITING],
+    loading: false,
+    error: false,
+    refresh: vi.fn(),
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ vaaBytes: "AQID" })),
+  );
+  writeContractAsync.mockRejectedValueOnce(new Error("execution reverted: AlreadyConsumed(0x...)"));
+  render(<ReleaseCollateral id="0xabc" />);
+
+  await user.click(screen.getByRole("button", { name: /send it on yourself/i }));
+
+  // A success wearing an error's clothes: the release landed, just not from this wallet.
+  await waitFor(() => expect(screen.queryByText(/AlreadyConsumed/)).toBeNull());
 });

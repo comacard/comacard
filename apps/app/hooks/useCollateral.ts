@@ -54,6 +54,16 @@ export type CollateralAsset = {
   crossing: boolean;
   /** True when the token exposes `TestToken.faucet`, so a zero balance is not a dead end. */
   faucetable: boolean;
+  /**
+   * Cleared for withdrawal by the operator and not yet taken, in base units.
+   *
+   * The Attestcoin side of a release is two halves and only the second is the holder's:
+   * `approveTokenRelease` is `onlyRole(OPERATOR_ROLE)`, then `unlockToken` pays out up to whatever
+   * was approved. This figure is that allowance, and it is usually zero. Reading it is what lets a
+   * screen tell "you cannot withdraw this" apart from "nobody has approved it yet", which are
+   * different sentences and only the second one is true.
+   */
+  releasable: bigint;
 };
 
 /** Find the asset a `/deposit/[sym]` segment addresses. Case-insensitive; null when unknown. */
@@ -84,71 +94,95 @@ export function useCollateral(): {
       const cc = createPublicClient({ transport: http(CREDITCOIN_RPC) });
       const sep = createPublicClient({ transport: http(SEPOLIA_RPC) });
 
-      const [tokens, totalValue, account, nativeLocked, nativeBalance, nativePrice] =
-        await Promise.all([
-          cc.readContract({ address: line, abi: creditLineAbi, functionName: "listedTokens" }),
-          cc.readContract({
-            address: line,
-            abi: creditLineAbi,
-            functionName: "collateralValueOf",
-            args: [who],
-          }),
-          cc.readContract({
-            address: line,
-            abi: creditLineAbi,
-            functionName: "accountOf",
-            args: [who],
-          }),
-          sep.readContract({
-            address: vault,
-            abi: sourceVaultAbi,
-            functionName: "balanceOf",
-            args: [who],
-          }),
-          sep.getBalance({ address: who }),
-          cc.readContract({ address: line, abi: creditLineAbi, functionName: "collateralPrice" }),
-        ]);
+      const [
+        tokens,
+        totalValue,
+        account,
+        nativeLocked,
+        nativeBalance,
+        nativePrice,
+        nativeReleasable,
+      ] = await Promise.all([
+        cc.readContract({ address: line, abi: creditLineAbi, functionName: "listedTokens" }),
+        cc.readContract({
+          address: line,
+          abi: creditLineAbi,
+          functionName: "collateralValueOf",
+          args: [who],
+        }),
+        cc.readContract({
+          address: line,
+          abi: creditLineAbi,
+          functionName: "accountOf",
+          args: [who],
+        }),
+        sep.readContract({
+          address: vault,
+          abi: sourceVaultAbi,
+          functionName: "balanceOf",
+          args: [who],
+        }),
+        sep.getBalance({ address: who }),
+        cc.readContract({ address: line, abi: creditLineAbi, functionName: "collateralPrice" }),
+        // Native ETH's half of the same allowance. `approveRelease` is operator-gated just as
+        // `approveTokenRelease` is, so this is the figure that says whether anything is claimable.
+        sep.readContract({
+          address: vault,
+          abi: sourceVaultAbi,
+          functionName: "releasable",
+          args: [who],
+        }),
+      ]);
       const perToken = await Promise.all(
         tokens.map(async (token) => {
-          const [config, proved, locked, available, symbol, name, faucetLimit] = await Promise.all([
-            cc.readContract({
-              address: line,
-              abi: creditLineAbi,
-              functionName: "tokenConfig",
-              args: [token],
-            }),
-            cc.readContract({
-              address: line,
-              abi: creditLineAbi,
-              functionName: "tokenCollateral",
-              args: [who, token],
-            }),
-            sep.readContract({
-              address: vault,
-              abi: sourceVaultAbi,
-              functionName: "tokenBalanceOf",
-              args: [who, token],
-            }),
-            sep.readContract({
-              address: token,
-              abi: erc20Abi,
-              functionName: "balanceOf",
-              args: [who],
-            }),
-            sep
-              .readContract({ address: token, abi: erc20Abi, functionName: "symbol" })
-              .catch(() => "TOKEN"),
-            sep
-              .readContract({ address: token, abi: erc20Abi, functionName: "name" })
-              .catch(() => ""),
-            // Asked rather than assumed. Every token listed on this deployment happens to be a
-            // TestToken, but that is a fact about today's listing, not about the interface, and a
-            // mint button on a token with no faucet would revert in the user's wallet.
-            sep
-              .readContract({ address: token, abi: testTokenAbi, functionName: "FAUCET_LIMIT" })
-              .then(() => true)
-              .catch(() => false),
-          ]);
+          const [config, proved, locked, available, symbol, name, faucetLimit, releasable] =
+            await Promise.all([
+              cc.readContract({
+                address: line,
+                abi: creditLineAbi,
+                functionName: "tokenConfig",
+                args: [token],
+              }),
+              cc.readContract({
+                address: line,
+                abi: creditLineAbi,
+                functionName: "tokenCollateral",
+                args: [who, token],
+              }),
+              sep.readContract({
+                address: vault,
+                abi: sourceVaultAbi,
+                functionName: "tokenBalanceOf",
+                args: [who, token],
+              }),
+              sep.readContract({
+                address: token,
+                abi: erc20Abi,
+                functionName: "balanceOf",
+                args: [who],
+              }),
+              sep
+                .readContract({ address: token, abi: erc20Abi, functionName: "symbol" })
+                .catch(() => "TOKEN"),
+              sep
+                .readContract({ address: token, abi: erc20Abi, functionName: "name" })
+                .catch(() => ""),
+              // Asked rather than assumed. Every token listed on this deployment happens to be a
+              // TestToken, but that is a fact about today's listing, not about the interface, and a
+              // mint button on a token with no faucet would revert in the user's wallet.
+              sep
+                .readContract({ address: token, abi: testTokenAbi, functionName: "FAUCET_LIMIT" })
+                .then(() => true)
+                .catch(() => false),
+              // What the operator has cleared for this holder. Almost always zero, which is exactly
+              // why the screen has to be able to say so rather than just offering nothing.
+              sep.readContract({
+                address: vault,
+                abi: sourceVaultAbi,
+                functionName: "tokenReleasable",
+                args: [who, token],
+              }),
+            ]);
           const [price, decimals] = config;
           const asset: CollateralAsset = {
             token,
@@ -162,6 +196,7 @@ export function useCollateral(): {
             price,
             crossing: locked > proved,
             faucetable: faucetLimit,
+            releasable,
           };
           return asset;
         }),
@@ -182,6 +217,7 @@ export function useCollateral(): {
         // Sepolia ETH has no faucet this app can call: it comes from Google Cloud's, off-site.
         faucetable: false,
         crossing: nativeLocked > nativeProved,
+        releasable: nativeReleasable,
       };
 
       return { assets: [native, ...perToken], totalValue };

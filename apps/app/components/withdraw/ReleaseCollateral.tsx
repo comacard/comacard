@@ -11,14 +11,18 @@ import { useRemoteWithdrawals } from "../../hooks/useRemoteWithdrawals";
 import { useWallet } from "../../hooks/useWallet";
 import {
   CREDITCOIN_CHAIN_ID,
+  crossingTime,
   NATIVE_SYMBOL,
   REMOTE_HUB,
+  releaseRelayAbi,
   remoteHubAbi,
+  WORMHOLE_VAULTS,
   wormholeCoreAbi,
   wormholeVaultAbi,
 } from "../../lib/comacard/contracts";
 import { amountFromValue, releasableValue } from "../../lib/comacard/credit";
 import { awaitSuccess } from "../../lib/comacard/tx";
+import { CREDITCOIN_WORMHOLE_ID, fetchSignedVaa } from "../../lib/comacard/vaa";
 import {
   AssetIcon,
   Button,
@@ -110,6 +114,8 @@ export function ReleaseCollateral({ id }: { id: string }) {
   const [failed, setFailed] = useState<string | null>(null);
   const [requested, setRequested] = useState(false);
   const [claimed, setClaimed] = useState(false);
+  /** "fetching the signature" / "submitting it", so step two can report rather than just spin. */
+  const [relaying, setRelaying] = useState<"idle" | "fetching" | "submitting">("idle");
 
   const asset = assets.find((a) => a.id.toLowerCase() === id.toLowerCase()) ?? null;
 
@@ -195,6 +201,64 @@ export function ReleaseCollateral({ id }: { id: string }) {
     }
   };
 
+  /**
+   * Fetch the guardians' signature and submit it to the far chain.
+   *
+   * Two failures worth telling apart, because one is patience and the other is a problem:
+   * `fetchSignedVaa` answering null means the guardians have not signed yet, which is the normal
+   * state for the first thirty seconds on BSC and Fuji and up to twenty minutes on the L2s. A
+   * revert from `executeRelease` means something else, and `AlreadyConsumed` in particular means
+   * the worker got there first, which is a success wearing an error's clothes.
+   */
+  const onRelay = async () => {
+    const chainId = asset?.evmChainId;
+    const deployment = asset ? WORMHOLE_VAULTS[asset.wormholeChainId] : undefined;
+    if (!asset || !awaitingGuardians || !chainId || !deployment || !REMOTE_HUB) return;
+    if (relaying !== "idle") return;
+
+    setFailed(null);
+    try {
+      setRelaying("fetching");
+      const vaa = await fetchSignedVaa(
+        CREDITCOIN_WORMHOLE_ID,
+        REMOTE_HUB,
+        awaitingGuardians.sequence,
+      );
+      if (!vaa) {
+        setFailed(
+          `The guardians have not signed this yet. On ${asset.chainName} that takes ${crossingTime(asset.wormholeChainId)}. Try again shortly.`,
+        );
+        return;
+      }
+
+      setRelaying("submitting");
+      await switchChainAsync({ chainId });
+      const sent = await writeContractAsync({
+        address: deployment.relay,
+        abi: releaseRelayAbi,
+        functionName: "executeRelease",
+        args: [vaa],
+        chainId,
+      });
+      await awaitSuccess(config, sent, chainId);
+
+      refresh();
+      refreshWithdrawals();
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : String(cause);
+      // The worker beat us to it. Nothing is wrong and the collateral is now claimable, so refresh
+      // rather than report: the next render is step 3.
+      if (/AlreadyConsumed/.test(message)) {
+        refresh();
+        refreshWithdrawals();
+        return;
+      }
+      setFailed(message);
+    } finally {
+      setRelaying("idle");
+    }
+  };
+
   const onClaim = async () => {
     const chainId = asset.evmChainId;
     const vault = asset.vault;
@@ -276,9 +340,20 @@ export function ReleaseCollateral({ id }: { id: string }) {
     );
   }
 
-  // Step 2. Said plainly, because between the request and the signature nothing on Home changes
-  // except the limit going down, and a screen that stayed silent would read as a withdrawal that
-  // did not work.
+  /**
+   * Step 2, and it is now a button rather than a wait.
+   *
+   * This screen used to say "nothing for you to do" here and leave the holder waiting on our
+   * worker. `ReleaseRelay.executeRelease` carries no access modifier: it verifies that the message
+   * came from our hub on Creditcoin and refuses anything else, so submitting your own release is
+   * exactly as safe as us doing it. Making someone wait on a daemon to get their own collateral
+   * back turns a trustless path into a custodial one, and that daemon has been down for a day at a
+   * time (#12).
+   *
+   * The worker still relays, and that is fine. Whichever arrives first wins; the loser reverts with
+   * `AlreadyConsumed` and this screen moves to step 3 either way, because step 3 keys off
+   * `releasable` on the vault rather than off who submitted what.
+   */
   if ((requested || awaitingGuardians !== null) && asset.releasable <= 0n) {
     return (
       <div className="flex min-h-[calc(100dvh-92px)] flex-col">
@@ -290,12 +365,37 @@ export function ReleaseCollateral({ id }: { id: string }) {
             </p>
           ) : null}
           <p className="mt-3 max-w-[300px] text-center text-[13px] leading-snug text-muted">
-            Creditcoin has published the release. The guardians sign it in under a minute on BSC and
-            Fuji, and in fifteen to twenty minutes on the L2s. You sign once more to take it. Come
-            back to this screen and the button will be here.
+            Creditcoin has published the release. The guardians sign it in{" "}
+            {crossingTime(asset.wormholeChainId)}, then it goes to {asset.chainName}.
           </p>
+          {failed ? (
+            <TransactionStatus status="failed" detail={failed.split("\n")[0]} className="mt-4" />
+          ) : null}
         </div>
-        <Button onClick={() => router.push("/home")}>Done</Button>
+
+        <div className="mt-auto">
+          {awaitingGuardians ? (
+            <Button onClick={onRelay} disabled={relaying !== "idle" || switching}>
+              {switching ? (
+                `Switching to ${asset.chainName}…`
+              ) : relaying === "fetching" ? (
+                <PendingLabel status="confirming" />
+              ) : relaying === "submitting" ? (
+                <PendingLabel status="signing" />
+              ) : (
+                "Send it on yourself"
+              )}
+            </Button>
+          ) : null}
+          <p className="mt-2 text-center text-[12px] leading-snug text-muted">
+            {awaitingGuardians
+              ? "We relay this for you. If it has not moved, you can do it yourself: the relay checks the signature, not who sent it."
+              : "Come back to this screen and the button to take it will be here."}
+          </p>
+          <Button variant="glass" className="mt-2" onClick={() => router.push("/home")}>
+            Done
+          </Button>
+        </div>
       </div>
     );
   }

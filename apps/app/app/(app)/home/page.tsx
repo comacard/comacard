@@ -181,6 +181,7 @@ function MobileHome() {
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
         remote={remoteCollateral}
+        sepolia={collateral}
         onNavigate={nav.forward}
       />
       <Toast open={!!kycError} message={kycError ?? ""} />
