@@ -215,7 +215,11 @@ export function DesktopOverview() {
           <IncomingDeposits deposits={account?.pendingDeposits ?? []} className="lg:col-span-2" />
           {/* This is money that has already stopped backing the limit and is waiting on a
               signature. */}
-          <ClaimableCollateral assets={remoteCollateral} className="lg:col-span-2" />
+          <ClaimableCollateral
+            assets={remoteCollateral}
+            sepolia={collateral}
+            className="lg:col-span-2"
+          />
 
           <Card className="flex min-w-0 flex-col px-6 pb-6 pt-5 lg:col-start-1">
             <CardFolderPanel account={account} />

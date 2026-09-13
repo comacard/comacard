@@ -4,7 +4,7 @@ import { formatUnits } from "viem";
 import type { CollateralAsset } from "../../hooks/useCollateral";
 import { usePrices } from "../../hooks/usePrices";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
-import { NATIVE_SYMBOL } from "../../lib/comacard/contracts";
+import { ATTESTCOIN_NETWORK, NATIVE_SYMBOL } from "../../lib/comacard/contracts";
 import { formatUsd, type UsdPrices, usdOf } from "../../lib/comacard/prices";
 import { AssetIcon, badgeForSymbol, CoinBadge, LoadMore, Section, Skeleton } from "../ui";
 import type { TokenSym } from "../ui/CoinBadge";
@@ -58,7 +58,6 @@ const BADGE: Record<string, TokenSym> = { ETH: "ETH", tWETH: "ETH", tUSDC: "USDC
 const PAGE = 4;
 
 /** Attestcoin proves Sepolia and Ethereum mainnet only, and the deployed line is bound to Sepolia. */
-const ATTESTCOIN_NETWORK = "Ethereum Sepolia";
 
 function amount(value: bigint, decimals: number, symbol: string): string {
   const n = Number(formatUnits(value, decimals));
@@ -151,7 +150,21 @@ export function CollateralList({
   const [shown, setShown] = useState(PAGE);
   const { prices } = usePrices();
 
-  const held = assets.filter((a) => a.locked > 0n || a.proved > 0n);
+  /*
+    What is backing the limit, plus what is on its way to backing it. Not what the vault happens to
+    be holding.
+
+    The filter was `locked > 0 || proved > 0`, and a released deposit satisfies the first half
+    forever: the tokens stay in the vault until the holder claims them, so the row sat here reading
+    "0.00 tUSDC" under a heading that says Assets held. Zero is the honest figure for this card,
+    because nothing is backing anything, which is exactly why the row does not belong in it.
+
+    It is not dropped, it is moved. `ClaimableCollateral` lists it under "Ready to withdraw" with
+    the claimable amount as its figure and a link to the screen that claims it. Deleting the row
+    outright, which is the obvious reading of "remove the ones showing zero", would have hidden 50
+    tUSDC that nothing else on Home mentions.
+  */
+  const held = assets.filter((a) => a.proved > 0n || a.crossing);
   const heldRemote = remote.filter((a) => a.credited > 0n);
 
   // Flattened before paging, so "Load more" counts rows rather than carriers. Paging each list

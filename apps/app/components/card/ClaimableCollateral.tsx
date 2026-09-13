@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
 import { formatUnits } from "viem";
+import type { CollateralAsset } from "../../hooks/useCollateral";
 import type { RemoteAsset } from "../../hooks/useRemoteCollateral";
-import { NATIVE_SYMBOL } from "../../lib/comacard/contracts";
+import { ATTESTCOIN_NETWORK, NATIVE_SYMBOL } from "../../lib/comacard/contracts";
 import { AssetIcon, badgeForSymbol, CoinBadge, Section } from "../ui";
 
 /**
@@ -29,39 +30,79 @@ import { AssetIcon, badgeForSymbol, CoinBadge, Section } from "../ui";
 const fmt = (value: bigint, decimals: number): string =>
   Number(formatUnits(value, decimals)).toLocaleString("en-US", { maximumFractionDigits: 6 });
 
+/** One claimable row, from either carrier. The two differ in where they link and nothing else. */
+type Ready = {
+  key: string;
+  href: string;
+  chainName: string;
+  symbol: string;
+  amount: string;
+};
+
 export function ClaimableCollateral({
   assets,
+  sepolia = [],
   className = "",
 }: {
   assets: RemoteAsset[];
+  /**
+   * The Attestcoin side, which was missing.
+   *
+   * Only Wormhole assets were listed here, so a Sepolia release that the operator had approved
+   * appeared nowhere on Home: it sat in the collateral list reading "0.00 tUSDC" because nothing
+   * was proved against it any more, under a heading that says Assets held. Both carriers produce
+   * the same fact, collateral that is the holder's and one signature away, so both belong here.
+   */
+  sepolia?: CollateralAsset[];
   className?: string;
 }) {
-  const ready = assets.filter((asset) => asset.releasable > 0n);
+  const ready: Ready[] = [
+    ...assets
+      .filter((asset) => asset.releasable > 0n)
+      .map((asset) => {
+        const symbol = asset.native ? (NATIVE_SYMBOL[asset.wormholeChainId] ?? "ETH") : "USDC";
+        return {
+          key: asset.id,
+          href: `/withdraw/x/${asset.id}`,
+          chainName: asset.chainName,
+          symbol,
+          amount: fmt(asset.releasable, asset.decimals),
+        };
+      }),
+    ...sepolia
+      .filter((asset) => asset.releasable > 0n)
+      .map((asset) => ({
+        key: asset.token ?? "sepolia-native",
+        href: `/withdraw/${asset.slug}`,
+        chainName: ATTESTCOIN_NETWORK,
+        symbol: asset.symbol,
+        amount: fmt(asset.releasable, asset.decimals),
+      })),
+  ];
   if (ready.length === 0) return null;
 
   return (
     <Section title="Ready to withdraw" className={className}>
       <div className="rounded-[16px] border border-line bg-white px-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
-        {ready.map((asset, i) => {
-          const symbol = asset.native ? (NATIVE_SYMBOL[asset.wormholeChainId] ?? "ETH") : "USDC";
+        {ready.map((row, i) => {
           return (
             <Link
-              key={asset.id}
-              href={`/withdraw/x/${asset.id}`}
+              key={row.key}
+              href={row.href}
               className={`-mx-4 flex items-center gap-3 px-4 py-3.5 no-underline transition-colors hover:bg-[#f4f4f4] ${
                 i === 0 ? "" : "border-t border-line"
               }`}
             >
-              <AssetIcon chainName={asset.chainName} badgeSize={14}>
-                <CoinBadge token={badgeForSymbol(symbol)} size={32} />
+              <AssetIcon chainName={row.chainName} badgeSize={14}>
+                <CoinBadge token={badgeForSymbol(row.symbol)} size={32} />
               </AssetIcon>
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-semibold">
-                  {fmt(asset.releasable, asset.decimals)} {symbol}
+                  {row.amount} {row.symbol}
                 </div>
                 {/* The whole point of the row: it is theirs already, and one signature away. */}
                 <div className="mt-0.5 text-[11.5px] text-muted">
-                  Waiting for you on {asset.chainName}
+                  Waiting for you on {row.chainName}
                 </div>
               </div>
               <svg

@@ -726,3 +726,11 @@ export const releaseRelayAbi = [
     outputs: [{ type: "uint16" }],
   },
 ] as const;
+
+/**
+ * The chain the Attestcoin carrier proves from, as a screen names it.
+ *
+ * One definition because two screens show it: the collateral list and the claimable list. Two
+ * string literals is two chances for one of them to say something else.
+ */
+export const ATTESTCOIN_NETWORK = "Ethereum Sepolia";

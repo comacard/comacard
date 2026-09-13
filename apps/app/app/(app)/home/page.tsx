@@ -133,7 +133,7 @@ function MobileHome() {
 
         {/* Money that has already left the limit and is waiting on one signature. A nudge, not a
             spinner: nothing is pending on the protocol here. */}
-        <ClaimableCollateral assets={remoteCollateral} className="mb-[22px]" />
+        <ClaimableCollateral assets={remoteCollateral} sepolia={collateral} className="mb-[22px]" />
 
         {/* The balance owed, always rendered. It used to be lifetime spend, shown only when the
           card was settled, which meant the one row about money either said nothing while there was
