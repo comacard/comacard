@@ -137,7 +137,7 @@ function CardActions({
           onClick={onSpend}
           disabled={checking || !canSpend}
         >
-          {checking ? <Spinner /> : "Spend"}
+          {checking ? <Spinner /> : "Send"}
         </Button>
         <Button size="md" variant="glass" className="flex-1" onClick={onDeposit}>
           Deposit

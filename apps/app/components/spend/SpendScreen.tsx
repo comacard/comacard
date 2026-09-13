@@ -9,16 +9,18 @@ import { Button, Keypad, PendingLabel, TransactionStatus } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
 
 /**
- * Spending against the card's limit.
+ * Drawing against the card's limit, into the holder's own wallet.
  *
- * **"Spend", not the contract's "draw".** Naming a control after its ledger entry is how a screen
- * ends up needing a glossary, so the whole surface uses a cardholder's words: the balance is what
- * you owe, not "outstanding principal", and clearing it is paying, not repaying a facility.
+ * **Titled "To my wallet", not "Spend".** This screen is what `SendPicker`'s first row opens, so it
+ * carries that row's words: a title that renamed itself between the tap and the screen would read
+ * as a different destination. The old title was "Spend", and it was the more flattering word and
+ * the less true one — there is no merchant and no payment rail here, so the tCTC lands in the
+ * holder's own wallet, a cash advance rather than a purchase. The line under the button has always
+ * said so; the title now agrees with it.
  *
- * Spend is a chosen word rather than an exact one, and the gap is worth knowing about: there is no
- * merchant and no payment rail, so the tCTC lands in the holder's own wallet — a cash advance
- * rather than a purchase. The line under the button says so before the signature, because a screen
- * that implied a shop would leave someone looking for one.
+ * The file keeps the name `SpendScreen`, and `SpentTotal` keeps "Spent from your card". Those name
+ * a limit consumed, which is still the right word for a card meant to be spent at a merchant one
+ * day; "Send" describes only what this particular control does today.
  *
  * Both writes here are on **Creditcoin**, not Sepolia. That is the opposite of the deposit screen,
  * and getting it backwards produces a signature that fails on a chain mismatch, so the switch is
@@ -86,7 +88,7 @@ export function SpendScreen() {
 
   return (
     <div className="flex min-h-[calc(100dvh-92px)] flex-col">
-      <SubHeader title="Spend" />
+      <SubHeader title="To my wallet" />
 
       <p className="mb-1 text-center text-[13px] text-muted">
         {fmt(ceiling)} tCTC available on your card
@@ -121,7 +123,7 @@ export function SpendScreen() {
           ) : busy ? (
             <PendingLabel status={txStatus === "confirming" ? "confirming" : "signing"} />
           ) : (
-            "Spend"
+            "Send"
           )}
         </Button>
         {/* Said before the signature, not after. There is no merchant in this demo, and a screen

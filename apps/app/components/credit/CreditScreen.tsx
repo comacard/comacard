@@ -112,7 +112,7 @@ export function CreditScreen() {
           is the second half. */}
       <div className="flex gap-3">
         <Button size={isDesktop ? "md" : "lg"} onClick={() => nav.forward("/send")}>
-          Spend
+          Send
         </Button>
         <Button
           size={isDesktop ? "md" : "lg"}

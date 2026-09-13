@@ -36,7 +36,7 @@ test("spends what was typed, bounded by the card's available credit", async () =
   render(<SpendScreen />);
 
   await user.keyboard("1");
-  await user.click(screen.getByRole("button", { name: "Spend" }));
+  await user.click(screen.getByRole("button", { name: "Send" }));
 
   expect(draw).toHaveBeenCalledWith(10n ** 18n);
 });
@@ -47,7 +47,7 @@ test("refuses more than the card has, before it can be signed", async () => {
 
   await user.keyboard("100");
 
-  expect(screen.getByRole("button", { name: "Spend" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   expect(draw).not.toHaveBeenCalled();
 });
 
@@ -57,7 +57,7 @@ test("switches to Creditcoin first: this write is not on Sepolia", async () => {
   render(<SpendScreen />);
 
   await user.keyboard("1");
-  await user.click(screen.getByRole("button", { name: "Spend" }));
+  await user.click(screen.getByRole("button", { name: "Send" }));
 
   // The deposit screen signs on Sepolia and this one does not; getting it backwards produces a
   // chain-mismatch failure at signing time.
@@ -76,6 +76,14 @@ test("uses the cardholder's words, not the contract's", () => {
 
   // Cardholder vocabulary, never the contract's: `draw` and "outstanding principal" are ledger
   // entries, and a screen named after them needs a glossary.
-  expect(screen.getByRole("button", { name: "Spend" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
   expect(screen.queryByText(/draw|principal|outstanding/i)).toBeNull();
+});
+
+test("carries the words of the picker row that opened it", () => {
+  render(<SpendScreen />);
+
+  // `SendPicker`'s first row says "To my wallet". A title that renamed itself between the tap and
+  // the screen would read as a different destination, so the heading repeats the row verbatim.
+  expect(screen.getByText("To my wallet")).toBeInTheDocument();
 });

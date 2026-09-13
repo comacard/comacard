@@ -133,12 +133,12 @@ test("an unread figure is a dash, never a zero", () => {
   expect(screen.getByText("—")).toBeInTheDocument();
 });
 
-test("Spend and Deposit are both offered, and Spend goes to the full page", async () => {
+test("Send and Deposit are both offered, and Send goes to the full page", async () => {
   const user = userEvent.setup();
   render(<DesktopOverview />);
 
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Spend" }));
+  await user.click(screen.getByRole("button", { name: "Send" }));
   // No desktop drawer exists for it, and the keypad takes a physical keyboard.
   expect(push).toHaveBeenCalledWith("/send");
 });
@@ -152,7 +152,7 @@ test("an open balance leads with Repay without hiding Deposit", async () => {
   expect(screen.getByText("1 tCTC")).toBeInTheDocument();
   expect(screen.getByText("Repay in full to close the cycle")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Spend" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Repay balance" }));
   expect(push).toHaveBeenCalledWith("/pay");
 });
@@ -185,7 +185,7 @@ test("an unverified holder is offered verification instead of the actions", asyn
   await waitFor(() =>
     expect(screen.getByRole("button", { name: /verify identity/i })).toBeInTheDocument(),
   );
-  expect(screen.queryByRole("button", { name: "Spend" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
 });
 
 test("a dead indexer reports no spending as unknown, not as none", () => {
@@ -206,7 +206,7 @@ test("a dead indexer reports no spending as unknown, not as none", () => {
   expect(screen.queryByText("0 tCTC")).toBeNull();
 });
 
-test("a limit still being read disables Spend as a wait, not as a refusal", () => {
+test("a limit still being read disables Send as a wait, not as a refusal", () => {
   // The Creditcoin RPC takes about four seconds a call. For that whole window `available` is
   // undefined, and `(available ?? 0n) === 0n` rendered a flat greyed button — which says "you have
   // nothing to spend" about a figure nothing had read yet.
@@ -215,7 +215,7 @@ test("a limit still being read disables Spend as a wait, not as a refusal", () =
 
   const spend = screen.getByRole("button", { name: "" });
   expect(spend).toBeDisabled();
-  // The label is gone because a spinner is in its place; the point is that it does not read "Spend"
+  // The label is gone because a spinner is in its place; the point is that it does not read "Send"
   // beside a dead control.
-  expect(screen.queryByRole("button", { name: "Spend" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
 });

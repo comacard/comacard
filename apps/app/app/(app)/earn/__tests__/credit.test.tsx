@@ -85,7 +85,7 @@ test("offers the two halves of a cycle, and dims the half that has nothing to do
   // Nothing owed, so Repay is dimmed rather than hidden: a control that vanishes teaches nobody
   // that it is the second half of what this screen records.
   expect(screen.getByRole("button", { name: "Repay" })).toBeDisabled();
-  await user.click(screen.getByRole("button", { name: "Spend" }));
+  await user.click(screen.getByRole("button", { name: "Send" }));
   expect(push).toHaveBeenCalledWith("/send");
 });
 
