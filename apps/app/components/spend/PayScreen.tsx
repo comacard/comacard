@@ -164,8 +164,10 @@ export function PayScreen() {
         </>
       ) : (
         <>
+          {/* "Current balance", the same words this screen already uses in its zero state a few
+              lines up, so one screen does not call one figure by two names. */}
           <p className="mb-1 text-center text-[13px] text-muted">
-            {fmt(owed)} tCTC owed on your card
+            Current balance {fmt(owed)} tCTC
           </p>
 
           <Keypad
@@ -182,7 +184,7 @@ export function PayScreen() {
               setAmount(pct === 1 ? fmt(owed, 18) : quickAmount(owed, pct, 18));
             }}
             invalid={exceeded}
-            hint={`You only owe ${fmt(owed)} tCTC`}
+            hint={`Your balance is ${fmt(owed)} tCTC`}
           />
 
           {failed ? (

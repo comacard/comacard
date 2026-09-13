@@ -127,7 +127,7 @@ test("refuses more than is owed before it can be signed", async () => {
 
   // `repay()` reverts with RepaymentExceedsDebt rather than refunding the difference.
   expect(screen.getByRole("button", { name: "Repay" })).toBeDisabled();
-  expect(screen.getByText(/You only owe 0.24 tCTC/)).toBeInTheDocument();
+  expect(screen.getByText(/Your balance is 0.24 tCTC/)).toBeInTheDocument();
 });
 
 test("holds the payment until the cycle has been open a minute, and says why", async () => {
