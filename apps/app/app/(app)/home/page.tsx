@@ -22,7 +22,6 @@ import {
 import { useCardAccount } from "../../../hooks/useCardAccount";
 import { useCollateral } from "../../../hooks/useCollateral";
 import { useCreditLine } from "../../../hooks/useCreditLine";
-import { useIsDesktop } from "../../../hooks/useIsDesktop";
 import { useKycStart } from "../../../hooks/useKycStart";
 import { useNav } from "../../../hooks/useNav";
 import { useRemoteCollateral } from "../../../hooks/useRemoteCollateral";
@@ -189,7 +188,35 @@ function MobileHome() {
   );
 }
 
+/**
+ * Which Overview renders, decided by CSS rather than by JavaScript.
+ *
+ * **The flash this removes.** `useIsDesktop` returns false on the server and on the first client
+ * render, then flips in a passive effect. `AuthGate` holds the page until the wallet hydrates, so
+ * the first mount happens after hydration with `isDesktop` still false: the phone screen mounted,
+ * ran its hooks, painted, and only then was replaced by the desktop one. A visible swap, on every
+ * visit, on a 1440px monitor.
+ *
+ * The same file already does this for the two navigation bars (`lg:hidden` on TopBlur and
+ * BottomNav), so the precedent and the breakpoint are both established here.
+ *
+ * **Both trees are in the DOM now, which is why `useCardAccount` had to move to React Query
+ * first.** It was a raw effect, so two mounted callers meant two real `GET /account/:wallet`
+ * calls, and a CSS branch would have made that permanent rather than transient. Every other hook
+ * on this screen was already Query-backed and deduplicated on its own.
+ *
+ * The cost is a second DOM, not a second fetch. `AccountMenu` stays behind the JS check in the
+ * layout because it is a dropdown with its own state, not a page.
+ */
 export default function HomePage() {
-  const isDesktop = useIsDesktop();
-  return isDesktop ? <DesktopOverview /> : <MobileHome />;
+  return (
+    <>
+      <div data-testid="home-mobile" className="lg:hidden">
+        <MobileHome />
+      </div>
+      <div data-testid="home-desktop" className="hidden lg:block">
+        <DesktopOverview />
+      </div>
+    </>
+  );
 }

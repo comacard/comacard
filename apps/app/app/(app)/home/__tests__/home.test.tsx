@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render as rtlRender, screen } from "@testing-library/react";
+import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import HomePage from "../page";
 
@@ -42,7 +42,10 @@ vi.mock("../../../../hooks/useCollateral", () => ({
 vi.mock("../../../../hooks/useRemoteCollateral", () => ({
   useRemoteCollateral: () => ({ assets: [], loading: false, error: false, refresh: vi.fn() }),
 }));
-vi.mock("../../../../hooks/useCreditHistory", () => ({
+// Both Overviews are in the DOM now that the branch is CSS, so `SpendChart` renders here and
+// reaches for `binEvents` from this same module. Replacing the module wholesale removed it.
+vi.mock("../../../../hooks/useCreditHistory", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../hooks/useCreditHistory")>()),
   useCreditHistory: () => ({ events: [], borrowed: 0n, loading: false, error: false }),
 }));
 vi.mock("../../../../hooks/useWalletAssets", () => ({
@@ -91,8 +94,9 @@ beforeEach(() => {
 
 test("the actions sit above the card artwork", () => {
   const { container } = render(<HomePage />);
+  const phone = within(screen.getByTestId("home-mobile"));
 
-  const spend = screen.getByRole("button", { name: "Send" });
+  const spend = phone.getByRole("button", { name: "Send" });
   const card = container.querySelector("[data-testid='card-artwork'], svg, img");
   expect(spend).toBeInTheDocument();
   // `compareDocumentPosition` rather than a class or index: it survives any amount of wrapper
@@ -104,10 +108,11 @@ test("the actions sit above the card artwork", () => {
 
 test("nothing is owed: Send and Deposit, and no Repay", () => {
   render(<HomePage />);
+  const phone = within(screen.getByTestId("home-mobile"));
 
-  expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Repay" })).toBeNull();
+  expect(phone.getByRole("button", { name: "Send" })).toBeInTheDocument();
+  expect(phone.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
+  expect(phone.queryByRole("button", { name: "Repay" })).toBeNull();
 });
 
 test("an open balance adds Repay last, and the order never moves", async () => {
@@ -118,20 +123,23 @@ test("an open balance adds Repay last, and the order never moves", async () => {
     loading: false,
     availableLoading: false,
   });
-  const { container } = render(<HomePage />);
+  render(<HomePage />);
+  const phone = within(screen.getByTestId("home-mobile"));
 
   // Send · Deposit · Repay, in that order and with Send still leading. Moving the primary around as
   // state changes makes the row feel unstable: someone reaching for the same control twice should
   // find it in the same place.
-  const labels = [...container.querySelectorAll("button")]
+  // Scoped to the phone tree: the branch is CSS now, so both Overviews are in the document and an
+  // unscoped query counts each control twice.
+  const labels = [...screen.getByTestId("home-mobile").querySelectorAll("button")]
     .map((b) => b.textContent?.trim())
     .filter((t) => t === "Send" || t === "Deposit" || t === "Repay");
   expect(labels).toEqual(["Send", "Deposit", "Repay"]);
 
   // No figure on the control. The balance is a fact about the account, not part of its name.
-  expect(screen.queryByRole("button", { name: /Repay .*tCTC/ })).toBeNull();
+  expect(phone.queryByRole("button", { name: /Repay .*tCTC/ })).toBeNull();
 
-  await user.click(screen.getByRole("button", { name: "Repay" }));
+  await user.click(phone.getByRole("button", { name: "Repay" }));
   expect(push).toHaveBeenCalledWith("/pay");
 });
 
@@ -143,9 +151,10 @@ test("a limit still being read disables Spend as a wait, not a refusal", () => {
     availableLoading: true,
   });
   render(<HomePage />);
+  const phone = within(screen.getByTestId("home-mobile"));
 
-  expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
+  expect(phone.queryByRole("button", { name: "Send" })).toBeNull();
+  expect(phone.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
 });
 
 test("an unverified holder is offered verification instead of the actions", () => {
@@ -157,18 +166,21 @@ test("an unverified holder is offered verification instead of the actions", () =
     },
   });
   render(<HomePage />);
+  const phone = within(screen.getByTestId("home-mobile"));
 
-  expect(screen.getByRole("button", { name: /verify identity/i })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Deposit" })).toBeNull();
+  expect(phone.getByRole("button", { name: /verify identity/i })).toBeInTheDocument();
+  expect(phone.queryByRole("button", { name: "Send" })).toBeNull();
+  expect(phone.queryByRole("button", { name: "Deposit" })).toBeNull();
 });
 
 test("the overflow opens what has nowhere else to sit on Home", async () => {
   const user = userEvent.setup();
   render(<HomePage />);
+  const phone = within(screen.getByTestId("home-mobile"));
 
-  await user.click(screen.getByRole("button", { name: "More" }));
+  await user.click(phone.getByRole("button", { name: "More" }));
 
+  // The sheet is portalled, so it lands outside the tree that opened it: these stay global.
   expect(screen.getByText("All transactions")).toBeInTheDocument();
   expect(screen.getByText("Get test tokens")).toBeInTheDocument();
 });
@@ -176,13 +188,14 @@ test("the overflow opens what has nowhere else to sit on Home", async () => {
 test("the overflow offers withdraw only for collateral that can actually come back", async () => {
   const user = userEvent.setup();
   render(<HomePage />);
+  const phone = within(screen.getByTestId("home-mobile"));
 
-  await user.click(screen.getByRole("button", { name: "More" }));
+  await user.click(phone.getByRole("button", { name: "More" }));
 
   // This wallet holds nothing on a Wormhole chain in these mocks, so there is nothing to take back.
   // Attestcoin collateral is never offered here: `approveRelease` is operator-gated, and a control
   // that ends in "ask us" is worse than no control.
-  expect(screen.queryByText(/Take back/)).toBeNull();
+  expect(phone.queryByText(/Take back/)).toBeNull();
 });
 
 test("Send is live as soon as the figure beside it is, not when the slowest read lands", () => {
@@ -196,8 +209,9 @@ test("Send is live as soon as the figure beside it is, not when the slowest read
     availableLoading: false,
   });
   render(<HomePage />);
+  const phone = within(screen.getByTestId("home-mobile"));
 
-  const send = screen.getByRole("button", { name: "Send" });
+  const send = phone.getByRole("button", { name: "Send" });
   expect(send).toBeInTheDocument();
   expect(send).toBeEnabled();
 });

@@ -62,8 +62,6 @@ export function CardHero({ account }: { account: ComacardAccount | null }) {
       ) : (
         <div className="mt-2 flex items-center gap-2">
           <CountUp
-            animateOnMount
-            from={0}
             // Keyed so the count animates through the change rather than cutting to the new figure:
             // the two numbers are the same money and the motion is what says so.
             key={inUsd ? "usd" : "ctc"}

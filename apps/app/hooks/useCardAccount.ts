@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { type ComacardAccount, comacardApiEnabled, getAccount } from "../lib/comacard/api";
 import { useWallet } from "./useWallet";
 
@@ -12,50 +13,51 @@ import { useWallet } from "./useWallet";
  *
  * KYC resolves through Didit's webhook, so the verdict never arrives in the response to our own
  * request. `refresh` is what the screen calls when the user comes back from the Didit tab.
+ *
+ * **React Query, and the reason is the desktop/mobile split rather than tidiness.** This was a raw
+ * `useEffect` and `useState`, so two mounted callers meant two real `GET /account/:wallet` calls.
+ * Home branches on `useIsDesktop`, which is false on the first client render and true immediately
+ * after, so `MobileHome` mounted, fetched, painted, and then `DesktopOverview` mounted and fetched
+ * again. Every other hook on that screen absorbed it because they are all Query-backed; this one
+ * was the exception. It matters more now: replacing the JS branch with a CSS one mounts both trees
+ * at once, which would have made the duplicate permanent rather than transient.
+ *
+ * Keyed by address alone, never by a refresh counter. An earlier version keyed on `address#nonce`,
+ * which meant every `refresh()` invalidated the data it already had: `account` went null for the
+ * length of the round trip, and Home read that null as "identity not required" and flipped its
+ * button from Verify identity to Deposit and back on every window focus. `invalidateQueries`
+ * refetches in place and keeps the previous answer on screen. Only a change of wallet discards.
  */
 
-/**
- * One settled read, tagged with the **wallet** it describes.
- *
- * Tagged by address and not by request. An earlier version keyed this on `address#nonce`, which
- * meant every `refresh()` invalidated the data it already had: `account` went null for the length
- * of the round trip, and Home read that null as "identity not required" and flipped its button from
- * Verify identity to Deposit and back on every window focus. A refresh now refetches without
- * discarding what it is refreshing. Only a change of wallet invalidates.
- */
-type Settled = { address: string; account: ComacardAccount | null; error: string | null };
+const KEY = ["comacard", "card-account"] as const;
 
 export function useCardAccount() {
   const { address, hydrated } = useWallet();
-  const [settled, setSettled] = useState<Settled | null>(null);
-  const [nonce, setNonce] = useState(0);
-
-  const refresh = useCallback(() => setNonce((n) => n + 1), []);
+  const queryClient = useQueryClient();
 
   // False whenever there is nothing to fetch: still hydrating, no wallet, or no backend configured.
-  // Derived during render rather than pushed into state from an effect, which is both what the lint
-  // rule asks for and what keeps "no wallet" from flashing through "loading".
   const canFetch = Boolean(hydrated && address && comacardApiEnabled());
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the extra dep is a deliberate refetch trigger, not a value the body reads
-  useEffect(() => {
-    if (!canFetch || !address) return;
-    let alive = true;
-    void getAccount(address).then((result) => {
-      if (!alive) return;
-      setSettled({
-        address,
-        account: result.ok ? result.value : null,
-        error: result.ok ? null : result.message,
-      });
-    });
-    return () => {
-      alive = false;
-    };
-    // `nonce` is what `refresh()` bumps; it belongs in the deps even though the body never reads it.
-  }, [canFetch, address, nonce]);
+  const query = useQuery({
+    queryKey: [...KEY, address ?? null],
+    enabled: canFetch,
+    // The card's own state, not a market figure. Refetching it on every focus is what the explicit
+    // `refresh` after a Didit round trip is for.
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    queryFn: async (): Promise<{ account: ComacardAccount | null; error: string | null }> => {
+      const result = await getAccount(address as string);
+      // Resolved rather than thrown: a backend that answered "no account" and a backend that could
+      // not be reached are different, and both belong in the data so the screen can tell them apart.
+      return result.ok
+        ? { account: result.value, error: null }
+        : { account: null, error: result.message };
+    },
+  });
 
-  const current = settled?.address === address ? settled : null;
+  const refresh = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: KEY });
+  }, [queryClient]);
 
   const error = !hydrated
     ? null
@@ -63,14 +65,14 @@ export function useCardAccount() {
       ? "Connect a wallet to see your card."
       : !comacardApiEnabled()
         ? "The card backend is not configured."
-        : (current?.error ?? null);
+        : (query.data?.error ?? null);
 
   return {
-    account: current?.account ?? null,
+    account: query.data?.account ?? null,
     error,
     // Only the FIRST read of a wallet is a loading state. A refresh keeps the previous answer on
     // screen, so nothing downstream has to cope with the account briefly vanishing.
-    loading: !hydrated || (canFetch && current === null),
+    loading: !hydrated || (canFetch && query.data === undefined && !query.isError),
     refresh,
   };
 }

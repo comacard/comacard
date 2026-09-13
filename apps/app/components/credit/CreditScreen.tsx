@@ -66,7 +66,18 @@ export function CreditScreen() {
   // column with a chart floating a screen-height below the number it explains.
   const head = (
     <>
-      <div className="py-[30px] text-center">
+      {/*
+        Left-aligned, like Home's headline and like every reference dashboard.
+
+        This was centred, which is the phone hero's treatment surviving into a 400px card: a centred
+        figure with a row of controls under it makes the controls read as its caption. Aligned to one
+        edge they read as a column, label then number then what you can do, and the eye travels one
+        line rather than three. Home made this change months ago and Credit did not.
+
+        `py-8` rather than `py-[30px]`: 30 is off the 4/8/12/16/24/32 scale that sixteen of the
+        seventeen measured sites use without exception.
+      */}
+      <div className="py-8">
         <div className="text-[15px] font-medium text-muted">Your limit</div>
         {/*
           A dash until `limitOf` answers, never a zero.
@@ -83,8 +94,6 @@ export function CreditScreen() {
           </div>
         ) : (
           <CountUp
-            animateOnMount
-            from={0}
             value={Number(formatUnits(limit, 18))}
             format={(n) => `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} tCTC`}
             className="mt-2 block whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] lg:text-[28px] [font-variant-numeric:tabular-nums]"
@@ -99,7 +108,7 @@ export function CreditScreen() {
           is the failure this app's own notes name twice. The score was equally absent, on the one
           screen whose subject is how the limit is earned.
         */}
-        <div className="mt-3 flex items-center justify-center gap-2 text-[13px] text-muted [font-variant-numeric:tabular-nums]">
+        <div className="mt-3 flex items-center gap-2 text-[13px] text-muted [font-variant-numeric:tabular-nums]">
           <span>score {score === undefined ? "—" : String(score)}</span>
           <span className="text-faint">·</span>
           <span className={owes ? "text-neg" : ""}>
@@ -112,11 +121,16 @@ export function CreditScreen() {
           rather than hidden when nothing is owed: a control that vanishes teaches nobody that it
           is the second half. */}
       <div className="flex gap-3">
-        <Button size={isDesktop ? "md" : "lg"} onClick={() => nav.forward("/send")}>
+        <Button
+          size={isDesktop ? "md" : "lg"}
+          block={!isDesktop}
+          onClick={() => nav.forward("/send")}
+        >
           Send
         </Button>
         <Button
           size={isDesktop ? "md" : "lg"}
+          block={!isDesktop}
           variant="glass"
           disabled={!owes}
           onClick={() => nav.forward("/pay")}

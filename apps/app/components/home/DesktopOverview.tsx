@@ -229,8 +229,6 @@ export function DesktopOverview() {
                       <span className="text-[13.5px] font-medium">{asset.name}</span>
                       <span className="text-[13.5px] font-semibold tabular-nums">
                         <CountUp
-                          animateOnMount
-                          from={0}
                           value={Number(formatUnits(asset.amount, asset.decimals))}
                           format={(n) =>
                             `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${asset.symbol}`

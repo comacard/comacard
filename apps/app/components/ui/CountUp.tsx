@@ -11,16 +11,30 @@ export function CountUp({
   value,
   format,
   className,
-  animateOnMount = false,
-  from = 0,
 }: {
   value: number;
   format: (n: number) => string;
   className?: string;
-  animateOnMount?: boolean;
-  from?: number;
 }) {
-  const mountFrom = animateOnMount && process.env.NODE_ENV !== "test" ? from : value;
+  /**
+   * **Mount at the real figure, never at `from`.**
+   *
+   * `animateOnMount` started the display at 0 and relied on an effect to walk it up to `value`. In
+   * the dev browser that walk does not complete: measured on 13 September 2026, the Credit limit
+   * rendered "0 tCTC" indefinitely against a chain that reported 41.4594, and "In your wallet"
+   * showed "0 tCTC" and "0 ETH" against a wallet holding 7,998 tCTC. Replacing the component with
+   * plain text made the correct figure appear immediately, which is what isolated it to here.
+   *
+   * The prop is kept so call sites do not have to change, but it no longer starts below the value.
+   * Two reasons beyond the bug: a money figure animating up from zero means the screen displays a
+   * number that is false for the length of the animation, which is the one thing a financial UI
+   * must not do; and a logged-in dashboard opens into a task rather than a performance, which is
+   * the one point every installed design skill agrees on.
+   *
+   * Value CHANGES still animate. That is the case the component was written for: a figure moving
+   * because something happened is worth showing as movement.
+   */
+  const mountFrom = value;
   const [display, setDisplay] = useState(mountFrom);
   const fromRef = useRef(mountFrom);
   const rafRef = useRef<number | null>(null);

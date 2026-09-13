@@ -18,7 +18,15 @@ import type { UsdPrices } from "../lib/comacard/prices";
  */
 export function usePrices(): { prices: UsdPrices; loading: boolean } {
   const query = useQuery({
-    queryKey: ["comacard", "prices"],
+    /**
+     * Distinct from `useWalletAssets`, which already owns `["comacard", "prices"]`.
+     *
+     * Two hooks sharing a key with different `queryFn`s is one cache entry served to both: whichever
+     * mounts first fills it, and the other reads a value of the wrong shape with no error. They are
+     * genuinely different things, oracle prices read from contracts versus CoinGecko's USD figures,
+     * so they get different keys rather than being merged.
+     */
+    queryKey: ["comacard", "usd-prices"],
     staleTime: 60 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
