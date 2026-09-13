@@ -15,8 +15,10 @@ test("leads with spending power when nothing is owed", () => {
 
   expect(screen.getByText("Available to spend")).toBeInTheDocument();
   expect(screen.getByText("36 tCTC")).toBeInTheDocument();
-  expect(screen.getByText(/of 41 tCTC limit/)).toBeInTheDocument();
-  expect(screen.getByText(/score/)).toHaveTextContent("42");
+  expect(screen.getByText("Limit")).toBeInTheDocument();
+  expect(screen.getByText("41 tCTC")).toBeInTheDocument();
+  // The label is "Score" now, a tile heading rather than a word inside a sentence.
+  expect(screen.getByText("Score").parentElement).toHaveTextContent("42");
 });
 
 test("flips to the balance the moment a cycle is open", () => {
@@ -27,7 +29,8 @@ test("flips to the balance the moment a cycle is open", () => {
   // reason: it is no longer the figure the next action depends on.
   expect(screen.getByText("Balance")).toBeInTheDocument();
   expect(screen.getByText("13 tCTC")).toBeInTheDocument();
-  expect(screen.getByText(/23 tCTC still available/)).toBeInTheDocument();
+  expect(screen.getByText("Still to spend")).toBeInTheDocument();
+  expect(screen.getByText("23 tCTC")).toBeInTheDocument();
   expect(screen.queryByText("Available to spend")).toBeNull();
 });
 
@@ -43,20 +46,24 @@ test("an open balance is marked, so the word does not carry the meaning alone", 
   expect(screen.getByText("36 tCTC").className).not.toContain("text-neg");
 });
 
-test("the sub-line says what closes a cycle rather than repeating the figure", () => {
+test("the pair under the figure flips with the figure, and Limit is not shown inside a cycle", () => {
+  // The two tiles replaced a caption that read "23 tCTC still available · repay in full to close
+  // this cycle". Axel chose to drop it. Worth recording what went with it: that sentence was the
+  // only place on Overview stating that a partial payment settles debt and earns no mark, and that
+  // fact now lives only on Credit, where `CycleList` marks a short cycle "No mark".
   render(<OverviewHeadline spendable="23" limit={41n * ONE} drawn={13n * ONE} score={42n} />);
 
-  // Only a payment that clears the balance to zero closes a cycle and moves the score. A partial
-  // one settles debt and earns nothing, and nothing else on this screen says so.
-  expect(screen.getByText(/repay in full to close this cycle/)).toBeInTheDocument();
+  expect(screen.getByText("Still to spend")).toBeInTheDocument();
+  expect(screen.queryByText("Limit")).toBeNull();
 });
 
 test("an unread figure is a dash, never a zero", () => {
   render(<OverviewHeadline spendable={undefined} limit={undefined} drawn={0n} score={undefined} />);
 
   // The Creditcoin RPC takes about four seconds a call. "0 tCTC" for that window is a claim that
-  // the card is empty, made by a screen that has not finished asking.
-  expect(screen.getByText("—")).toBeInTheDocument();
+  // the card is empty, made by a screen that has not finished asking. All three figures are unread
+  // here, the headline and both tiles, and every one of them has to be a dash rather than a zero.
+  expect(screen.getAllByText("—")).toHaveLength(3);
   expect(screen.queryByText("0 tCTC")).toBeNull();
 });
 

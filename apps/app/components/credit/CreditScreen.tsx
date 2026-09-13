@@ -78,10 +78,14 @@ export function CreditScreen() {
         edge they read as a column, label then number then what you can do, and the eye travels one
         line rather than three. Home made this change months ago and Credit did not.
 
-        `py-8` rather than `py-[30px]`: 30 is off the 4/8/12/16/24/32 scale that sixteen of the
-        seventeen measured sites use without exception.
+        `pt-8 pb-6` rather than `py-[30px]`: 30 is off the 4/8/12/16/24/32 scale that sixteen of
+        the seventeen measured sites use without exception.
+
+        The bottom is 24 rather than 32 so that the buttons sit in the middle of two equal gaps.
+        They used to have 32 above and, once `mt-auto` below them resolved to zero, nothing at all
+        underneath, which read as the buttons having slid down onto the block below them.
       */}
-      <div className="py-8">
+      <div className="pb-6 pt-8">
         <div className="text-[15px] font-medium text-muted">Your limit</div>
         {/*
           A dash until `limitOf` answers, never a zero.
@@ -150,15 +154,14 @@ export function CreditScreen() {
         </Button>
       </div>
 
-      {/* The working behind the figure at the top of this card. `mt-auto` on desktop drops it to
-          the foot of the rail, which is as tall as the record beside it; on mobile the card is only
-          as tall as its content, so the plain margin applies. */}
-      <LimitWorking
-        collateralValue={totalValue}
-        limit={limit}
-        score={score}
-        className="mt-6 lg:mt-auto"
-      />
+      {/* The working behind the figure at the top of this card.
+
+          `mt-auto` was tried here and was dead weight: this card is the taller of the two in its
+          row, so the grid stretches the chart to it and there is never any slack to push into.
+          What it actually did was resolve to zero and glue this block to the buttons, leaving 32px
+          of air above them and none below. Both gaps are 24 now, so the buttons sit between the
+          two blocks rather than against one of them. */}
+      <LimitWorking collateralValue={totalValue} limit={limit} score={score} className="mt-6" />
     </>
   );
 

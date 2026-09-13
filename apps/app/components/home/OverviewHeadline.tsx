@@ -1,7 +1,7 @@
 "use client";
 import { formatUnits } from "viem";
 import { cn } from "../../lib/utils";
-import { Skeleton } from "../ui";
+import { Skeleton, StatStrip } from "../ui";
 
 /**
  * The one figure the desktop Overview leads with, and it is not always the same figure.
@@ -28,8 +28,8 @@ import { Skeleton } from "../ui";
  * **"Balance" is Axel's choice over "You owe".** It is what Mercury and Brex use and it is short,
  * but on a product that is both debit and credit the word does not say which direction it points,
  * which is the ambiguity that made Amex name three separate balances. Two things compensate: the
- * figure takes the negative tone when anything is owed, and the sub-line says "repay in full to
- * close this cycle" rather than restating the number.
+ * figure takes the negative tone when anything is owed, and the tile beside it changes from Limit
+ * to Still to spend, so the pair under the figure says which direction the headline points.
  */
 
 const ctc = (value: bigint | undefined): string | null =>
@@ -103,21 +103,39 @@ export function OverviewHeadline({
         {headline === null ? "—" : `${headline} tCTC`}
       </div>
 
-      {/* Two facts, and which two depends on what the headline is. Both are the ones that decide
-          what a person does next: how much room is left, and what closes the cycle. */}
-      <p className="mt-2 text-[13px] text-muted [font-variant-numeric:tabular-nums]">
-        {owes ? (
-          <>
-            {spendable ?? "—"} tCTC still available <span className="text-faint">·</span> repay in
-            full to close this cycle
-          </>
-        ) : (
-          <>
-            of {ctc(limit) ?? "—"} tCTC limit <span className="text-faint">·</span> score{" "}
-            {score === undefined ? "—" : String(score)}
-          </>
-        )}
-      </p>
+      {/*
+        Two tiles rather than a run-on caption.
+
+        These two facts used to be a sentence under the figure: "of 41.4594 tCTC limit · score 42",
+        with a middot doing the work of a divider. Two unrelated numbers joined by punctuation read
+        as one clause about the figure above them, which is not what they are: each is a heading of
+        its own with a value under it. Axel asked for them to have a section, and this is it.
+
+        `StatStrip` is the component that already draws exactly this, hairlines and all. It was
+        written for four tiles, unused since this headline replaced that band, and two of it is what
+        was wanted here: four said available, limit, balance and lifetime spend were peers, and two
+        says these are the two supporting readings of the one figure above.
+
+        Which two depends on the headline, the same way the headline itself does. Inside an open
+        cycle the limit is not the useful number, what is left to spend is.
+      */}
+      <StatStrip
+        className="mt-4"
+        stats={
+          owes
+            ? [
+                {
+                  label: "Still to spend",
+                  value: spendable === undefined ? null : `${spendable} tCTC`,
+                },
+                { label: "Score", value: score === undefined ? null : String(score) },
+              ]
+            : [
+                { label: "Limit", value: ctc(limit) === null ? null : `${ctc(limit)} tCTC` },
+                { label: "Score", value: score === undefined ? null : String(score) },
+              ]
+        }
+      />
     </div>
   );
 }

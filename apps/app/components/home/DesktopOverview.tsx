@@ -104,6 +104,12 @@ function CardActions({
   );
 }
 
+/** Wei to a readable tCTC figure. Null stays null: an unread balance is a dash, never a zero. */
+const ctc = (value: bigint | undefined): string | null =>
+  value === undefined
+    ? null
+    : Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: 4 });
+
 export function DesktopOverview() {
   const nav = useNav();
   const { panel, open, close } = usePanel();
@@ -259,6 +265,24 @@ export function DesktopOverview() {
                   </div>
                 ))}
               </Card>
+
+              {/*
+                What the wallet cannot say for itself.
+
+                tCTC drawn on the card lands in this same wallet and is fungible with the rest of
+                it, so this row silently mixes money that is the holder's with money that is
+                borrowed, and somebody reading 7,997 has no way to know a repayment is outstanding.
+
+                It deliberately does not say "13 of this", which is the sentence that suggested
+                itself first and would have been a guess: a draw can be sent on to somebody else the
+                minute it arrives, and then none of it is in here. What is certain is the debt, so
+                the debt is what the line states, and it renders only while there is one.
+              */}
+              {owes ? (
+                <p className="mx-1 mt-2 text-[12.5px] text-faint [font-variant-numeric:tabular-nums]">
+                  {ctc(drawn)} tCTC drawn on your card is still owed back.
+                </p>
+              ) : null}
             </Section>
           ) : null}
         </div>

@@ -140,7 +140,10 @@ test("an unread figure is a dash, never a zero", () => {
   // 0 tCTC there would state something about the account that nothing has established.
   render(<DesktopOverview />);
 
-  expect(screen.getByText(/of — tCTC limit/)).toBeInTheDocument();
+  // Scoped to the Limit tile. The headline above it is also a dash in this state, so an unscoped
+  // query cannot tell which one it found.
+  const tile = screen.getByText("Limit").parentElement as HTMLElement;
+  expect(tile).toHaveTextContent("—");
 });
 
 test("Send and Deposit are both offered, and Send goes to the full page", async () => {
@@ -166,7 +169,9 @@ test("an open balance leads with Repay without hiding Deposit", async () => {
   // The headline flips to the balance, because that is now the figure the next action depends on.
   expect(screen.getByText("Balance")).toBeInTheDocument();
   expect(screen.getByText("1 tCTC")).toBeInTheDocument();
-  expect(screen.getByText(/repay in full to close this cycle/)).toBeInTheDocument();
+  // And the tile beside the figure flips with it: inside an open cycle the limit is not the useful
+  // number, what is left to spend is.
+  expect(screen.getByText("Still to spend")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Repay balance" }));

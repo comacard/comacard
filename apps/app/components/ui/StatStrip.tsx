@@ -40,7 +40,10 @@ export function StatStrip({
   className?: string;
 }) {
   return (
-    <Card className={cn("grid grid-cols-2 lg:grid-cols-4", className)}>
+    // Columns follow the number of tiles. `lg:grid-cols-4` was written when this always held four,
+    // and a two-tile strip under it filled the first half of the card and left the second half
+    // blank. Two tiles are two columns at every width.
+    <Card className={cn("grid grid-cols-2", stats.length > 2 ? "lg:grid-cols-4" : "", className)}>
       {stats.map((stat, i) => (
         <div
           key={stat.label}
