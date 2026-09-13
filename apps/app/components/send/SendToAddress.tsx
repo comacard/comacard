@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatUnits, isAddress, parseUnits } from "viem";
 import { useConfig, useSendTransaction, useSwitchChain } from "wagmi";
 import { useCreditLine } from "../../hooks/useCreditLine";
+import { quickAmount } from "../../lib/comacard/amount";
 import { CREDITCOIN_CHAIN_ID, explorerTx } from "../../lib/comacard/contracts";
 import { awaitSuccess } from "../../lib/comacard/tx";
 import { Button, Keypad, PendingLabel, TransactionStatus } from "../ui";
@@ -184,9 +185,7 @@ export function SendToAddress() {
         value={amount}
         onChange={setAmount}
         symbol=""
-        onQuick={(pct) =>
-          setAmount(formatUnits((ceiling * BigInt(Math.round(pct * 1000))) / 1000n, 18))
-        }
+        onQuick={(pct) => setAmount(quickAmount(ceiling, pct, 18))}
         invalid={exceeded}
         hint={`Your card has ${fmt(ceiling)} tCTC`}
       />
@@ -208,9 +207,6 @@ export function SendToAddress() {
             "Send"
           )}
         </Button>
-        <p className="mt-2 text-center text-[12px] leading-snug text-muted">
-          Two signatures: the credit reaches your wallet, then goes on. You pay it back either way.
-        </p>
       </div>
     </div>
   );

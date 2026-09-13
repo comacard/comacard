@@ -18,6 +18,7 @@ export { PendingLabel } from "./PendingLabel";
 export { Section } from "./Section";
 export { Segmented } from "./Segmented";
 export { Skeleton } from "./Skeleton";
+export { SlidingTabs, TabPanel } from "./SlidingTabs";
 export { Spinner } from "./Spinner";
 export { type Stat, StatStrip } from "./StatStrip";
 export { SubHeader } from "./SubHeader";

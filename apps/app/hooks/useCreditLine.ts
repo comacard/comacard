@@ -236,9 +236,22 @@ export function useCreditLine() {
    * move it in between, and the caller cannot be holding it open.
    */
   const repay = useCallback(
-    // No parameter at all, rather than one that is accepted and ignored: a signature that still took
-    // an amount would invite a caller to believe theirs was used.
-    async () => {
+    /**
+     * Repay part of the balance, or all of it.
+     *
+     * `amount` omitted means the whole balance, and it is read here rather than taken from the
+     * caller: the contract reverts with `RepaymentExceedsDebt` rather than refunding, and a figure
+     * the screen was holding goes stale exactly when someone has just drawn against the same line.
+     *
+     * The parameter exists because the contract supports a partial payment and someone repaying a
+     * card should be able to pay what they can. It used to be absent on the grounds that only a
+     * payment clearing the balance closes a cycle, which is true, and was the wrong reason: a
+     * product does not refuse a payment because it earns the payer nothing.
+     *
+     * A caller's figure is still clamped to the freshly read debt. Paying more than is owed is the
+     * one thing this call cannot do, so the last word belongs to the chain either way.
+     */
+    async (amount?: bigint) => {
       if (!address) throw new Error("no wallet connected");
       const line = addressOf("creditLine");
       const fresh = await readContract(config, {
@@ -249,11 +262,16 @@ export function useCreditLine() {
         chainId: CREDITCOIN_CHAIN_ID,
       });
       if (fresh.drawn === 0n) throw new Error("nothing is owed");
+
+      const value =
+        amount === undefined ? fresh.drawn : amount > fresh.drawn ? fresh.drawn : amount;
+      if (value <= 0n) throw new Error("nothing to pay");
+
       return writeContractAsync({
         address: line,
         abi: creditLineAbi,
         functionName: "repay",
-        value: fresh.drawn,
+        value,
         chainId: CREDITCOIN_CHAIN_ID,
       });
     },

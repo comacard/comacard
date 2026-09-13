@@ -15,7 +15,7 @@ function humanize(item: ActivityItem): { title: string; description: string } {
     case "drew":
       return { title: "Spent", description: item.detail };
     case "repaid":
-      return { title: "Payment", description: item.detail };
+      return { title: "Repay", description: item.detail };
     case "collateral-locked":
       // "Deposit", not "Deposit". It sits directly above "Deposit confirmed" once the
       // guardians have signed, and the pair read as two different things rather than two moments

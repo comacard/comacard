@@ -53,7 +53,7 @@ beforeEach(() => {
 
 test("shows every on-chain row, newest first, with plain-language titles", () => {
   render(<TransactionsPage />);
-  expect(screen.getByText("Payment")).toBeInTheDocument();
+  expect(screen.getByText("Repay")).toBeInTheDocument();
   expect(screen.getByText("Spent")).toBeInTheDocument();
   expect(screen.getByText("Deposit confirmed")).toBeInTheDocument();
   // The filter tab is also called "Deposit", so the row title is matched by its element: a tab is a

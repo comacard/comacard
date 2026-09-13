@@ -5,6 +5,7 @@ import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
 import { assetBySlug, type CollateralAsset, useCollateral } from "../../hooks/useCollateral";
 import { useCreditLine } from "../../hooks/useCreditLine";
+import { quickAmount } from "../../lib/comacard/amount";
 import { explorerTx, SEPOLIA_CHAIN_ID } from "../../lib/comacard/contracts";
 import { collateralValue, limitFrom } from "../../lib/comacard/credit";
 import {
@@ -101,10 +102,7 @@ export function LockCollateral({ sym }: { sym: string }) {
   // showing: the identical lock buys more credit later, which is the whole product.
   const addedLimit = limitFrom(value, score ?? 0n);
 
-  const quick = (pct: number) => {
-    const part = (asset.available * BigInt(Math.round(pct * 1000))) / 1000n;
-    setAmount(formatUnits(part, decimals));
-  };
+  const quick = (pct: number) => setAmount(quickAmount(asset.available, pct, decimals));
 
   const onLock = async () => {
     if (busy || entered <= 0n || exceeded) return;

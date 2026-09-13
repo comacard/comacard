@@ -2,96 +2,69 @@ import { render, screen } from "@testing-library/react";
 import { SpentTotal } from "../SpentTotal";
 
 /**
- * What has come out of the card, counted from `Draw` events.
+ * The one row on Home that answers "do I still owe anything".
  *
- * Two things are pinned. It must never read the wallet, because a wallet holds tCTC from faucets
- * and from everything else the holder does on Creditcoin, and presenting that as spending would
- * make an unused card look heavily used. And zero must be stated rather than hidden: without it the
- * only tCTC figure on Home is the collateral's value, which is a different number entirely.
+ * It used to answer a different question: lifetime spend, summed from `Draw` events with
+ * repayments never netted off, and rendered only when nothing was owed. So a card with a balance
+ * showed no row at all, and a card that had just been paid off showed "13 tCTC", which reads as
+ * still outstanding. These tests pin the inversion closed.
  */
 
-const history = vi.fn();
-vi.mock("../../../hooks/useCreditHistory", () => ({ useCreditHistory: () => history() }));
+const creditLine = vi.fn();
+vi.mock("../../../hooks/useCreditLine", () => ({ useCreditLine: () => creditLine() }));
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  history.mockReturnValue({
-    borrowed: 0n,
-    repaid: 0n,
-    cyclesClosed: 0,
-    events: [],
-    loading: false,
-    error: false,
-  });
-});
-
-test("states zero rather than hiding the row", () => {
+test("shows what is still owed", () => {
+  creditLine.mockReturnValue({ drawn: 13n * 10n ** 18n, loading: false });
   render(<SpentTotal />);
 
-  // Hidden, the only tCTC on the screen is "50.0000 tCTC" under the collateral, which is what the
-  // collateral is worth, not what was spent. The zero is what tells them apart.
-  expect(screen.getByText("Spent from your card")).toBeInTheDocument();
+  expect(screen.getByText("Balance")).toBeInTheDocument();
+  expect(screen.getByText("13 tCTC")).toBeInTheDocument();
+});
+
+test("goes to zero once the card is settled, and says so out loud", () => {
+  // The complaint this fixes: repaid in full, and the row still read 13.
+  creditLine.mockReturnValue({ drawn: 0n, loading: false });
+  render(<SpentTotal />);
+
   expect(screen.getByText("0 tCTC")).toBeInTheDocument();
 });
 
-test("sums what the credit line paid out", () => {
-  history.mockReturnValue({
-    borrowed: 1_500_000_000_000_000_000n,
-    repaid: 0n,
-    cyclesClosed: 0,
-    events: [],
-    loading: false,
-    error: false,
-  });
-  render(<SpentTotal />);
+test("is rendered whether or not anything is owed", () => {
+  // Previously `{owes ? null : <SpentTotal />}` on Home, which hid the row in exactly the state
+  // where a person most wants to see it.
+  creditLine.mockReturnValue({ drawn: 5n * 10n ** 18n, loading: false });
+  const { container } = render(<SpentTotal />);
+  expect(container).not.toBeEmptyDOMElement();
 
-  expect(screen.getByText("1.5 tCTC")).toBeInTheDocument();
+  creditLine.mockReturnValue({ drawn: 0n, loading: false });
+  const settled = render(<SpentTotal />);
+  expect(settled.container).not.toBeEmptyDOMElement();
 });
 
-test("does not net repayments off: this is what was taken, not what is owed", () => {
-  history.mockReturnValue({
-    borrowed: 1_000_000_000_000_000_000n,
-    repaid: 1_000_000_000_000_000_000n,
-    cyclesClosed: 1,
-    events: [],
-    loading: false,
-    error: false,
-  });
-  render(<SpentTotal />);
-
-  // Fully repaid, and still 1 tCTC was spent. The balance owed is a separate row answering a
-  // separate question.
-  expect(screen.getByText("1 tCTC")).toBeInTheDocument();
-});
-
-test("withholds the row when the indexer could not be read", () => {
-  history.mockReturnValue({
-    borrowed: 0n,
-    repaid: 0n,
-    cyclesClosed: 0,
-    events: [],
-    loading: false,
-    error: true,
-  });
+test("withholds the row until the read lands, because an unread figure is not a zero", () => {
+  // `accountOf` on the Creditcoin RPC takes about four seconds. Printing "0 tCTC" for that window
+  // is a claim that the card is settled, made by a screen that has not asked yet.
+  creditLine.mockReturnValue({ drawn: undefined, loading: true });
   const { container } = render(<SpentTotal />);
 
-  // The zero this row exists to state is one the indexer returned. A zero produced by failing to
-  // reach it is a different thing entirely: it showed "Spent from your card 0 tCTC" next to a
-  // 1 tCTC balance read live off the chain, and both cannot be true.
   expect(container).toBeEmptyDOMElement();
 });
 
-test("withholds the row until the first read lands", () => {
-  history.mockReturnValue({
-    borrowed: 0n,
-    repaid: 0n,
-    cyclesClosed: 0,
-    events: [],
-    loading: true,
-    error: false,
-  });
+test("withholds the row when the read failed rather than reporting nothing owed", () => {
+  creditLine.mockReturnValue({ drawn: undefined, loading: false });
   const { container } = render(<SpentTotal />);
 
-  // An unresolved query is not a zero, and printing one would state something not yet known.
   expect(container).toBeEmptyDOMElement();
+});
+
+test("an open balance is marked, a settled one is not", () => {
+  // Colour carries the state as well as the figure, so the row reads at a glance rather than
+  // needing the number to be parsed.
+  creditLine.mockReturnValue({ drawn: 13n * 10n ** 18n, loading: false });
+  const owing = render(<SpentTotal />);
+  expect(owing.getByText("13 tCTC").className).toContain("text-neg");
+
+  creditLine.mockReturnValue({ drawn: 0n, loading: false });
+  const settled = render(<SpentTotal />);
+  expect(settled.getByText("0 tCTC").className).not.toContain("text-neg");
 });

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { ActivityList } from "../../../components/activity/ActivityList";
-import { SubHeader } from "../../../components/ui";
+import { SlidingTabs, SubHeader, TabPanel } from "../../../components/ui";
 import { useTransactions } from "../../../hooks/useTransactions";
 
 /**
@@ -55,31 +55,29 @@ export default function TransactionsPage() {
     <div className="pb-8">
       <div className="stagger">
         <SubHeader title="Transactions" />
-        <div className="mb-3.5 flex gap-1.5">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              aria-pressed={filter === f.key}
-              onClick={() => setFilter(f.key)}
-              className={`h-9 flex-1 rounded-full text-[13.5px] font-medium transition-colors ${filter === f.key ? "bg-[#ECECEC] text-pill-ink" : "text-[#8a8a8a] hover:text-ink"}`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <SlidingTabs
+          options={FILTERS}
+          value={filter}
+          onChange={setFilter}
+          label="Filter transactions"
+          className="mb-3.5"
+        />
         {/* The full history is the one place day headings earn their space: it is long, and "3h ago"
             stops being useful the moment the list runs past yesterday. The three-row previews on
             Home stay ungrouped. */}
-        <ActivityList
-          items={shown}
-          loading={loading}
-          grouped
-          now={now}
-          pageSize={12}
-          emptyTitle={empty.title}
-          emptyDescription={empty.description}
-        />
+        {/* Keyed on the filter so the panel remounts and cross-fades. Without the key the rows
+            swap in place and the change reads as the list glitching rather than as a new list. */}
+        <TabPanel key={filter}>
+          <ActivityList
+            items={shown}
+            loading={loading}
+            grouped
+            now={now}
+            pageSize={12}
+            emptyTitle={empty.title}
+            emptyDescription={empty.description}
+          />
+        </TabPanel>
       </div>
     </div>
   );

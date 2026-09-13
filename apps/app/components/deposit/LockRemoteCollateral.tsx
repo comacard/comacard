@@ -7,6 +7,7 @@ import { readContract } from "wagmi/actions";
 import { useCreditLine } from "../../hooks/useCreditLine";
 import { type RemoteAsset, useRemoteCollateral } from "../../hooks/useRemoteCollateral";
 import { useWallet } from "../../hooks/useWallet";
+import { quickAmount } from "../../lib/comacard/amount";
 import {
   crossingTime,
   erc20Abi,
@@ -290,11 +291,7 @@ export function LockRemoteCollateral({ id }: { id: string }) {
         value={amount}
         onChange={setAmount}
         symbol=""
-        onQuick={(pct) =>
-          setAmount(
-            formatUnits((asset.available * BigInt(Math.round(pct * 1000))) / 1000n, asset.decimals),
-          )
-        }
+        onQuick={(pct) => setAmount(quickAmount(asset.available, pct, asset.decimals))}
         invalid={exceeded}
         hint={`You only have ${fmt(asset.available, asset.decimals)} ${symbol}`}
       />

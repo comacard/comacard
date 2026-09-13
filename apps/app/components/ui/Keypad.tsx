@@ -89,8 +89,24 @@ export function Keypad({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col justify-center">
+        {/*
+          The size steps down as the figure grows, rather than the figure running off the screen.
+
+          A quick-select used to produce twenty characters at 18 decimals and this was a fixed 60px,
+          so the number simply left the viewport on the right. `quickAmount` stops that at the
+          source, but somebody can still type a long figure, and a keypad whose display can overflow
+          is a keypad that can hide what it is about to send.
+        */}
         <div
-          className={`text-center text-[60px] font-semibold leading-none tracking-[-.03em] [font-variant-numeric:tabular-nums] ${invalid ? "text-neg" : ""}`}
+          className={`text-center font-semibold leading-none tracking-[-.03em] [font-variant-numeric:tabular-nums] ${
+            display.length > 15
+              ? "text-[30px]"
+              : display.length > 11
+                ? "text-[40px]"
+                : display.length > 8
+                  ? "text-[50px]"
+                  : "text-[60px]"
+          } ${invalid ? "text-neg" : ""}`}
         >
           <span>{symbol}</span>
           {/* `cursorIndex` at the end of the string is what makes this read as typing: torph
@@ -104,7 +120,9 @@ export function Keypad({
             </TextMorph>
           </span>
           <span
-            className={`ml-[3px] inline-block h-[50px] w-[2px] animate-pulse align-[-7px] ${invalid ? "bg-neg" : "bg-ink"}`}
+            className={`ml-[3px] inline-block w-[2px] animate-pulse align-[-7px] ${
+              display.length > 15 ? "h-[26px]" : display.length > 11 ? "h-[34px]" : "h-[50px]"
+            } ${invalid ? "bg-neg" : "bg-ink"}`}
           />
         </div>
         {hint !== undefined && (

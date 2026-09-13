@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
 import { useCreditLine } from "../../hooks/useCreditLine";
+import { quickAmount } from "../../lib/comacard/amount";
 import { CREDITCOIN_CHAIN_ID, explorerTx } from "../../lib/comacard/contracts";
 import { Button, Keypad, PendingLabel, TransactionStatus } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
@@ -98,9 +99,7 @@ export function SpendScreen() {
         value={amount}
         onChange={setAmount}
         symbol=""
-        onQuick={(pct) =>
-          setAmount(formatUnits((ceiling * BigInt(Math.round(pct * 1000))) / 1000n, 18))
-        }
+        onQuick={(pct) => setAmount(quickAmount(ceiling, pct, 18))}
         invalid={exceeded}
         hint={`Your card has ${fmt(ceiling)} tCTC`}
       />

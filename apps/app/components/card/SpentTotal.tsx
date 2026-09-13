@@ -1,46 +1,48 @@
 "use client";
 import { formatUnits } from "viem";
-import { useCreditHistory } from "../../hooks/useCreditHistory";
+import { useCreditLine } from "../../hooks/useCreditLine";
 
 /**
- * How much has come out of the card, and nothing else.
+ * What is still owed on the card.
  *
- * **Counted from `Draw` events, never from the wallet balance.** The wallet holds tCTC from
- * faucets, from other people, from whatever the holder was already doing on Creditcoin, and none
- * of that came from this card. A figure that read the balance would present all of it as spending,
- * which is the specific way this number would mislead: it would make a card that has never been
- * used look heavily used.
+ * **This used to be lifetime spend and it was answering the wrong question.** It summed every
+ * `Draw` event and never netted repayments off, which is a true figure and not the one anybody
+ * opens Home to check. Worse, it was rendered only when nothing was owed, so the screen showed
+ * "Spent from your card 13 tCTC" immediately after a repayment cleared the balance, and showed
+ * nothing at all while there was a balance to clear. Exactly backwards. Axel repaid in full and
+ * reasonably read the 13 as still outstanding.
  *
- * So the only thing summed here is what the credit line paid out, and every one of those is a
- * transaction the holder signed against their own limit.
+ * So the row is the balance, it is always rendered, and it goes to zero when the card is settled.
+ * Lifetime spending is still on Credit, where the chart is about history.
  *
- * Repayments are not netted off. This is what has been taken, not what is still owed; the balance
- * owed has its own row on Home and they answer different questions.
+ * **Read from the chain, not the indexer.** `accountOf.drawn` is the outstanding principal and it
+ * is what `repay` settles against. The indexer's `Account` row is as of that account's last
+ * transaction, so for the seconds after a repayment it still reports the old debt, which is the one
+ * moment this row is being looked at hardest.
  *
- * **Zero is shown, not hidden.** Hiding it left "50.0000 tCTC" under the collateral row as the only
- * tCTC figure on the screen, and that number is what the collateral is worth, not what was spent.
- * A stated zero is what tells the two apart, so the row that looked like noise was the one doing
- * the work. That holds for a zero the indexer returned, not for one produced by failing to reach
- * it: the row disappears then, because it has nothing to report.
+ * A zero is shown rather than hidden. "0 tCTC" is the answer to "do I owe anything", and it is the
+ * answer people come here for. An unread figure is still withheld: the row disappears while the
+ * call is in flight, because an unresolved read is not a zero.
  */
 
 const ctc = (value: bigint): string =>
   Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: 4 });
 
 export function SpentTotal({ className = "" }: { className?: string }) {
-  const { borrowed, loading, error } = useCreditHistory();
+  const { drawn, loading } = useCreditLine();
 
-  // Withheld while unread, and withheld when the read failed. An unresolved query is not a zero,
-  // and neither is an indexer that never answered: "0 tCTC" in either case states something not
-  // known. The stated zero this component exists for is the one that came back from a live read.
-  if (loading || error) return null;
+  // `drawn` is undefined until `accountOf` answers. Printing 0 then would be a claim that the card
+  // is settled, made by a screen that has not asked yet.
+  if (loading || drawn === undefined) return null;
 
   return (
     <div
       className={`flex items-baseline justify-between gap-3 rounded-[16px] border border-line bg-white px-4 py-3.5 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)] ${className}`}
     >
-      <span className="text-[13px] text-muted">Spent from your card</span>
-      <span className="text-[15px] font-semibold tabular-nums">{ctc(borrowed)} tCTC</span>
+      <span className="text-[13px] text-muted">Balance</span>
+      <span className={`text-[15px] font-semibold tabular-nums ${drawn > 0n ? "text-neg" : ""}`}>
+        {ctc(drawn)} tCTC
+      </span>
     </div>
   );
 }

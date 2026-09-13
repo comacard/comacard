@@ -1,28 +1,34 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { formatUnits } from "viem";
+import { formatUnits, parseUnits } from "viem";
 import { useSwitchChain } from "wagmi";
 import { useCreditLine } from "../../hooks/useCreditLine";
+import { quickAmount } from "../../lib/comacard/amount";
 import { CREDITCOIN_CHAIN_ID, explorerTx } from "../../lib/comacard/contracts";
-import { Button, PendingLabel, TransactionStatus } from "../ui";
+import { Button, Keypad, PendingLabel, TransactionStatus } from "../ui";
 import { SubHeader } from "../ui/SubHeader";
 
 /**
  * Repaying the card balance.
  *
- * **One button, for the whole balance, and that is a correctness decision rather than a
- * simplification.** Only a payment that clears the balance to zero closes a credit cycle and counts
- * toward the score; a partial payment reduces the debt and earns nothing. An amount field here
- * would invite the one action that quietly wastes the cycle, so there isn't one.
+ * **The amount is typed, and Max is exact.** This was one button for the whole balance, on the
+ * grounds that only a payment clearing the balance closes a cycle and a partial one earns nothing.
+ * That is true about the scoring and it was the wrong reason: a card does not refuse a payment
+ * because it earns the payer nothing, and a person who can pay half should be able to.
+ *
+ * Max does not go through `quickAmount`. Every other screen can round a quick amount down and lose
+ * a speck harmlessly; here the last wei is the difference between closing a cycle and not, so
+ * pressing Max records that it was pressed and sends `undefined`, which makes `repay` use the debt
+ * it reads from the chain itself.
  *
  * **The sixty-second rule is the other trap.** `minCycleDuration` on the deployed line is 60
  * seconds, and a balance settled faster than that clears the debt while the score stays exactly
  * where it was: no error, no explanation. So the button waits, visibly, and says why. Someone who
  * spent and paid within a few seconds would otherwise conclude the scoring is broken.
  *
- * The exact amount matters too: `repay()` reverts when `msg.value` exceeds the debt, so the figure
- * is read from the account row rather than rounded for display and sent back.
+ * The exact amount matters either way: `repay()` reverts when `msg.value` exceeds the debt rather
+ * than refunding, so `repay` re-reads the account row one call before sending and clamps to it.
  */
 
 const MIN_CYCLE_SECONDS = 60;
@@ -41,6 +47,14 @@ function explainRepay(message: string): string {
   return message.split("\n")[0] ?? message;
 }
 
+function parse(text: string): bigint {
+  try {
+    return parseUnits(text === "" || text === "." ? "0" : text, 18);
+  } catch {
+    return 0n;
+  }
+}
+
 const fmt = (value: bigint, digits = 4): string =>
   Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: digits });
 
@@ -52,6 +66,15 @@ export function PayScreen() {
   // The chain switch and the fresh debt read both sit outside `useWriteContract`, so their failures
   // reached `txStatus` as nothing at all.
   const [failed, setFailed] = useState<string | null>(null);
+  const [amount, setAmount] = useState("0");
+  /**
+   * Max was pressed and the field has not been edited since.
+   *
+   * Carried as a flag rather than inferred by comparing the typed figure to the balance, because
+   * the typed figure is a rounded decimal string and the balance is wei: they will not match, and a
+   * person who types the displayed balance by hand has not asked to clear the cycle to the wei.
+   */
+  const [wantsAll, setWantsAll] = useState(false);
 
   // Read after mount and ticked, never during render: a clock read while rendering bakes the
   // server's time into the HTML and makes the render impure.
@@ -75,15 +98,27 @@ export function PayScreen() {
   const secondsLeft = heldFor === null ? null : Math.max(0, MIN_CYCLE_SECONDS - heldFor);
   const tooSoon = secondsLeft !== null && secondsLeft > 0;
 
+  const entered = parse(amount);
+  const exceeded = entered > owed;
+  /**
+   * In flight, from the first tap to the receipt.
+   *
+   * `busy` alone was the bug: it clears the moment `writeContractAsync` resolves, which is when the
+   * wallet is signed rather than when the transaction lands. For the four-ish seconds Creditcoin
+   * takes to mine it, the button went back to reading "Repay 13 tCTC" as though nothing had
+   * happened, and then the success screen appeared out of nowhere. `txStatus` covers that gap.
+   */
+  const pending = busy || txStatus === "signing" || txStatus === "confirming";
+
   const onPay = async () => {
-    if (busy || owed <= 0n || tooSoon) return;
+    if (pending || owed <= 0n || tooSoon || entered <= 0n || exceeded) return;
     setBusy(true);
     setFailed(null);
     try {
       if (!onCreditcoin) await switchChainAsync({ chainId: CREDITCOIN_CHAIN_ID });
-      // No argument: `repay` re-reads the debt one call before sending. The figure on this screen is
-      // a polled copy, and `repay()` refuses an overpayment rather than refunding it.
-      await repay();
+      // `undefined` for Max, so `repay` sends the debt it reads from the chain rather than the
+      // rounded decimal on this screen. Anything else goes as typed and is clamped there.
+      await repay(wantsAll ? undefined : entered);
     } catch (cause) {
       setFailed(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -117,45 +152,65 @@ export function PayScreen() {
     <div className="flex min-h-[calc(100dvh-92px)] flex-col">
       <SubHeader title="Repay" />
 
-      <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="text-[15px] font-medium text-muted">Current balance</div>
-        <div className="mt-2 whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] tabular-nums">
-          {fmt(owed)} tCTC
-        </div>
-        {failed ? (
-          <TransactionStatus status="failed" detail={explainRepay(failed)} className="mt-4" />
-        ) : null}
-        {owed > 0n ? (
-          <p className="mt-4 max-w-[260px] text-center text-[12.5px] leading-snug text-muted">
-            Paying the full balance is what closes the cycle and raises your score. Part of it
-            settles the debt and counts for nothing.
-          </p>
-        ) : null}
-      </div>
-
-      {txStatus === "failed" ? (
-        <TransactionStatus
-          status="failed"
-          detail={error ? error.message.split("\n")[0] : undefined}
-          href={hash ? explorerTx(CREDITCOIN_CHAIN_ID, hash) : undefined}
-          className="mb-3"
-        />
-      ) : null}
-
-      <div className="mt-auto">
-        {owed <= 0n ? (
+      {owed <= 0n ? (
+        <>
+          <div className="flex flex-1 flex-col items-center justify-center">
+            <div className="text-[15px] font-medium text-muted">Current balance</div>
+            <div className="mt-2 whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] tabular-nums">
+              0 tCTC
+            </div>
+          </div>
           <Button onClick={() => router.push("/home")}>Back to home</Button>
-        ) : (
-          <>
-            <Button onClick={onPay} disabled={busy || switching || tooSoon}>
+        </>
+      ) : (
+        <>
+          <p className="mb-1 text-center text-[13px] text-muted">
+            {fmt(owed)} tCTC owed on your card
+          </p>
+
+          <Keypad
+            value={amount}
+            onChange={(next) => {
+              setAmount(next);
+              // Typing after Max means the figure is now theirs, so the exact-balance shortcut no
+              // longer applies.
+              setWantsAll(false);
+            }}
+            symbol=""
+            onQuick={(pct) => {
+              setWantsAll(pct === 1);
+              setAmount(pct === 1 ? fmt(owed, 18) : quickAmount(owed, pct, 18));
+            }}
+            invalid={exceeded}
+            hint={`You only owe ${fmt(owed)} tCTC`}
+          />
+
+          {failed ? (
+            <TransactionStatus status="failed" detail={explainRepay(failed)} className="mb-3" />
+          ) : null}
+
+          {txStatus === "failed" ? (
+            <TransactionStatus
+              status="failed"
+              detail={error ? error.message.split("\n")[0] : undefined}
+              href={hash ? explorerTx(CREDITCOIN_CHAIN_ID, hash) : undefined}
+              className="mb-3"
+            />
+          ) : null}
+
+          <div className="mt-auto">
+            <Button
+              onClick={onPay}
+              disabled={pending || switching || tooSoon || entered <= 0n || exceeded}
+            >
               {switching ? (
                 "Switching…"
-              ) : busy ? (
+              ) : pending ? (
                 <PendingLabel status={txStatus === "confirming" ? "confirming" : "signing"} />
               ) : tooSoon ? (
                 `Wait ${secondsLeft}s`
               ) : (
-                `Repay ${fmt(owed)} tCTC`
+                "Repay"
               )}
             </Button>
             {tooSoon ? (
@@ -164,9 +219,9 @@ export function PayScreen() {
                 balance and leave your score where it is.
               </p>
             ) : null}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

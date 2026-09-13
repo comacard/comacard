@@ -136,12 +136,10 @@ function MobileHome() {
             spinner: nothing is pending on the protocol here. */}
         <ClaimableCollateral assets={remoteCollateral} className="mb-[22px]" />
 
-        {/* Taken from the card, above what backs it. Read from Draw events rather than the wallet,
-          because tCTC that arrived from anywhere else was never spent on this card.
-          Hidden while a balance is open: the two figures are different questions, what is owed
-          now, and what has ever been taken, but they read as one repeated number until the first
-          repayment makes them diverge. */}
-        {owes ? null : <SpentTotal className="mb-[22px]" />}
+        {/* The balance owed, always rendered. It used to be lifetime spend, shown only when the
+          card was settled, which meant the one row about money either said nothing while there was
+          a balance or showed a number that looked like one after it had been paid. */}
+        <SpentTotal className="mb-[22px]" />
 
         {/* What the headline is actually built on. Locking more moves the number at the top of this
           screen. */}
