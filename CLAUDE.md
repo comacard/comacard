@@ -135,7 +135,7 @@ and earn no mark.
 `https://sepolia.infura.io/v3/<key>`. Copy the file as-is and the worker dies with
 `401 Unauthorized: invalid project id` before doing anything. Use the `publicnode.com` endpoints.
 
-**`apps/app/.env.local` is a symlink to the root `.env`**, and it is tracked in git on purpose (see
+**`apps/app/.env` is a symlink to the root `.env`**, and it is tracked in git on purpose (see
 the negation in `.gitignore`). Replacing it with a real file means committing environment contents.
 
 **Every amount on the wire is a decimal string, not a number.** They are wei; `Number()` loses

@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 # …except the template: it documents the NEXT_PUBLIC_* knobs and holds no secret by construction.
 !.env.example
+# …and except the symlink to the repository-root .env, which is how Next finds it without flags.
+# This exception has to be repeated here rather than only at the root: git applies the deepest
+# .gitignore last, so a root-level negation cannot un-ignore what `.env*` catches in this folder.
+!.env
 
 # vercel
 .vercel

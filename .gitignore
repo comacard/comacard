@@ -33,8 +33,10 @@ lcov.info
 .env
 .env.*
 !.env.example
-# symlink to the repository-root .env, so Next finds it without flags
-!apps/app/.env.local
+# symlink to this file, so Next finds it without flags. Named `.env` rather than `.env.local`
+# because two names for one file is one name too many, and the symlink is the only env file the
+# app has.
+!apps/app/.env
 *.pem
 *.key
 *.keystore
