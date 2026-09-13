@@ -4,27 +4,17 @@
    cannot also be there, hence file scope. */
 
 /**
- * The stablecoin whose brand logo represents each currency bucket, plus the native coins. CTC is
- * Creditcoin's own; ETH, BNB and AVAX are the collateral assets of the chains collateral arrives from. Neither is a currency bucket, so neither has a
- * `Currency` mapping below: both are reachable only by passing `token` explicitly.
+ * Every symbol a screen can put a logo against. CTC is Creditcoin's own; ETH, BNB and AVAX are the
+ * native coins of the chains collateral arrives from.
  */
-export type TokenSym = "USDC" | "USDT" | "EURC" | "CETES" | "CTC" | "ETH" | "BNB" | "AVAX";
+export type TokenSym = "USDC" | "USDT" | "CTC" | "ETH" | "BNB" | "AVAX";
 
-/** The three fiat codes. Declared here rather than imported from the
- *  vault client: it is three string literals, and importing them was the last thing tying a live UI
- *  component to that package. Only `currency` callers reach this map, and none remain in Comacard. */
-type Currency = "USD" | "EUR" | "MXN";
-const CURRENCY_TOKEN: Record<Currency, TokenSym> = { USD: "USDC", EUR: "EURC", MXN: "CETES" };
-
-// Official token logos under /public/tokens (USDC → Circle SVG, USDT → Tether, EURC → Circle,
-// CETES → Etherfuse, CTC → Creditcoin's symbol, knocked out white on the brand black so it reads as
-// a coin).
+// Official token logos under /public/tokens (USDC → Circle SVG, USDT → Tether, CTC → Creditcoin's
+// symbol, knocked out white on the brand black so it reads as a coin).
 // Real brand assets, so this is the one deliberate exception to the monochrome palette (PM-approved).
 const FILE: Record<TokenSym, string> = {
   USDC: "/tokens/usdc.svg",
   USDT: "/tokens/usdt.svg",
-  EURC: "/tokens/eurc.png",
-  CETES: "/tokens/cetes.png",
   CTC: "/tokens/ctc.png",
   ETH: "/tokens/eth.svg",
   // Not every chain pays in ether. BSC's native coin is BNB and Fuji's is AVAX, and falling back to
@@ -47,28 +37,26 @@ export function badgeForSymbol(symbol: string): TokenSym {
   if (bare === "AVAX") return "AVAX";
   if (bare === "USDC") return "USDC";
   if (bare === "USDT") return "USDT";
-  if (bare === "EURC") return "EURC";
-  if (bare === "CETES") return "CETES";
   return "CTC";
 }
 
 /**
- * Circular token logo. Pass a `token` (USDC/EURC/CETES/CTC/ETH) or a `currency` (USD/EUR/MXN); the currency
- * maps to its funding stablecoin's logo. `object-cover` keeps non-circular source art (CETES) inside
- * the round badge.
+ * Circular token logo. `object-cover` keeps non-circular source art inside the round badge.
+ *
+ * It used to take a `currency` prop as well, mapping USD, EUR and MXN onto the stablecoin that
+ * funded each one. No screen passed it, the last two logos it reached are gone, and a prop with no
+ * caller is a prop somebody will one day trust.
  */
 export function CoinBadge({
-  currency,
   token,
   size = 40,
   className = "",
 }: {
-  currency?: Currency;
   token?: TokenSym;
   size?: number;
   className?: string;
 }) {
-  const key: TokenSym = token ?? (currency ? CURRENCY_TOKEN[currency] : "USDC");
+  const key: TokenSym = token ?? "USDC";
   return (
     // biome-ignore lint/performance/noImgElement: static asset that must paint the moment the step appears; next/image defers it
     <img

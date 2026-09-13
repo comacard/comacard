@@ -22,21 +22,25 @@ type TourScreen = {
 
 const ONBOARDING_DONE_KEY = STORAGE.onboardingDone;
 
+/**
+ * Three beats, in the order the product works: put something down, watch the limit it buys grow as
+ * you repay, spend it. Copy picked by Axel.
+ */
 const TOUR: TourScreen[] = [
   {
-    title: "Deposit multiple\ncurrencies",
-    body: "Choose a supported currency and let the app put your funds to work",
-    visual: <BucketsVisual />,
+    title: "Put down what you\nalready hold",
+    body: "Lock an asset on its own chain. It stays there, and your card is sized against it",
+    visual: <CollateralVisual />,
   },
   {
-    title: "Start earning\nin the background",
-    body: "Deposit once and the app places your funds into an earning vault",
-    visual: <EarningChartVisual />,
+    title: "Your limit is earned,\nnot bought",
+    body: "Repay in full and the same collateral buys a bigger limit next time",
+    visual: <LimitChartVisual />,
   },
   {
-    title: "Review moves\nbefore they happen",
-    body: "If something changes, the app pauses first and lets you approve the next move",
-    visual: <AgentVisual />,
+    title: "Spend it\nlike a card",
+    body: "What the card is allowed is yours to spend. Pay it back and you keep it",
+    visual: <CardVisual />,
   },
 ];
 
@@ -288,45 +292,49 @@ function Stepper({ current, total }: { current: number; total: number }) {
   );
 }
 
-function BucketsVisual() {
+/**
+ * Three assets a holder could put down, each named with the chain it stays on.
+ *
+ * The chain is the second line rather than a yield figure, because the chain is the claim this
+ * screen is making: the asset does not move. It also matches the "Assets held" card the holder
+ * meets on Home, so the first thing they see in the tour is the thing they will actually use.
+ */
+function CollateralVisual() {
   return (
     <div className={styles.assetStack} aria-hidden="true">
-      <AssetRow
-        asset="EURC"
-        tags={["Blend Pool"]}
-        value="$1,240"
-        apy="6.2% APY"
-        token="EURC"
-        loading
-      />
-      <AssetRow asset="CTC" tags={[]} value="$5,420" apy="7.8% APY" token="CTC" highlight />
-      <AssetRow
-        asset="CETES"
-        tags={["Etherfuse"]}
-        value="$2,416"
-        apy="8.4% APY"
-        token="CETES"
-        loading
-      />
+      <AssetRow asset="USDT" chain="BSC Testnet" value="1,200.00" token="USDT" />
+      <AssetRow asset="CTC" chain="Creditcoin" value="5,420.00" token="CTC" highlight />
+      <AssetRow asset="USDC" chain="Ethereum Sepolia" value="2,416.00" token="USDC" />
     </div>
   );
 }
 
-function AgentVisual() {
+/**
+ * The card, and the one figure a holder spends against.
+ *
+ * The two screens before this are about what backs the card and how the limit grows. This one is
+ * the proof it can be used: the phone shows Home as it actually renders, and the floating card is
+ * a draw that has happened with the repayment still to come, because a limit nobody has spent is
+ * a claim rather than a card.
+ */
+function CardVisual() {
   return (
     <div className={styles.agentPanel} aria-hidden="true">
       <div className={styles.phoneMock}>
         <div className={styles.phoneIsland} />
         <div className={styles.phoneContent}>
           <div className={styles.homeHeroMini}>
-            <span>Total value</span>
-            <b>$2,200.73</b>
-            <em>All buckets</em>
+            <span>Spendable</span>
+            <b>35.0097 tCTC</b>
+            <em>of 41.4594 allowed</em>
           </div>
-          <div className={styles.homeButtonMini}>Deposit</div>
-          <span className={styles.homeSectionMini}>Buckets</span>
-          <HomeBucketMini token="USDC" title="USD bucket" value="$1,116.29" apy="8.59% APY" />
-          <HomeBucketMini token="EURC" title="EUR bucket" value="€1,004.09" apy="5.10% APY" />
+          <div className={styles.homeButtonMini}>Send</div>
+          <span className={styles.homeSectionMini}>Your card</span>
+          <div className={styles.cardMini}>
+            <span className={styles.cardMiniChip} />
+            <b>Comacard</b>
+            <em>0000 0000 0000 5058</em>
+          </div>
         </div>
       </div>
       <div className={styles.safeExitCard}>
@@ -342,30 +350,29 @@ function AgentVisual() {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <path d="M12 9v4M12 17h.01" />
+            <path d="M20 6 9 17l-5-5" />
           </svg>
         </span>
         <div className={styles.safeExitText}>
-          <strong>Your earning is paused</strong>
-          <span>Review the move</span>
+          <strong>Spent 13 tCTC</strong>
+          <span>Pay it back to close the cycle</span>
         </div>
-        <b>Review</b>
+        <b>Repay</b>
       </div>
     </div>
   );
 }
 
-function EarningChartVisual() {
+function LimitChartVisual() {
   const bars = [28, 34, 42, 49, 55, 62, 68, 73, 79, 84, 89, 94];
   return (
     <div className={styles.chartPanel} aria-hidden="true">
       <div className={styles.chartHeader}>
         <div>
-          <span>You&apos;re Earning</span>
-          <strong>+$42.18</strong>
+          <span>Your limit</span>
+          <strong>41.4594 tCTC</strong>
         </div>
-        <b>+7.8% APY</b>
+        <b>score 42</b>
       </div>
       <div className={styles.earningBars}>
         {bars.map((height, i) => (
@@ -377,45 +384,18 @@ function EarningChartVisual() {
   );
 }
 
-function HomeBucketMini({
-  token,
-  title,
-  value,
-  apy,
-}: {
-  token: TokenSym;
-  title: string;
-  value: string;
-  apy: string;
-}) {
-  return (
-    <div className={styles.homeBucketMini}>
-      <CoinBadge token={token} size={26} />
-      <div>
-        <b>{title}</b>
-        <span>{token === "USDC" ? "DeFindex" : "Blend"}</span>
-      </div>
-      <strong>
-        {value}
-        <small>{apy}</small>
-      </strong>
-    </div>
-  );
-}
-
 function AssetRow({
   asset,
-  tags,
+  chain,
   value,
-  apy,
   token,
   highlight = false,
   loading = false,
 }: {
   asset: string;
-  tags: string[];
+  /** Where it stays. This is the point of the screen, so it gets the second line. */
+  chain: string;
   value: string;
-  apy: string;
   token: TokenSym;
   highlight?: boolean;
   loading?: boolean;
@@ -442,17 +422,10 @@ function AssetRow({
         <>
           <span className={styles.assetText}>
             <strong>{asset}</strong>
-            {tags.length > 0 && (
-              <span className={styles.assetTags}>
-                {tags.map((tag) => (
-                  <em key={tag}>{tag}</em>
-                ))}
-              </span>
-            )}
+            <span className={styles.assetChain}>{chain}</span>
           </span>
           <span className={styles.assetValue}>
             <b>{value}</b>
-            <small>{apy}</small>
           </span>
         </>
       )}

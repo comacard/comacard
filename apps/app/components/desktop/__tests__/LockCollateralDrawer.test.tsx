@@ -92,8 +92,9 @@ test("lists the assets the chain says are accepted, not a hardcoded stablecoin s
 
   expect(screen.getByRole("button", { name: /tUSDC/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /1 ETH$/ })).toBeInTheDocument();
-  // The drawer this replaced offered these, and none of them exist in this protocol.
-  expect(screen.queryByText(/EURC|CETES/)).toBeNull();
+  // The drawer this replaced offered fiat buckets. The assets have to come from the chain, so
+  // anything denominated in a currency this protocol does not take must not appear.
+  expect(screen.queryByText(/USD bucket|EUR bucket|bucket/i)).toBeNull();
 });
 
 test("picking a token and entering an amount locks it through lockToken", async () => {

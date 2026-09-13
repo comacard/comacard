@@ -44,34 +44,6 @@ export async function connectWallet(page: Page): Promise<void> {
 }
 
 /**
- * Deposit `amount` EURC through the real UI: pick the coin → keypad → "Deposit fund" → the one-time
- * consent mandate. The caller must already be on `/deposit`. The e2e vault starts empty and
- * `seedVault` never granted consent anyway, so the very first deposit is what surfaces the sheet.
- */
-export async function depositEurc(page: Page, amount: string): Promise<void> {
-  await page.getByRole("button", { name: /^EURC/ }).click();
-  await expect(page).toHaveURL(/\/deposit\/eurc$/);
-
-  for (const digit of amount) {
-    // `exact` matters: accessible-name matching is substring-based, so a bare "0" would also match
-    // the "10%" and "50%" quick-fill buttons sitting above the keypad.
-    await page.getByRole("button", { name: digit, exact: true }).click();
-  }
-  await expect(page.getByTestId("keypad-value")).toHaveText(amount);
-  await page.getByRole("button", { name: "Deposit fund" }).click();
-
-  const consent = page.getByRole("dialog", { name: "Approve automatic earning" });
-  await expect(consent).toBeVisible();
-  await shot(page, "02-consent-sheet");
-  await consent.getByRole("button", { name: "Agree & sign" }).click();
-
-  // Success is a status screen (STE-48), not an auto-redirect: confirm it, then return home.
-  await expect(page.getByText("Deposit Success")).toBeVisible();
-  await page.getByRole("button", { name: "Back to Home" }).click();
-  await expect(page).toHaveURL(/\/home$/);
-}
-
-/**
  * Assert the desktop Overview chrome is on screen and the mobile bottom nav is hidden.
  *
  * **This asserted the old dashboard until now**, and would have failed the moment it ran: headings
@@ -102,7 +74,7 @@ export async function expectDesktopHome(page: Page): Promise<void> {
  */
 export async function depositViaDrawer(
   page: Page,
-  coin: "USDC" | "EURC" | "CETES",
+  coin: "tUSDC" | "tUSDT" | "ETH",
   amount: string,
 ): Promise<void> {
   await page.getByRole("button", { name: "Deposit" }).click();
