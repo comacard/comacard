@@ -97,3 +97,26 @@ test("an open balance makes Repay the live one", async () => {
   await user.click(screen.getByRole("button", { name: "Repay" }));
   expect(push).toHaveBeenCalledWith("/pay");
 });
+
+test("an unread limit is a dash, never a zero", () => {
+  // `loading` on this screen is the indexer's, not the chain's, so the block renders as soon as
+  // the history lands while `limitOf` is still four seconds away on the Creditcoin RPC. Printing
+  // "0 tCTC" there states that the card is allowed nothing, on the one screen the limit is the
+  // subject of.
+  creditLine.mockReturnValue({ limit: undefined, drawn: 0n, score: 42n });
+  render(<EarnPage />);
+
+  expect(screen.getByText("—")).toBeInTheDocument();
+  expect(screen.queryByText("0 tCTC")).toBeNull();
+});
+
+test("the score and the balance are both on the screen", () => {
+  // Neither was. `drawn` was read and used only to disable Repay, so that control sat permanently
+  // greyed with no figure and no reason, and the score was absent from the screen whose whole
+  // subject is how the limit is earned.
+  creditLine.mockReturnValue({ limit: 41n * 10n ** 18n, drawn: 13n * 10n ** 18n, score: 42n });
+  render(<EarnPage />);
+
+  expect(screen.getByText(/score 42/)).toBeInTheDocument();
+  expect(screen.getByText(/13 tCTC owed/)).toBeInTheDocument();
+});

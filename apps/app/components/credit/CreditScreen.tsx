@@ -5,6 +5,7 @@ import { useCreditLine } from "../../hooks/useCreditLine";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
 import { useNav } from "../../hooks/useNav";
 import { Button, Card, CountUp, PageHeader, Skeleton } from "../ui";
+import { CycleList } from "./CycleList";
 import { SpendChart } from "./SpendChart";
 
 /**
@@ -26,10 +27,13 @@ import { SpendChart } from "./SpendChart";
  * because only a repayment that clears the balance closes a cycle and scores.
  */
 
+const fmt = (value: bigint): string =>
+  Number(formatUnits(value, 18)).toLocaleString("en-US", { maximumFractionDigits: 4 });
+
 export function CreditScreen() {
   const nav = useNav();
   const isDesktop = useIsDesktop();
-  const { limit, drawn } = useCreditLine();
+  const { limit, drawn, score } = useCreditLine();
   const { loading } = useCreditHistory();
 
   const owes = (drawn ?? 0n) > 0n;
@@ -64,13 +68,44 @@ export function CreditScreen() {
     <>
       <div className="py-[30px] text-center">
         <div className="text-[15px] font-medium text-muted">Your limit</div>
-        <CountUp
-          animateOnMount
-          from={0}
-          value={Number(formatUnits(limit ?? 0n, 18))}
-          format={(n) => `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} tCTC`}
-          className="mt-2 block whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] lg:text-[28px] [font-variant-numeric:tabular-nums]"
-        />
+        {/*
+          A dash until `limitOf` answers, never a zero.
+
+          `loading` here is the indexer's, not the chain's, so this block renders as soon as the
+          history lands while the Creditcoin RPC is still four seconds from returning the limit.
+          `limit ?? 0n` printed "0 tCTC" for that whole window: a statement that the card is allowed
+          nothing, made by a screen that had not asked yet. It is the rule the app's own notes state
+          and this was breaking it on the one screen the limit is the subject of.
+        */}
+        {limit === undefined ? (
+          <div className="mt-2 text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] lg:text-[28px]">
+            —
+          </div>
+        ) : (
+          <CountUp
+            animateOnMount
+            from={0}
+            value={Number(formatUnits(limit, 18))}
+            format={(n) => `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })} tCTC`}
+            className="mt-2 block whitespace-nowrap text-[clamp(32px,12vw,54px)] font-semibold leading-none tracking-[-.02em] lg:text-[28px] [font-variant-numeric:tabular-nums]"
+          />
+        )}
+
+        {/*
+          What the limit was earned by, and what is outstanding against it.
+
+          The balance was not on this screen at all: `drawn` was read and used only to disable the
+          Repay button, so that control sat permanently greyed with no figure and no reason, which
+          is the failure this app's own notes name twice. The score was equally absent, on the one
+          screen whose subject is how the limit is earned.
+        */}
+        <div className="mt-3 flex items-center justify-center gap-2 text-[13px] text-muted [font-variant-numeric:tabular-nums]">
+          <span>score {score === undefined ? "—" : String(score)}</span>
+          <span className="text-faint">·</span>
+          <span className={owes ? "text-neg" : ""}>
+            {drawn === undefined ? "—" : `${fmt(drawn)} tCTC`} owed
+          </span>
+        </div>
       </div>
 
       {/* The two halves of one cycle, which is what this screen is a record of. Repay is dimmed
@@ -99,7 +134,7 @@ export function CreditScreen() {
       {isDesktop ? (
         <PageHeader
           title="Credit"
-          description="What the card is allowed, and the record that earns it."
+          description="What the card is allowed, and every cycle that earned it."
           className="mb-5"
         />
       ) : null}
@@ -111,7 +146,14 @@ export function CreditScreen() {
           <div className="mb-5">{head}</div>
         )}
 
-        <SpendChart />
+        <div className="flex min-w-0 flex-col gap-6">
+          <SpendChart />
+
+          {/* The screen's actual subject. "Repay cleanly and the same collateral buys a bigger
+              limit" is a claim about cycles, and until now a cardholder could not see how many
+              they had completed or which ones counted. */}
+          <CycleList />
+        </div>
       </div>
     </div>
   );
