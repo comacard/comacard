@@ -1,6 +1,5 @@
 "use client";
 import { useEffect } from "react";
-import { formatUnits } from "viem";
 import { ActivityList } from "../../../components/activity/ActivityList";
 import { CardFolderPanel } from "../../../components/card/CardFolderPanel";
 import { ClaimableCollateral } from "../../../components/card/ClaimableCollateral";
@@ -10,7 +9,15 @@ import { KycSheet } from "../../../components/card/KycSheet";
 import { SpentTotal } from "../../../components/card/SpentTotal";
 import { CardHero } from "../../../components/home/CardHero";
 import { DesktopOverview } from "../../../components/home/DesktopOverview";
-import { Button, Card, Skeleton, Spinner, Toast } from "../../../components/ui";
+import {
+  ActionPill,
+  ActionRow,
+  Button,
+  Card,
+  Skeleton,
+  Spinner,
+  Toast,
+} from "../../../components/ui";
 import { useCardAccount } from "../../../hooks/useCardAccount";
 import { useCollateral } from "../../../hooks/useCollateral";
 import { useCreditLine } from "../../../hooks/useCreditLine";
@@ -60,9 +67,6 @@ function MobileHome() {
   // clears the primary action is the step that actually unblocks the user.
   const needsVerification = account !== null && !account.kyc.verified;
   const owes = (drawn ?? 0n) > 0n;
-  const owedLabel = Number(formatUnits(drawn ?? 0n, 18)).toLocaleString("en-US", {
-    maximumFractionDigits: 4,
-  });
   const preview = transactions.slice(0, 3);
   const hasMore = transactions.length > 3;
 
@@ -77,45 +81,35 @@ function MobileHome() {
         ) : (
           <CardHero account={account} />
         )}
-        <CardFolderPanel account={account} className="mb-[26px]" />
-
+        {/* Actions above the card, not below it. The number is what the eye lands on and these are
+            what it can do about the number; the card is the object being described, and it reads
+            better as the answer than as a thing to scroll past. */}
         {needsVerification ? (
           <Button className="mb-[22px]" onClick={verify} disabled={starting}>
             {starting ? "Opening…" : "Verify identity"}
           </Button>
         ) : (
-          <>
-            {/* An open balance leads, because settling it is what scores. It does not replace the
-              other two: depositing has nothing to do with owing, and hiding it was a mistake. */}
-            {owes ? (
-              <div className="mb-2.5 rounded-[16px] border border-line bg-white px-4 py-4 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[13px] text-muted">Current balance</span>
-                  <span className="text-[16px] font-semibold tabular-nums">{owedLabel} tCTC</span>
-                </div>
-                <Button className="mt-3" onClick={() => nav.forward("/pay")}>
-                  Repay
-                </Button>
-              </div>
-            ) : null}
-
-            <div className="mb-[22px] flex gap-2.5">
-              {/* Disabled while the limit is unknown, but not silently: four seconds of a greyed
-                  button with no explanation reads as a refusal rather than a read in flight. */}
-              <Button
-                variant={owes ? "glass" : "ink"}
-                className="flex-1"
-                onClick={() => nav.forward("/spend")}
-                disabled={creditLoading || (available ?? 0n) === 0n}
-              >
-                {creditLoading ? <Spinner /> : "Spend"}
-              </Button>
-              <Button variant="glass" className="flex-1" onClick={() => nav.forward("/deposit")}>
-                Deposit
-              </Button>
-            </div>
-          </>
+          <ActionRow className="mb-[22px]">
+            {/* Send leads and stays filled whether or not a balance is open. The order is fixed:
+                moving the primary around as state changes makes the row feel unstable, and a person
+                reaching for the same button twice should find it in the same place. */}
+            <ActionPill
+              primary
+              onClick={() => nav.forward("/spend")}
+              // Disabled while the limit is unknown, but not silently: four seconds of a greyed
+              // control with no explanation reads as a refusal rather than a read in flight.
+              disabled={creditLoading || (available ?? 0n) === 0n}
+            >
+              {creditLoading ? <Spinner /> : "Send"}
+            </ActionPill>
+            <ActionPill onClick={() => nav.forward("/deposit")}>Deposit</ActionPill>
+            {/* No figure on the pill. The balance is a fact about the account, not part of the name
+                of the control that settles it, and it is already stated on Credit. */}
+            {owes ? <ActionPill onClick={() => nav.forward("/pay")}>Repay</ActionPill> : null}
+          </ActionRow>
         )}
+
+        <CardFolderPanel account={account} className="mb-[26px]" />
 
         {/* Before the collateral list, because an incoming deposit is the answer to "why has my
           limit not moved". Seeing the backing first and the explanation second is backwards. */}
