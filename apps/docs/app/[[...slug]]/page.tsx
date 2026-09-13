@@ -1,6 +1,7 @@
 import { marked } from "marked";
 import { notFound } from "next/navigation";
 import { PAGES, pageBySlug, readPage } from "../../lib/pages";
+import { Mermaid } from "../Mermaid";
 
 /** Every page is known at build time, so all of them are static. */
 export function generateStaticParams() {
@@ -37,6 +38,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug?: str
       </p>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: build-time markdown from this repository, not user input */}
       <div className="doc" dangerouslySetInnerHTML={{ __html: html }} />
+      <Mermaid />
 
       <p className="mt-14 border-t border-line pt-5 text-[12.5px] text-faint">
         This page is{" "}

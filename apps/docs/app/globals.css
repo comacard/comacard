@@ -139,3 +139,13 @@ body {
 .doc img {
   max-width: 100%;
 }
+
+/* Diagrams rendered from ```mermaid fences by app/Mermaid.tsx. */
+.doc figure.diagram {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+.doc figure.diagram svg {
+  max-width: 100%;
+  height: auto;
+}

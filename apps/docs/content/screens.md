@@ -1,8 +1,8 @@
 # What it looks like
 
-Captured from [app.comacard.xyz](https://app.comacard.xyz) rather than drawn. Every figure on these
-screens is read from a contract or from the indexer's copy of one, so what is below is what the
-product does rather than what it is meant to do.
+Captured from [app.comacard.xyz](https://app.comacard.xyz) rather than drawn. The three onboarding
+screens are the app's own illustrations, so their figures are examples; every figure past the
+connect screen is read from a contract or from the indexer's copy of one.
 
 ## Putting collateral down
 

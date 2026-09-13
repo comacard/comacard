@@ -144,8 +144,9 @@ Being explicit, so nobody reads more into it than it says:
 - **Getting collateral back.** `SourceVault.unlock` needs an operator to call
   `approveRelease` first, and `placeReleaseHold` on the Creditcoin side. Neither
   is reachable from the app.
-- **History import.** `provenNonce` is still 0. Proving Ethereum mainnet
-  activity would add up to 40 more points and needs the worker, not the app.
+- **History import.** `provenNonce` is still 0 in this run. Proving Ethereum
+  mainnet activity adds up to 40 more points and needs the worker, not the app;
+  it was run separately, see the history step in [DEMO.md](../DEMO.md).
 - **Default.** `markDefaulted` was not exercised; it needs a draw left unpaid
   past a 30-day term.
 
