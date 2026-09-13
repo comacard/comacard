@@ -147,3 +147,27 @@ test("an unverified holder is offered verification instead of the actions", () =
   expect(screen.queryByRole("button", { name: "Send" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Deposit" })).toBeNull();
 });
+
+test("the overflow opens what has nowhere else to sit on Home", async () => {
+  const user = userEvent.setup();
+  render(<HomePage />);
+
+  await user.click(screen.getByRole("button", { name: "More" }));
+
+  expect(screen.getByText("All transactions")).toBeInTheDocument();
+  expect(screen.getByText("Get test tokens")).toBeInTheDocument();
+  // The question the collateral list otherwise raises without answering.
+  expect(screen.getByText(/released by us, not by you/i)).toBeInTheDocument();
+});
+
+test("the overflow offers withdraw only for collateral that can actually come back", async () => {
+  const user = userEvent.setup();
+  render(<HomePage />);
+
+  await user.click(screen.getByRole("button", { name: "More" }));
+
+  // This wallet holds nothing on a Wormhole chain in these mocks, so there is nothing to take back.
+  // Attestcoin collateral is never offered here: `approveRelease` is operator-gated, and a control
+  // that ends in "ask us" is worse than no control.
+  expect(screen.queryByText(/Take back/)).toBeNull();
+});

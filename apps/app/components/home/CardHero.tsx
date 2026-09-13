@@ -19,6 +19,10 @@ import { CountUp } from "../ui";
  * Nothing sits under it. The limit and the score were there to explain the headline and did the
  * opposite: three figures in a stack, two of which a reader has to already understand to know why
  * they differ. Both have a screen of their own where they are the subject.
+ *
+ * Left-aligned rather than centred. A centred figure with a row of actions under it makes the
+ * actions look like a caption for it; aligned to the same edge they read as a column — label,
+ * number, what you can do — and the eye travels one line rather than three.
  */
 
 export function CardHero({ account }: { account: ComacardAccount | null }) {
@@ -31,7 +35,7 @@ export function CardHero({ account }: { account: ComacardAccount | null }) {
   const unknown = account === null;
 
   return (
-    <div className="py-[26px] text-center">
+    <div className="py-[26px]">
       <div className="text-[15px] font-medium text-muted">
         {unissued ? "Your card" : "Spendable"}
       </div>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ActivityList } from "../../../components/activity/ActivityList";
 import { CardFolderPanel } from "../../../components/card/CardFolderPanel";
 import { ClaimableCollateral } from "../../../components/card/ClaimableCollateral";
@@ -9,6 +9,7 @@ import { KycSheet } from "../../../components/card/KycSheet";
 import { SpentTotal } from "../../../components/card/SpentTotal";
 import { CardHero } from "../../../components/home/CardHero";
 import { DesktopOverview } from "../../../components/home/DesktopOverview";
+import { MoreSheet } from "../../../components/home/MoreSheet";
 import {
   ActionPill,
   ActionRow,
@@ -29,6 +30,7 @@ import { useTransactions } from "../../../hooks/useTransactions";
 import { useWalletAssets } from "../../../hooks/useWalletAssets";
 
 function MobileHome() {
+  const [moreOpen, setMoreOpen] = useState(false);
   const nav = useNav();
   const { loading } = useWalletAssets();
   const { loading: txLoading, items: transactions } = useTransactions();
@@ -106,6 +108,21 @@ function MobileHome() {
             {/* No figure on the pill. The balance is a fact about the account, not part of the name
                 of the control that settles it, and it is already stated on Credit. */}
             {owes ? <ActionPill onClick={() => nav.forward("/pay")}>Repay</ActionPill> : null}
+            {/* Round rather than labelled: it has no name of its own, and "More" would take as much
+                width as a real action for something that is a door rather than a destination. */}
+            <ActionPill aria-label="More" className="!w-11 !px-0" onClick={() => setMoreOpen(true)}>
+              <svg
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <circle cx="5" cy="12" r="1.6" />
+                <circle cx="12" cy="12" r="1.6" />
+                <circle cx="19" cy="12" r="1.6" />
+              </svg>
+            </ActionPill>
           </ActionRow>
         )}
 
@@ -156,6 +173,12 @@ function MobileHome() {
         verified={!!account?.kyc.verified}
         onClose={closeKyc}
         onPoll={refresh}
+      />
+      <MoreSheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        remote={remoteCollateral}
+        onNavigate={nav.forward}
       />
       <Toast open={!!kycError} message={kycError ?? ""} />
     </div>

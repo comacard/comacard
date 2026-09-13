@@ -67,10 +67,16 @@ export function CollateralList({
             </AssetIcon>
             <div className="min-w-0 flex-1">
               <div className="text-[14px] font-semibold">{asset.symbol}</div>
-              {asset.crossing && (
+              {asset.crossing ? (
                 <div className="mt-0.5 text-[11.5px] text-warn">
                   {amount(asset.locked - asset.proved, asset.decimals, asset.symbol)} still crossing
                 </div>
+              ) : (
+                // Why this row has no chevron when the Wormhole rows below it do. Without the line
+                // the difference reads as a missing feature rather than a property of the carrier:
+                // `SourceVault.approveRelease` is operator-gated, because Attestcoin writability is
+                // still in third-party audit and Creditcoin cannot write back to Ethereum.
+                <div className="mt-0.5 text-[11.5px] text-muted">Released by us, not by you</div>
               )}
             </div>
             <div className="text-right">
