@@ -307,7 +307,7 @@ function CollateralVisual() {
   return (
     <div className={styles.assetStack} aria-hidden="true">
       <AssetRow asset="USDT" chain="BSC Testnet" value="1,200.00" token="USDT" />
-      <AssetRow asset="CTC" chain="Creditcoin" value="5,420.00" token="CTC" highlight />
+      <AssetRow asset="ETH" chain="Base Sepolia" value="0.4200" token="ETH" highlight />
       <AssetRow asset="USDC" chain="Ethereum Sepolia" value="2,416.00" token="USDC" />
     </div>
   );

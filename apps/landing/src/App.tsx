@@ -53,17 +53,17 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * One everyday purchase, start to finish. The point of ending on the cashback is
- * that nothing was sold to pay for the coffee: the limit covered it, the locked
- * CTC never moved, and CTC came back on top.
+ * One everyday purchase, start to finish. The point is that nothing was sold to
+ * pay for the coffee: the card covered it, what was locked never moved, and the
+ * record is what grows.
  */
 const TRANSCRIPT: { speaker: "you" | "card"; text: string; emphasis?: boolean }[] = [
   { speaker: "you", text: "buy me a coffee" },
   { speaker: "card", text: "done. 2 CTC, paid from your limit." },
   { speaker: "you", text: "my CTC is still locked?" },
   { speaker: "card", text: "all of it. you pay it back in 30 days." },
-  { speaker: "you", text: "and the cashback" },
-  { speaker: "card", text: "0.05 CTC, already back in your balance.", emphasis: true },
+  { speaker: "you", text: "and next month?" },
+  { speaker: "card", text: "settle on time and the same lock allows more.", emphasis: true },
 ];
 
 /**
@@ -349,8 +349,8 @@ function HeroSection() {
         >
           <p className="max-w-md text-[15px] leading-relaxed text-white/75 sm:text-base">
             Most cards hand back exactly what you put in. This one does not. Verify who you are,
-            lock CTC, and start at two thirds of it. Repay on time and that flips: a clean record
-            borrows more than it holds.
+            lock what you already hold, and start at two thirds of it. Settle on time and that
+            flips: a clean record is allowed more than it holds.
           </p>
         </div>
       </div>
@@ -412,7 +412,7 @@ function CardSection({ visible, imagesVisible }: { visible: boolean; imagesVisib
       <div className="absolute inset-x-0 bottom-0 flex flex-col gap-8 px-5 pb-10 sm:px-10 sm:pb-14 md:flex-row md:items-end md:justify-between md:px-14 md:pb-16">
         <div className={staggerClass("max-w-md")} style={{ animationDelay: "0.7s" }}>
           <p className="text-[15px] leading-relaxed text-[#18161B]/75 sm:text-base">
-            Your CTC never moves. It stays locked on the chain you put it on, and Creditcoin only
+            Your crypto never moves. It stays locked on the chain you put it on, and Creditcoin only
             ever sees a proof that it is there. Pay, settle up, take it back whenever you want.
           </p>
         </div>

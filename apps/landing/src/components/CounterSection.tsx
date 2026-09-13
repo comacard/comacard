@@ -6,9 +6,9 @@ const GLOBE_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260625_213350_6343fcfb-2892-4dcc-8573-1161447cacf5.mp4";
 
 const STATS: { value: number; suffix: string; description: string }[] = [
-  { value: 92, suffix: "%", description: "Say they stopped selling coins to cover small spending" },
-  { value: 30, suffix: "", description: "Days to pay it back, the same every time" },
-  { value: 41, suffix: "+", description: "Countries with people already on the list" },
+  { value: 6, suffix: "", description: "Chains you can lock on, and the asset stays on its own" },
+  { value: 30, suffix: "", description: "Days to settle, the same every time, no interest" },
+  { value: 0, suffix: "", description: "Times you sell your crypto to pay for something" },
 ];
 
 /** Ease-out cubic. Fast at the start, so the number feels like it lands. */

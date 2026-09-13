@@ -50,14 +50,6 @@ const QUOTES: {
     company: "Initech",
     avatar: `${PEXELS}/1681010/pexels-photo-1681010.jpeg${CROP}`,
   },
-  {
-    quote:
-      "The cashback comes back as money I can spend. That is more than I can say for the points on my old card.",
-    author: "Mary Major",
-    role: "Founder",
-    company: "Globex",
-    avatar: `${PEXELS}/733872/pexels-photo-733872.jpeg${CROP}`,
-  },
 ];
 
 /** Tripled so the track can wrap without a visible jump. Keys are assigned
