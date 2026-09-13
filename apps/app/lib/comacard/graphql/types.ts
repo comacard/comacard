@@ -117,4 +117,23 @@ export type WalletTransactionsResult = {
   >[];
   Default: Pick<DefaultEvent, "id" | "writtenOff" | "collateralSeized" | "timestamp" | "txHash">[];
   Attestation: Pick<Attestation, "id" | "kind" | "amount" | "timestamp" | "txHash">[];
+  /** Collateral that crossed by Wormhole. `asset` is null only on a mid-sync read. */
+  RemoteDeposit: {
+    id: string;
+    amount: string;
+    lockedAt: string;
+    creditedAt: string | null;
+    lockTxHash: string;
+    creditTxHash: string | null;
+    asset: { wormholeChainId: number; decimals: number } | null;
+  }[];
+  RemoteWithdrawal: {
+    id: string;
+    amount: string;
+    requestedAt: string;
+    withdrawnAt: string | null;
+    requestTxHash: string;
+    withdrawTxHash: string | null;
+    asset: { wormholeChainId: number; decimals: number } | null;
+  }[];
 };

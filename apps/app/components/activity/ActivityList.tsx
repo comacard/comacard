@@ -2,20 +2,49 @@ import type { ActivityItem } from "../../lib/comacard/activity";
 import { Skeleton } from "../ui";
 import { ActivityRow } from "./ActivityRow";
 
+/**
+ * "Today", "Yesterday", then the date. Rows arrive newest first and a heading is emitted whenever
+ * the day changes, so the list splits without a second pass.
+ *
+ * `at` is epoch ms rather than the rendered `when`: "3h ago" cannot tell you which day it was, and
+ * two rows four hours apart can straddle midnight. Rows with no `at` fall into one trailing group
+ * with no heading, which is what the fixture rows and anything hand-built do.
+ */
+function dayKey(at: number): string {
+  const d = new Date(at);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function dayLabel(at: number, now: number): string {
+  const a = dayKey(at);
+  if (a === dayKey(now)) return "Today";
+  if (a === dayKey(now - 86_400_000)) return "Yesterday";
+  return new Date(at).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    // The year only when it is not this one. "12 Sep 2025" on every row is noise.
+    year: new Date(at).getFullYear() === new Date(now).getFullYear() ? undefined : "numeric",
+  });
+}
+
 export function ActivityList({
   items,
-  onReview,
-  reviewed,
   divider = true,
   loading = false,
+  grouped = false,
+  now,
   emptyTitle,
   emptyDescription,
 }: {
   items: ActivityItem[];
-  onReview?: () => void;
-  reviewed?: boolean;
   divider?: boolean;
   loading?: boolean;
+  /** Split into a titled block per day. Off by default: the previews on Home show three rows and a
+   *  heading above each would be more chrome than list. */
+  grouped?: boolean;
+  /** Epoch ms, read after mount by the caller. Required for `grouped`, because deciding "Today"
+   *  during render bakes the server's clock into the HTML. */
+  now?: number | null;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -72,17 +101,38 @@ export function ActivityList({
     );
   }
 
+  if (grouped && now != null) {
+    const days: { label: string; rows: ActivityItem[] }[] = [];
+    for (const item of items) {
+      const label = item.at === undefined ? "" : dayLabel(item.at, now);
+      const last = days.at(-1);
+      if (last && last.label === label) last.rows.push(item);
+      else days.push({ label, rows: [item] });
+    }
+    return (
+      <div className="fade-in flex flex-col gap-5">
+        {days.map((day) => (
+          <section key={`${day.label}-${day.rows[0]?.id}`}>
+            {day.label ? (
+              <h3 className="mx-1 mb-1.5 text-[12.5px] font-medium text-muted">{day.label}</h3>
+            ) : null}
+            {/* A card per day rather than one card around the whole list: the heading sits outside
+                it, so a day reads as a block instead of a divider in a long sheet. */}
+            <div className="rounded-[16px] border border-line bg-card px-5 [box-shadow:0_1px_2px_rgba(17,19,22,.04),0_10px_22px_-16px_rgba(17,19,22,.22)]">
+              {day.rows.map((item, i) => (
+                <ActivityRow key={item.id} item={item} first={i === 0} divider />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className={`${wrap} fade-in`}>
       {items.map((item, i) => (
-        <ActivityRow
-          key={item.id}
-          item={item}
-          first={i === 0}
-          onReview={onReview}
-          reviewed={reviewed}
-          divider={divider}
-        />
+        <ActivityRow key={item.id} item={item} first={i === 0} divider={divider} />
       ))}
     </div>
   );

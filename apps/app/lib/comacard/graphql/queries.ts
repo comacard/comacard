@@ -128,9 +128,13 @@ query Protocol {
 /**
  * Everything that has happened to one wallet, in a single round trip.
  *
- * Five row types across two chains. They are fetched together rather than as five queries because
- * the feed interleaves them by timestamp: fetching separately means five loading states for one
+ * Seven row types across six chains. They are fetched together rather than separately because the
+ * feed interleaves them by timestamp: fetching one at a time means seven loading states for one
  * list, and rows that pop in out of order.
+ *
+ * `RemoteDeposit` and `RemoteWithdrawal` were missing for a while, and the symptom was quiet: a
+ * cross-chain deposit raised the limit and **nothing in the list said why**. `CollateralLock` only
+ * covers the Attestcoin path on Sepolia, so five of the six chains had no row at all.
  */
 export const WALLET_TRANSACTIONS = `
 query WalletTransactions($wallet: String!, $limit: Int = 30) {
@@ -148,6 +152,22 @@ query WalletTransactions($wallet: String!, $limit: Int = 30) {
   }
   Attestation(where: { account: { _eq: $wallet } }, order_by: { timestamp: desc }, limit: $limit) {
     id kind amount timestamp txHash
+  }
+  RemoteDeposit(
+    where: { account: { _eq: $wallet } }
+    order_by: { lockedAt: desc }
+    limit: $limit
+  ) {
+    id amount lockedAt creditedAt lockTxHash creditTxHash
+    asset { wormholeChainId decimals }
+  }
+  RemoteWithdrawal(
+    where: { account: { _eq: $wallet } }
+    order_by: { requestedAt: desc }
+    limit: $limit
+  ) {
+    id amount requestedAt withdrawnAt requestTxHash withdrawTxHash
+    asset { wormholeChainId decimals }
   }
 }
 `;

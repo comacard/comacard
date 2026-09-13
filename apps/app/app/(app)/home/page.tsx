@@ -141,7 +141,6 @@ function MobileHome() {
           <ActivityList
             items={preview}
             loading={txLoading}
-            reviewed
             emptyTitle="No transactions yet"
             emptyDescription="Locks, draws and repayments will show here once they are on chain."
           />

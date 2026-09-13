@@ -35,15 +35,7 @@ const EMPTY_COPY: Record<Tab, { title: string; description: string }> = {
  * the `kind`→icon enhancement is deferred (pending Axel's reply on STE-48). Review → onReview (the
  * panel host opens the safe-exit dialog).
  */
-export function ActivityDrawer({
-  open,
-  onClose,
-  onReview,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onReview: () => void;
-}) {
+export function ActivityDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { loading, items } = useTransactions();
   const [tab, setTab] = useState<Tab>("All");
   const cat = TAB_CAT[tab];
@@ -79,11 +71,9 @@ export function ActivityDrawer({
           <ActivityList
             items={shown}
             loading={loading}
-            onReview={onReview}
             // Always reviewed: `usePendingExit` was the SoroSense safe-exit seam, and this product has no
             // proposal for anyone to approve. Leaving the flag wired to a deleted hook would have been
             // the only reason to keep that hook alive.
-            reviewed
             divider={false}
             emptyTitle={empty.title}
             emptyDescription={empty.description}

@@ -434,10 +434,24 @@ export const sourceVaultAbi = [
   },
 ] as const;
 
+/**
+ * A transaction link, for any chain this product touches.
+ *
+ * It used to know Sepolia and fall through to Creditcoin for everything else, which was true while
+ * there were two chains and became a wrong link the moment there were six: a BSC lock pointed at
+ * Creditcoin's explorer, where it does not exist. The far-chain bases come from `WORMHOLE_VAULTS`
+ * rather than a second table, because that one is already the list of chains with a vault on them.
+ */
+const EXPLORER: Record<number, string> = {
+  [SEPOLIA_CHAIN_ID]: "https://sepolia.etherscan.io",
+  [CREDITCOIN_CHAIN_ID]: "https://creditcoin-testnet.blockscout.com",
+  ...Object.fromEntries(
+    Object.values(WORMHOLE_VAULTS).map((v) => [v.evmChainId, v.explorer] as const),
+  ),
+};
+
 export const explorerTx = (chainId: number, hash: string): string =>
-  chainId === SEPOLIA_CHAIN_ID
-    ? `https://sepolia.etherscan.io/tx/${hash}`
-    : `https://creditcoin-testnet.blockscout.com/tx/${hash}`;
+  `${EXPLORER[chainId] ?? "https://creditcoin-testnet.blockscout.com"}/tx/${hash}`;
 
 /**
  * The cross-chain collateral hub, read-only.

@@ -2,46 +2,107 @@ import { render, screen } from "@testing-library/react";
 import type { ActivityItem } from "../../../lib/comacard/activity";
 import { ActivityList } from "../ActivityList";
 
-const items: ActivityItem[] = [
-  {
-    id: 2,
-    cat: "auto",
-    kind: "rebalanced",
-    detail: "Switched to DeFindex · 8.59% APY",
-    when: "3h ago",
-  },
-  {
-    id: 1,
-    cat: "auto",
-    kind: "proposed-exit",
-    detail: "Proposed safe exit from EURC pool",
-    when: "6h ago",
-    review: true,
-  },
-];
+/**
+ * The list renders the six kinds `useTransactions` emits and nothing else.
+ *
+ * It used to be tested against `rebalanced` and `proposed-exit` — a SoroSense agent moving money
+ * between Stellar yield buckets, with a Review button for approving a proposed exit. Nothing in
+ * Comacard sets `review`, and no row has since the port, so the affordance and its fourteen sibling
+ * cases were asserting behaviour the product does not have.
+ */
 
-test("renders activity details and a Review affordance for review items", () => {
-  render(<ActivityList items={items} onReview={() => {}} />);
-  expect(screen.getByText("Moved to better yield")).toBeInTheDocument();
-  expect(screen.getByText("Review needed")).toBeInTheDocument();
-  expect(screen.queryByText(/rebalanced|proposed safe exit/i)).toBeNull();
-  expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument();
+const DAY = 86_400_000;
+const NOW = Date.UTC(2026, 8, 13, 12, 0, 0);
+
+const row = (over: Partial<ActivityItem> & Pick<ActivityItem, "id" | "kind">): ActivityItem => ({
+  cat: "you",
+  detail: "",
+  when: "",
+  ...over,
 });
 
-test("shows a dead 'Reviewed' label (no active Review) once the exit is resolved", () => {
-  render(<ActivityList items={items} onReview={() => {}} reviewed />);
-  expect(screen.getByText("Reviewed")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
+test("words each kind for someone who has held a secured credit card", () => {
+  render(
+    <ActivityList
+      items={[
+        row({ id: 1, kind: "drew", detail: "1.0000 tCTC from your credit limit" }),
+        row({ id: 2, kind: "collateral-locked", detail: "0.0100 BNB put down on BSC Testnet" }),
+        row({ id: 3, kind: "proved", detail: "0.0100 BNB now backs your credit limit" }),
+      ]}
+    />,
+  );
+
+  // No chain names in a title, and no protocol vocabulary anywhere near one.
+  expect(screen.getByText("Spent")).toBeInTheDocument();
+  expect(screen.getByText("Security deposit")).toBeInTheDocument();
+  expect(screen.getByText("Deposit confirmed")).toBeInTheDocument();
+  expect(screen.queryByText(/collateral|attestation|drew/i)).toBeNull();
+});
+
+test("an unknown kind shows its detail rather than inventing a title", () => {
+  render(<ActivityList items={[row({ id: 1, kind: "something-new", detail: "42 tCTC moved" })]} />);
+
+  expect(screen.getByText("42 tCTC moved")).toBeInTheDocument();
+});
+
+test("grouped: splits by day and names today and yesterday", () => {
+  render(
+    <ActivityList
+      grouped
+      now={NOW}
+      items={[
+        row({ id: 1, kind: "drew", detail: "a", at: NOW - 3_600_000 }),
+        row({ id: 2, kind: "repaid", detail: "b", at: NOW - DAY }),
+        row({ id: 3, kind: "repaid", detail: "c", at: NOW - 5 * DAY }),
+      ]}
+    />,
+  );
+
+  expect(screen.getByText("Today")).toBeInTheDocument();
+  expect(screen.getByText("Yesterday")).toBeInTheDocument();
+  // Older than that gets a date, and no year because it is this one. "Sep 8" rather than "8 Sep":
+  // en-US month-first, which is also what the reference app this was modelled on shows.
+  expect(screen.getByText("Sep 8")).toBeInTheDocument();
+});
+
+test("grouped: two rows on the same day share one heading", () => {
+  render(
+    <ActivityList
+      grouped
+      now={NOW}
+      items={[
+        row({ id: 1, kind: "drew", detail: "a", at: NOW - 3_600_000 }),
+        row({ id: 2, kind: "repaid", detail: "b", at: NOW - 7_200_000 }),
+      ]}
+    />,
+  );
+
+  expect(screen.getAllByText("Today")).toHaveLength(1);
+});
+
+test("grouped needs a clock, and renders flat without one", () => {
+  // `now` is read after mount, so the first paint has none. Deciding "Today" during render would
+  // bake the server's clock into the HTML.
+  render(
+    <ActivityList
+      grouped
+      now={null}
+      items={[row({ id: 1, kind: "drew", detail: "a", at: NOW })]}
+    />,
+  );
+
+  expect(screen.queryByText("Today")).toBeNull();
+  expect(screen.getByText("Spent")).toBeInTheDocument();
 });
 
 test("renders a designed empty state when empty copy is provided", () => {
   render(
     <ActivityList
       items={[]}
-      emptyTitle="No agent activity yet"
-      emptyDescription="Deposit first; automated moves will show here."
+      emptyTitle="No transactions yet"
+      emptyDescription="Put down a deposit and everything that follows will show here."
     />,
   );
-  expect(screen.getByText("No agent activity yet")).toBeInTheDocument();
-  expect(screen.getByText("Deposit first; automated moves will show here.")).toBeInTheDocument();
+
+  expect(screen.getByText("No transactions yet")).toBeInTheDocument();
 });

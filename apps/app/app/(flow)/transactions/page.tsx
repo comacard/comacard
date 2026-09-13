@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityList } from "../../../components/activity/ActivityList";
-import { Card, SubHeader } from "../../../components/ui";
+import { SubHeader } from "../../../components/ui";
 import { useTransactions } from "../../../hooks/useTransactions";
 
 /**
@@ -38,6 +38,15 @@ const EMPTY_COPY: Record<FilterKey, { title: string; description: string }> = {
 export default function TransactionsPage() {
   const { loading, items } = useTransactions();
   const [filter, setFilter] = useState<FilterKey>("all");
+  // Read after mount, never during render: deciding "Today" while rendering bakes the server's
+  // clock into the HTML and makes the first client paint disagree with it.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    // Through a frame rather than synchronously: setting state inside an effect body cascades a
+    // render, and the lint rule that catches it is right. Same shape as CreditScreen.
+    const frame = requestAnimationFrame(() => setNow(Date.now()));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const shown = filter === "all" ? items : items.filter((item) => item.group === filter);
   const empty = EMPTY_COPY[filter];
@@ -59,15 +68,17 @@ export default function TransactionsPage() {
             </button>
           ))}
         </div>
-        <Card className="px-5 py-1">
-          <ActivityList
-            items={shown}
-            loading={loading}
-            reviewed
-            emptyTitle={empty.title}
-            emptyDescription={empty.description}
-          />
-        </Card>
+        {/* The full history is the one place day headings earn their space: it is long, and "3h ago"
+            stops being useful the moment the list runs past yesterday. The three-row previews on
+            Home stay ungrouped. */}
+        <ActivityList
+          items={shown}
+          loading={loading}
+          grouped
+          now={now}
+          emptyTitle={empty.title}
+          emptyDescription={empty.description}
+        />
       </div>
     </div>
   );

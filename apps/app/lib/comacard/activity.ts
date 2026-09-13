@@ -18,8 +18,10 @@ export interface ActivityItem {
   kind: string;
   detail: string;
   when: string;
+  /** Epoch ms. `when` is the rendered relative string; this is what date grouping sorts and splits
+   *  on, because "3h ago" cannot tell you which day it was. */
+  at?: number;
   flag?: boolean;
-  review?: boolean;
   /** Block explorer link for a row that came off a chain. */
   href?: string;
   /** Which part of the product the row belongs to, for the transactions filter. */

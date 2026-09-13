@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 test("the tabs are a cardholder's, not the machinery's", () => {
-  render(<ActivityDrawer open onClose={() => {}} onReview={() => {}} />);
+  render(<ActivityDrawer open onClose={() => {}} />);
 
   expect(screen.getByRole("button", { name: "Card" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Deposit" })).toBeInTheDocument();
@@ -49,7 +49,7 @@ test("the tabs are a cardholder's, not the machinery's", () => {
 
 test("each tab shows only its own group", async () => {
   const user = userEvent.setup();
-  render(<ActivityDrawer open onClose={() => {}} onReview={() => {}} />);
+  render(<ActivityDrawer open onClose={() => {}} />);
 
   expect(screen.getByText("Spent on the card")).toBeInTheDocument();
   expect(screen.getByText("Locked collateral")).toBeInTheDocument();

@@ -3,17 +3,27 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { relativeTime } from "../lib/activity/map";
 import type { ActivityItem } from "../lib/comacard/activity";
-import { CREDITCOIN_CHAIN_ID, explorerTx, SEPOLIA_CHAIN_ID } from "../lib/comacard/contracts";
+import {
+  CREDITCOIN_CHAIN_ID,
+  explorerTx,
+  NATIVE_SYMBOL,
+  SEPOLIA_CHAIN_ID,
+  WORMHOLE_CHAIN_NAMES,
+  WORMHOLE_VAULTS,
+} from "../lib/comacard/contracts";
 import { query, WALLET_TRANSACTIONS, type WalletTransactionsResult } from "../lib/comacard/graphql";
 import { useWallet } from "./useWallet";
 
 /**
  * The wallet's real transaction history, straight from the Envio indexer.
  *
- * Five row types across two chains, merged into one feed: draws and repayments on Creditcoin,
- * collateral locks on Sepolia, defaults, and the Attestcoin proofs that carry a lock across. They
- * are interleaved by block timestamp, which is the only ordering that makes sense when the events
- * come from different chains.
+ * Seven row types across six chains, merged into one feed: draws and repayments on Creditcoin,
+ * Attestcoin locks on Sepolia with the proofs that carry them across, defaults, and the Wormhole
+ * deposits and withdrawals from the other five chains. They are interleaved by block timestamp,
+ * which is the only ordering that makes sense when the events come from different chains.
+ *
+ * The Wormhole rows were missing at first and the gap was silent: a cross-chain deposit raised the
+ * limit and nothing in the list accounted for it, because `CollateralLock` only covers Sepolia.
  *
  * Rows are emitted as `ActivityItem`, the shape `ActivityList` and `ActivityRow` already render, so
  * the feed gained real data without a single icon or layout change. New `kind` values map onto
@@ -23,9 +33,10 @@ import { useWallet } from "./useWallet";
  * record of this wallet, which is a true and useful statement; inventing rows would not be.
  */
 
-/** 18-decimal base units to a short human string. Display only. */
-function amount(wei: string, symbol: string): string {
-  const n = Number((BigInt(wei) * 10_000n) / 10n ** 18n) / 10_000;
+/** Base units to a short human string, against the asset's own decimals. Display only.
+ *  A 6-decimal stablecoin read as 18 is off by a factor of a trillion and still looks plausible. */
+function amount(wei: string, symbol: string, decimals = 18): string {
+  const n = Number((BigInt(wei) * 10_000n) / 10n ** BigInt(decimals)) / 10_000;
   const digits = n > 0 && n < 1 ? 4 : 2;
   return `${n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${symbol}`;
 }
@@ -37,9 +48,8 @@ type Raw = { at: number; item: Omit<ActivityItem, "id" | "when"> };
 const onCreditcoin = (hash: string) => explorerTx(CREDITCOIN_CHAIN_ID, hash);
 const onEthereum = (hash: string) => explorerTx(SEPOLIA_CHAIN_ID, hash);
 
-function build(data: WalletTransactionsResult): Raw[] {
-  const rows: Raw[] = [];
-
+/** Draws and repayments on Creditcoin: what the card did. */
+function creditRows(data: WalletTransactionsResult, rows: Raw[]): void {
   for (const d of data.Draw) {
     rows.push({
       at: Number(d.timestamp) * 1000,
@@ -66,6 +76,10 @@ function build(data: WalletTransactionsResult): Raw[] {
       },
     });
   }
+}
+
+/** The Sepolia path — a lock, the proof that carries it across, and a default. */
+function attestcoinRows(data: WalletTransactionsResult, rows: Raw[]): void {
   for (const l of data.CollateralLock) {
     rows.push({
       at: Number(l.timestamp) * 1000,
@@ -114,7 +128,107 @@ function build(data: WalletTransactionsResult): Raw[] {
       item: { cat: "auto", kind: "proved", group: "deposit", href: onCreditcoin(a.txHash), detail },
     });
   }
+}
 
+/** Chain name, native symbol and explorer for a Wormhole chain id, in one read. */
+function remoteChain(wormholeChainId: number): {
+  sym: string;
+  chain: string;
+  evmChainId: number | undefined;
+} {
+  return {
+    sym: NATIVE_SYMBOL[wormholeChainId] ?? "ETH",
+    chain: WORMHOLE_CHAIN_NAMES[wormholeChainId] ?? "another chain",
+    evmChainId: WORMHOLE_VAULTS[wormholeChainId]?.evmChainId,
+  };
+}
+
+/**
+ * Collateral that crossed by Wormhole.
+ *
+ * A deposit is two moments on two chains — the lock, and the credit that follows once the guardians
+ * have signed — and both are worth a row: the gap between them is minutes, and during it the limit
+ * has not moved yet.
+ */
+function remoteDepositRows(data: WalletTransactionsResult, rows: Raw[]): void {
+  for (const d of data.RemoteDeposit) {
+    // A mid-sync read: the deposit row landed and its asset row has not. Without decimals the
+    // amount cannot be shown, and assuming 18 misprices a 6-decimal stablecoin by a trillion.
+    if (d.asset === null) continue;
+    const { sym, chain, evmChainId } = remoteChain(d.asset.wormholeChainId);
+    const shown = amount(d.amount, sym, d.asset.decimals);
+    rows.push({
+      at: Number(d.lockedAt) * 1000,
+      item: {
+        cat: "you",
+        kind: "collateral-locked",
+        group: "deposit",
+        href: evmChainId ? explorerTx(evmChainId, d.lockTxHash) : undefined,
+        detail: `${shown} put down on ${chain}`,
+      },
+    });
+    if (d.creditedAt !== null && d.creditTxHash !== null) {
+      rows.push({
+        at: Number(d.creditedAt) * 1000,
+        item: {
+          cat: "auto",
+          kind: "proved",
+          group: "deposit",
+          href: onCreditcoin(d.creditTxHash),
+          detail: `${shown} now backs your credit limit`,
+        },
+      });
+    }
+  }
+}
+
+/**
+ * A withdrawal is three transactions and only two of them are the borrower's. The relay's approval
+ * in between is the protocol working, not something they did, so it gets no row.
+ */
+function remoteWithdrawalRows(data: WalletTransactionsResult, rows: Raw[]): void {
+  for (const w of data.RemoteWithdrawal) {
+    if (w.asset === null) continue;
+    const { sym, chain, evmChainId } = remoteChain(w.asset.wormholeChainId);
+    const shown = amount(w.amount, sym, w.asset.decimals);
+    rows.push({
+      at: Number(w.requestedAt) * 1000,
+      item: {
+        cat: "you",
+        kind: "collateral-released",
+        group: "deposit",
+        href: onCreditcoin(w.requestTxHash),
+        detail: `${shown} released from your limit`,
+      },
+    });
+    if (w.withdrawnAt !== null && w.withdrawTxHash !== null) {
+      rows.push({
+        at: Number(w.withdrawnAt) * 1000,
+        item: {
+          cat: "you",
+          kind: "collateral-released",
+          group: "deposit",
+          href: evmChainId ? explorerTx(evmChainId, w.withdrawTxHash) : undefined,
+          detail: `${shown} back in your wallet on ${chain}`,
+        },
+      });
+    }
+  }
+}
+
+/**
+ * One feed from seven sources, interleaved by block timestamp — the only ordering that means
+ * anything when the events come from six different chains.
+ *
+ * Split per carrier rather than written as one loop: it was a single function of complexity 35 by
+ * the time the Wormhole rows went in, and the three groups have nothing to say to each other.
+ */
+function build(data: WalletTransactionsResult): Raw[] {
+  const rows: Raw[] = [];
+  creditRows(data, rows);
+  attestcoinRows(data, rows);
+  remoteDepositRows(data, rows);
+  remoteWithdrawalRows(data, rows);
   return rows.sort((a, b) => b.at - a.at);
 }
 
@@ -155,6 +269,7 @@ export function useTransactions(): { loading: boolean; items: ActivityItem[]; er
     ? build(result.data).map((r, i) => ({
         id: i,
         when: now === null ? "" : relativeTime(r.at, now),
+        at: r.at,
         ...r.item,
       }))
     : [];

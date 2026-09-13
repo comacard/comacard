@@ -242,7 +242,6 @@ export function DesktopOverview() {
                 <ActivityList
                   items={preview}
                   loading={txLoading}
-                  reviewed
                   emptyTitle="No transactions yet"
                   emptyDescription="Locks, draws and repayments will show here once they are on chain."
                 />
@@ -282,7 +281,7 @@ export function DesktopOverview() {
       </div>
 
       <LockCollateralDrawer open={panel === "deposit"} onClose={close} />
-      <ActivityDrawer open={panel === "activity"} onClose={close} onReview={close} />
+      <ActivityDrawer open={panel === "activity"} onClose={close} />
       <KycSheet
         open={!!kycUrl}
         url={kycUrl}

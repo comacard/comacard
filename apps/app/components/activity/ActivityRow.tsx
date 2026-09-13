@@ -1,40 +1,17 @@
 import type { ActivityItem } from "../../lib/comacard/activity";
 
+/**
+ * The six kinds `useTransactions` emits, worded for someone who has used a secured credit card and
+ * never a blockchain: a security deposit earns a limit, you spend against it, you pay it back. No
+ * chain names in a title.
+ *
+ * There were twenty cases here and fourteen could never fire — "Put to work", "Rewards added",
+ * "Auto reinvest updated", freeze, proposed-exit, sign-mandate, consented, approve-exit. All of them
+ * described a SoroSense agent moving money between Stellar yield buckets, which is not a thing this
+ * product does. Dead branches in a `switch` are worse than dead files: they read as behaviour.
+ */
 function humanize(item: ActivityItem): { title: string; description: string } {
   switch (item.kind) {
-    case "deposit":
-    case "deposited":
-      return { title: "Deposit", description: item.detail };
-    case "withdraw":
-    case "withdrew":
-      return { title: "Withdraw", description: item.detail };
-    case "allocated":
-      return { title: "Put to work", description: "Your deposit is now earning." };
-    case "compounded":
-      return { title: "Rewards added", description: "Your rewards were added back automatically." };
-    case "rebalanced":
-      return {
-        title: "Moved to better yield",
-        description: "Your money was moved to a stronger earning option.",
-      };
-    case "froze":
-      return { title: "Paused earning", description: "Earning was paused to protect your money." };
-    case "proposed-exit":
-      return { title: "Review needed", description: "Review a suggested move for your money." };
-    case "sign-mandate":
-    case "consented":
-      return {
-        title: "Automation enabled",
-        description: "Automatic earning moves are now enabled.",
-      };
-    case "approve-exit":
-      return { title: "Move approved", description: "You approved the suggested move." };
-    case "auto-compound":
-      return { title: "Auto reinvest updated", description: item.detail };
-
-    // ---- on-chain, from the indexer (hooks/useTransactions.ts) ----
-    // Worded for someone who has used a secured credit card and never a blockchain: a security
-    // deposit earns a limit, you spend against it, you pay it back. No chain names in a title.
     case "drew":
       return { title: "Spent", description: item.detail };
     case "repaid":
@@ -66,8 +43,6 @@ function ActivityIcon({ kind }: { kind: string }) {
   };
 
   switch (kind) {
-    case "deposit":
-    case "deposited":
     case "repaid":
       return (
         // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, aria-hidden comes from the spread
@@ -77,8 +52,6 @@ function ActivityIcon({ kind }: { kind: string }) {
           <path d="M5 21h14" />
         </svg>
       );
-    case "withdraw":
-    case "withdrew":
     case "drew":
     case "collateral-released":
       return (
@@ -89,7 +62,6 @@ function ActivityIcon({ kind }: { kind: string }) {
           <path d="M5 3h14" />
         </svg>
       );
-    case "allocated":
     case "collateral-locked":
       return (
         // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, aria-hidden comes from the spread
@@ -98,28 +70,6 @@ function ActivityIcon({ kind }: { kind: string }) {
           <path d="M17 7.5c0-1.7-2.1-2.8-5-2.8s-5 1.1-5 2.8 2.1 2.8 5 2.8 5 1.1 5 2.8-2.1 2.8-5 2.8-5-1.1-5-2.8" />
         </svg>
       );
-    case "compounded":
-      return (
-        // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, aria-hidden comes from the spread
-        <svg {...common}>
-          <path d="M21 12a9 9 0 0 1-15.5 6.2" />
-          <path d="M3 12A9 9 0 0 1 18.5 5.8" />
-          <path d="M18 2v4h4" />
-          <path d="M6 22v-4H2" />
-        </svg>
-      );
-    case "rebalanced":
-      return (
-        // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, aria-hidden comes from the spread
-        <svg {...common}>
-          <path d="M16 3h5v5" />
-          <path d="M4 20 21 3" />
-          <path d="M21 16v5h-5" />
-          <path d="M15 15l6 6" />
-          <path d="M4 4l5 5" />
-        </svg>
-      );
-    case "froze":
     case "defaulted":
       return (
         // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, aria-hidden comes from the spread
@@ -129,18 +79,6 @@ function ActivityIcon({ kind }: { kind: string }) {
           <path d="M14 9v6" />
         </svg>
       );
-    case "proposed-exit":
-      return (
-        // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, aria-hidden comes from the spread
-        <svg {...common}>
-          <path d="M12 3 20 7v5c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V7l8-4Z" />
-          <path d="M12 8v5" />
-          <path d="M12 17h.01" />
-        </svg>
-      );
-    case "sign-mandate":
-    case "consented":
-    case "approve-exit":
     case "proved":
       return (
         // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, aria-hidden comes from the spread
@@ -161,14 +99,10 @@ function ActivityIcon({ kind }: { kind: string }) {
 export function ActivityRow({
   item,
   first,
-  onReview,
-  reviewed,
   divider = true,
 }: {
   item: ActivityItem;
   first: boolean;
-  onReview?: () => void;
-  reviewed?: boolean;
   divider?: boolean;
 }) {
   const copy = humanize(item);
@@ -186,21 +120,6 @@ export function ActivityRow({
         </div>
         {copy.description && <div className="mt-0.5 text-xs text-muted">{copy.description}</div>}
       </div>
-      {item.review ? (
-        reviewed ? (
-          <span className="flex h-[30px] shrink-0 items-center rounded-full bg-[#ECECEC] px-3.5 text-[12.5px] font-semibold text-faint">
-            Reviewed
-          </span>
-        ) : onReview ? (
-          <button
-            type="button"
-            onClick={onReview}
-            className="h-[30px] shrink-0 rounded-full bg-[#1a1a1a] px-3.5 text-[12.5px] font-semibold text-[#f8f8f8]"
-          >
-            Review
-          </button>
-        ) : null
-      ) : null}
     </>
   );
 
