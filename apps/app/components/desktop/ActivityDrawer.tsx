@@ -71,9 +71,8 @@ export function ActivityDrawer({ open, onClose }: { open: boolean; onClose: () =
           <ActivityList
             items={shown}
             loading={loading}
-            // Always reviewed: `usePendingExit` was the SoroSense safe-exit seam, and this product has no
-            // proposal for anyone to approve. Leaving the flag wired to a deleted hook would have been
-            // the only reason to keep that hook alive.
+            // Always reviewed: this product has no proposal for anyone to approve, so the flag has
+            // nothing to vary on.
             divider={false}
             emptyTitle={empty.title}
             emptyDescription={empty.description}

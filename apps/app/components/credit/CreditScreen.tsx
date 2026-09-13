@@ -14,7 +14,7 @@ import { SpendChart } from "./SpendChart";
  * What the card has earned, which is a record rather than a yield.
  *
  * This screen took over the Earn tab's shape: headline, sub-line, two actions, a bar chart with
- * four ranges, and changed everything it was reporting. Earn promised APY on deposits into Stellar
+ * four ranges, and changed everything it was reporting. Earn promised APY on deposits into
  * buckets: no part of that exists here, users receive no yield at all, and the numbers on it were a
  * different product's. The layout was worth keeping; the subject was not.
  *

@@ -7,8 +7,8 @@ import { ActivityDrawer } from "../ActivityDrawer";
  * The desktop activity drawer, now reading the same on-chain feed as the mobile Transactions page
  * and filtering with the same three tabs.
  *
- * It used to read the SoroSense activity fixture and offer an "Agent" tab, which named machinery
- * this product does not have. The tabs are named for a secured credit card instead: you put down a
+ * It used to read a fixture feed and offer an "Agent" tab, which named machinery this product does
+ * not have. The tabs are named for a secured credit card instead: you put down a
  * deposit, you get a limit, you spend and pay it back.
  */
 

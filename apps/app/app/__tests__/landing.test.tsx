@@ -18,7 +18,7 @@ beforeEach(() => {
   replace.mockReset();
   connect.mockReset();
   localStorage.clear();
-  localStorage.setItem("soro.onboarding.done", "1");
+  localStorage.setItem("comacard.onboarding.done", "1");
 });
 
 test("navigates to /home after a successful connect", async () => {
@@ -29,10 +29,10 @@ test("navigates to /home after a successful connect", async () => {
 });
 
 test("surfaces a readable message on failure: no [object Object], no navigation", async () => {
-  connect.mockRejectedValue(new WalletError("Freighter is locked", 5));
+  connect.mockRejectedValue(new WalletError("Wallet is locked", 5));
   render(<Landing />);
   fireEvent.click(await screen.findByText("Connect wallet"));
-  expect(await screen.findByText("Freighter is locked")).toBeInTheDocument();
+  expect(await screen.findByText("Wallet is locked")).toBeInTheDocument();
   expect(push).not.toHaveBeenCalled();
   expect(replace).not.toHaveBeenCalled();
 });

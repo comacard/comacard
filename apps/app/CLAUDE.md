@@ -11,25 +11,23 @@ bun run test       # vitest
 bun run lint       # eslint, NOT biome. See the note at the bottom.
 ```
 
-## Where this code came from, and what is left of it
+## One thing left from the port
 
-This app started as a **verbatim copy of the SoroSense Stellar frontend** and was converted in place.
-As of the #9 sweep the conversion is done: `@sorosense/vault-client`, `lib/vault`, `lib/api`,
-`lib/earn`, `lib/wallet`, `providers/VaultProvider`, `lib/wallet-real.ts` and the three `@stellar/*`
-packages are all gone, along with the `/withdraw` route that was still rendering a Stellar keypad on
-the path `/withdraw/x/[id]` now uses. 100 files, and the test count went 427 → 200, not coverage
-lost, but assertions about buckets, APY and an agent feed this product does not have.
+This app began as a copy of a different product's frontend and was converted in place. That
+conversion is finished: the vault client package, its three chain SDK dependencies, the old
+provider, the old wallet kit, the old routes and every screen that spoke about yield are gone, and
+nothing in the manifest or the source names that product any more.
 
-Two things survive on purpose:
+**`app/page.tsx` is the exception.** The onboarding tour still sells the old product: three screens
+about depositing into yield buckets, an automated agent, and an APY chart. Comacard pays no yield
+and has no agent. It imports none of the removed code, so this is copy and artwork rather than
+wiring, and the words are Axel's to choose.
 
-- **`app/page.tsx`**: the onboarding screen. Still names Blend and DeFindex in its copy. It imports
-  none of the removed code; this is wording, not wiring, and Axel is handling it separately.
-- **Provenance comments.** `Switch.tsx`, `Segmented.tsx` and `Bars.tsx` cite
-  `docs/mockups/sorosense-mock-2.html` as the origin of their geometry. Those are honest notes about
-  where a design came from, not Stellar code.
-
-`localStorage` keys are still prefixed `soro.` (`soro.wallet`, `soro.onboarding.done`). Renaming them
-signs everyone out, which is not worth doing before a demo.
+`localStorage` keys are prefixed `comacard.`. They used to carry the old product's prefix, and
+`lib/storage.ts` moves anything still under the old name on first load, once per browser. That
+migration is not decoration: `comacard.release.pending.v1` is the only record of a withdrawal that
+has been signed and not yet claimed, so dropping it would leave money in a vault with nothing on
+screen pointing at it.
 
 ## The wallet layer
 
@@ -37,8 +35,9 @@ signs everyone out, which is not worth doing before a demo.
 Both adapters register the `eip155` namespace and installing the pair breaks connection state
 silently.
 
-`lib/wallet.ts` is the seam: five functions (`connect`, `getAddress`, `getWalletId`,
-`signTransaction`, `disconnect`) that `WalletProvider` and every screen already consume. Swapping
+`lib/wallet.ts` is the seam: four functions (`connect`, `getAddress`, `getWalletId`, `disconnect`)
+that `WalletProvider` and every screen already consume. It was five: `signTransaction` took an XDR,
+was there for a mock vault client that no longer exists, and no screen ever called it. Swapping
 ethers for wagmi touched no component because of it. New code can use wagmi hooks directly.
 
 **Everything from `@reown/*` and `wagmi/actions` is imported dynamically**, and that is load-bearing,
@@ -66,7 +65,7 @@ path this app cannot execute. Stubbing them out instead removed Coinbase Wallet 
 
 `lib/comacard/` is the whole client surface. `NEXT_PUBLIC_COMACARD_API_URL` points at `apps/api`,
 which composes KYC, the credit line and the indexer into one answer per wallet. (`lib/api/` was the
-SoroSense vault client and is gone; `NEXT_PUBLIC_API_URL` no longer does anything.)
+old vault client and is gone; `NEXT_PUBLIC_API_URL` no longer does anything.)
 
 `lib/comacard/graphql/` reads the Envio indexer directly, because the API exposes no `Attestation`
 route and that row is how a screen learns collateral has finished crossing.
@@ -189,11 +188,11 @@ signature so no call site can believe its own number was used.
 
 ## Lint
 
-`bun run lint` here is **ESLint**, inherited from the SoroSense port. The repo root uses **Biome**,
-and the pre-commit hook runs `biome check --staged --write`.
+`bun run lint` here is **ESLint**, inherited from the port. The repo root uses **Biome**, and the
+pre-commit hook runs `biome check --staged --write`.
 
 That hook is fine in normal use: it only looks at staged files. It becomes a wall when this app is
-staged in bulk, which is exactly what the port did: one commit staging the whole tree had Biome
-rewrite 171 files and still fail with ~187 errors, because SoroSense was written to a different
-style. Commits covering the port therefore need `--no-verify`, and clearing that is a real decision
-someone has to make: exclude `apps/app` from Biome, or convert the app to it.
+staged in bulk, which is what the port did: one commit staging the whole tree had Biome rewrite 171
+files and still fail with ~187 errors, because the code it inherited was written to a different
+style. Commits of that size therefore need `--no-verify`, and clearing it is a real decision someone
+has to make: exclude `apps/app` from Biome, or convert the app to it.

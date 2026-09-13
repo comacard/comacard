@@ -3,9 +3,12 @@ import * as real from "./wallet-reown";
 
 export { USER_CLOSED_MODAL, WalletError } from "./wallet-error";
 
-// `real` is Reown AppKit (`wallet-reown.ts`). The Stellar Wallets Kit implementation this seam
-// was originally written against is gone: it was unreachable from `wallet.ts` after the move to
-// Reown, and the three `@stellar/*` packages in the manifest existed only to satisfy it.
+// `real` is Reown AppKit (`wallet-reown.ts`); `e2e` is a stub that signs without a prompt.
+//
+// Four functions, not five. `signTransaction` used to sit here and is gone: its only caller was a
+// mock vault client from the product this app was ported from, it took an XDR that nothing in this
+// codebase produces, and no screen ever called it. Creditcoin writes do not come through this seam
+// at all, they are `writeContract` calls in `lib/comacard/contracts.ts`.
 
 /**
  * Next inlines NEXT_PUBLIC_* at build time, so in a production build this reads `"" === "1"` and every
@@ -18,5 +21,4 @@ const E2E = process.env.NEXT_PUBLIC_E2E === "1";
 export const connect = E2E ? e2e.connect : real.connect;
 export const getAddress = E2E ? e2e.getAddress : real.getAddress;
 export const getWalletId = E2E ? () => "e2e" : real.getWalletId;
-export const signTransaction = E2E ? e2e.signTransaction : real.signTransaction;
 export const disconnect = E2E ? e2e.disconnect : real.disconnect;

@@ -17,6 +17,7 @@ import {
   bscTestnet,
   optimismSepolia,
 } from "../lib/comacard/wagmi";
+import { STORAGE } from "../lib/storage";
 import { useWallet } from "./useWallet";
 
 /**
@@ -117,7 +118,7 @@ const ZERO32 = "0x00000000000000000000000000000000000000000000000000000000000000
  * list that fails to render because a cache read was refused would be a much worse bug than a slow
  * one. A miss simply means the scan runs.
  */
-const ORIGIN_CACHE_KEY = "soro.remote.origin.v1";
+const ORIGIN_CACHE_KEY = STORAGE.remoteOrigin;
 
 function readOriginCache(): Map<string, { chainId: number; token: Hex }> {
   try {

@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { STORAGE } from "../storage";
 
 /**
  * A release that has left Creditcoin and not yet arrived on the far chain.
@@ -32,7 +33,7 @@ export type PendingRelease = {
   at: number;
 };
 
-const KEY = "soro.release.pending.v1";
+const KEY = STORAGE.pendingRelease;
 
 /** A week. Long past the twenty minutes an L2 release takes, short enough to not be archaeology. */
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;

@@ -28,7 +28,7 @@ test("renders nothing and does not forward while hydrating", () => {
 });
 
 test("shows connect screen when onboarding was already completed", async () => {
-  localStorage.setItem("soro.onboarding.done", "1");
+  localStorage.setItem("comacard.onboarding.done", "1");
   useWallet.mockReturnValue({ address: null, hydrated: true, connect: vi.fn() });
   render(<Landing />);
   expect(await screen.findByRole("button", { name: "Connect wallet" })).toBeInTheDocument();

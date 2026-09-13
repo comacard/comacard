@@ -19,8 +19,7 @@
       "!apps/indexer/abis",
       "!apps/indexer/.envio",
       "!apps/indexer/envio-env.d.ts",
-      "!apps/app/public",
-      "!packages/vault-client/bindings/src"
+      "!apps/app/public"
     ]
   },
   "formatter": {
@@ -198,7 +197,6 @@
     },
     {
       "includes": [
-        "packages/vault-client/**",
         "apps/app/lib/wallet*.ts",
         "apps/app/lib/wallet/**",
         "apps/app/lib/e2e/**",

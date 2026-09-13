@@ -1,10 +1,10 @@
 /**
  * "3h ago", and nothing else.
  *
- * This file also held `itemFromEntry`, which mapped the SoroSense backend's `FeedEntry` wire row
- * into a rendered one. That backend is not in this repo and the rows Comacard renders are built
- * from Creditcoin logs, so the mapper had no caller and its two type imports were the last thing
- * tying the transactions list to `lib/vault` and `lib/api`.
+ * This file also held `itemFromEntry`, which mapped an old backend's `FeedEntry` wire row into a
+ * rendered one. That backend is not in this repo and the rows Comacard renders are built from
+ * Creditcoin logs, so the mapper had no caller and its two type imports were the last thing tying
+ * the transactions list to modules that no longer exist.
  *
  * Still pure and still takes `now` from the caller: reading the clock during render bakes a
  * timestamp into the SSR HTML and desyncs the first client paint.

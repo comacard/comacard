@@ -232,7 +232,7 @@ reading before touching anything:
 | | |
 | --- | --- |
 | `contracts/CLAUDE.md` | the 913-byte ceiling, `via_ir`, and why the hub lives beside the line |
-| `apps/app/CLAUDE.md` | a Next 16 app ported from a Stellar product, and what that still implies |
+| `apps/app/CLAUDE.md` | a Next 16 app ported from another product, and the one screen that still shows it |
 | `apps/worker/CLAUDE.md` | the two loops, and why a receipt does not mean delivery |
 | `apps/indexer/CLAUDE.md` | Envio's three-deployment cap and the silent failures around it |
 | `apps/api/CLAUDE.md` | one `Promise.all` that used to take the whole response down |

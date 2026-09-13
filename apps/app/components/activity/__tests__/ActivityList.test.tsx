@@ -6,8 +6,8 @@ import { ActivityList } from "../ActivityList";
 /**
  * The list renders the six kinds `useTransactions` emits and nothing else.
  *
- * It used to be tested against `rebalanced` and `proposed-exit`: a SoroSense agent moving money
- * between Stellar yield buckets, with a Review button for approving a proposed exit. Nothing in
+ * It used to be tested against `rebalanced` and `proposed-exit`: an automated agent moving money
+ * between yield buckets, with a Review button for approving a proposed exit. Nothing in
  * Comacard sets `review`, and no row has since the port, so the affordance and its fourteen sibling
  * cases were asserting behaviour the product does not have.
  */

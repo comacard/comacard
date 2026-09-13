@@ -7,7 +7,7 @@ import type { ActivityItem } from "../../lib/comacard/activity";
  *
  * There were twenty cases here and fourteen could never fire: "Put to work", "Rewards added",
  * "Auto reinvest updated", freeze, proposed-exit, sign-mandate, consented, approve-exit. All of them
- * described a SoroSense agent moving money between Stellar yield buckets, which is not a thing this
+ * described an automated agent moving money between yield buckets, which is not a thing this
  * product does. Dead branches in a `switch` are worse than dead files: they read as behaviour.
  */
 function humanize(item: ActivityItem): { title: string; description: string } {

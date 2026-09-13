@@ -1,5 +1,6 @@
 "use client";
 import { createContext, type ReactNode, useCallback, useEffect, useState } from "react";
+import { migrateStorageKeys, STORAGE } from "../lib/storage";
 import * as wallet from "../lib/wallet";
 
 type Ctx = {
@@ -12,12 +13,11 @@ type Ctx = {
   isConnected: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-  signTransaction: (xdr: string) => Promise<string>;
 };
 export const WalletContext = createContext<Ctx | null>(null);
-const KEY = "soro.wallet";
-const NAME_KEY = "soro.wallet.name";
-const ID_KEY = "soro.wallet.id";
+const KEY = STORAGE.wallet;
+const NAME_KEY = STORAGE.walletName;
+const ID_KEY = STORAGE.walletId;
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null | undefined>(undefined);
@@ -29,6 +29,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // address is not a live session (the user may have revoked, locked, or switched accounts),
   // so entering the app on it would only fail later, at signing time. Verify, then trust.
   useEffect(() => {
+    // Before the first read, and only ever once per browser: values written under the old
+    // `soro.` prefix are moved across. See `lib/storage.ts`.
+    migrateStorageKeys();
     let alive = true;
     void (async () => {
       try {
@@ -44,9 +47,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (!alive) return;
         if (live === saved) {
           setAddress(saved);
-          // The kit does not persist the selected wallet id across reloads, so getWalletName()
-          // would lie and say "Freighter"; the name captured at connect time is the only truthful
-          // source for a restored session.
+          // The connector does not persist which wallet was chosen across reloads, so asking it
+          // after a refresh returns whatever is registered first rather than what was connected.
+          // The name captured at connect time is the only truthful source for a restored session.
           setWalletName(window.localStorage.getItem(NAME_KEY));
           return;
         }
@@ -98,7 +101,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         isConnected: !!address,
         connect,
         disconnect,
-        signTransaction: wallet.signTransaction,
       }}
     >
       {children}

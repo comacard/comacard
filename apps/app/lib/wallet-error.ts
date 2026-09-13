@@ -1,13 +1,11 @@
-// Kit-free error helpers. Kept out of `wallet.ts` so UI + tests can import them
-// without pulling in Stellar Wallets Kit (which drags in the CommonJS
-// `@stellar/freighter-api` and fails to load under the vitest/jsdom ESM env).
+// Error helpers, kept out of `wallet.ts` so the UI and the tests can import them without pulling
+// in the connector stack, which does not load under the vitest jsdom environment.
 
-/** Code Stellar Wallets Kit rejects with when the user dismisses the picker. */
+/** Code a wallet picker rejects with when the user dismisses it. */
 export const USER_CLOSED_MODAL = -1;
 
 /**
- * Stellar Wallets Kit rejects with plain `{ code, message }` objects (e.g.
- * kit.js `reject({ code: -1, message: "The user closed the modal." })`), not
+ * Wallet pickers reject with plain `{ code, message }` objects rather than
  * Error instances: an unhandled one surfaces to the user as the useless
  * "[object Object]". Normalising at the wallet boundary gives callers a real
  * Error with a readable message and a `code` to special-case cancellation.

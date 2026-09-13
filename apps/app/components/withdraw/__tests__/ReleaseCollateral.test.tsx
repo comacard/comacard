@@ -311,7 +311,7 @@ test("a request in flight is not an empty screen", () => {
   });
   withdrawals.mockReturnValue({ items: [], loading: false, error: false, refresh: vi.fn() });
   window.localStorage.setItem(
-    "soro.release.pending.v1",
+    "comacard.release.pending.v1",
     JSON.stringify([
       { assetId: "0xabc", sequence: "8", amount: "10000000000000000", at: Date.now() },
     ]),
@@ -334,7 +334,7 @@ test("the local note carries the sequence when the indexer has not caught up", a
   // Indexer empty. This is the first minute after a request, which is when somebody is looking.
   withdrawals.mockReturnValue({ items: [], loading: false, error: false, refresh: vi.fn() });
   window.localStorage.setItem(
-    "soro.release.pending.v1",
+    "comacard.release.pending.v1",
     JSON.stringify([
       { assetId: "0xabc", sequence: "8", amount: "10000000000000000", at: Date.now() },
     ]),

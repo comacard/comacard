@@ -69,7 +69,7 @@ test("forgetting one leaves the others", () => {
 test("a request older than a week is dropped rather than kept forever", () => {
   const eightDays = Date.now() - 8 * 24 * 60 * 60 * 1000;
   window.localStorage.setItem(
-    "soro.release.pending.v1",
+    "comacard.release.pending.v1",
     JSON.stringify([{ assetId: "0xabc", sequence: "8", amount: "1", at: eightDays }]),
   );
 
@@ -80,7 +80,7 @@ test("a malformed entry is skipped rather than rendered", () => {
   // This lives somewhere a person can edit. Nothing here moves money: the sequence only fetches a
   // signature the relay verifies anyway. But a half-written entry must not reach the screen.
   window.localStorage.setItem(
-    "soro.release.pending.v1",
+    "comacard.release.pending.v1",
     JSON.stringify([{ assetId: "0xabc" }, { sequence: "8" }, "nonsense"]),
   );
 
@@ -88,6 +88,6 @@ test("a malformed entry is skipped rather than rendered", () => {
 });
 
 test("unparseable storage is empty, not a thrown render", () => {
-  window.localStorage.setItem("soro.release.pending.v1", "{not json");
+  window.localStorage.setItem("comacard.release.pending.v1", "{not json");
   expect(readPending()).toEqual([]);
 });

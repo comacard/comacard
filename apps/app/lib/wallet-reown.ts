@@ -154,29 +154,6 @@ export async function getAddress(): Promise<string> {
   });
 }
 
-/**
- * The vault seam still speaks Stellar: `MockVaultClient` hands out placeholder XDRs ("mock-xdr-N").
- * An EVM wallet can sign neither those nor a real one, so the placeholders are signed as an
- * arbitrary message, which keeps every mocked flow demoable end to end. A real Stellar XDR is
- * refused outright rather than silently mis-signed.
- *
- * Creditcoin transactions do NOT come through here. They are `writeContract` calls in
- * `lib/comacard/contracts.ts`, where the ABI makes the intent legible.
- */
-export async function signTransaction(xdr: string): Promise<string> {
-  try {
-    if (!xdr.startsWith("mock-xdr-")) {
-      throw new WalletError(
-        "This wallet signs Creditcoin (EVM) transactions. A Stellar XDR cannot be signed here.",
-      );
-    }
-    const { signMessage } = await actions();
-    return await signMessage(wagmiConfig, { message: xdr });
-  } catch (e) {
-    throw toWalletError(e);
-  }
-}
-
 export async function disconnect(): Promise<void> {
   const c = loaded();
   if (!c) return;

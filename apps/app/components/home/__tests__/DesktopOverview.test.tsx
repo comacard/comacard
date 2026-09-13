@@ -5,7 +5,7 @@ import type { ActivityItem } from "../../../lib/comacard/activity";
 import { DesktopOverview } from "../DesktopOverview";
 
 /**
- * The desktop Overview after it stopped being a SoroSense dashboard.
+ * The desktop Overview.
  *
  * It is built from the same components and the same hooks as the mobile Home, so these tests are
  * about what desktop composes, not about re-proving each piece: the card leads, cross-chain

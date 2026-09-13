@@ -74,9 +74,9 @@ export async function depositEurc(page: Page, amount: string): Promise<void> {
 /**
  * Assert the desktop Overview chrome is on screen and the mobile bottom nav is hidden.
  *
- * **This asserted the SoroSense dashboard until now**, and would have failed the moment it ran:
- * headings "Buckets", "Growth" and "Agent", plus a "your value" hero eyebrow, none of which have
- * existed since the #9 conversion. `DesktopOverview.test.tsx` asserts the opposite in the same
+ * **This asserted the old dashboard until now**, and would have failed the moment it ran: headings
+ * "Buckets", "Growth" and "Agent", plus a "your value" hero eyebrow, none of which have existed
+ * since the #9 conversion. `DesktopOverview.test.tsx` asserts the opposite in the same
  * repo, so the two suites contradicted each other and the contradiction went unnoticed because the
  * Playwright specs are not in the vitest run.
  *
@@ -90,7 +90,7 @@ export async function expectDesktopHome(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: "Deposit" })).toBeVisible();
   // CSS-hidden at lg rather than unmounted, so `toBeHidden` is the right assertion.
   await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
-  // Nothing from the Stellar product should survive on this screen.
+  // Nothing from the product this was ported from should survive on this screen.
   await expect(page.getByText(/\b(bucket|APY|sentinel)\b/i)).toHaveCount(0);
 }
 

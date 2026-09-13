@@ -1,15 +1,13 @@
 "use client";
 
 /**
- * The switch from `docs/mockups/sorosense-mock-2.html` (`.switch`): a 46×28 track whose 22px knob
- * slides right when checked.
+ * A 46x28 track whose 22px knob slides right when checked.
  *
- * Two modes, one primitive. With `onChange` it is a *live control*: the Account auto-reinvest row
- * (STE-38) writes the depositor's auto-compound preference through the seam on every press. With
- * `readOnly` it is a *state display*: real `role="switch"` semantics plus `aria-disabled`, so
- * assistive tech announces "switch, on, dimmed" rather than inviting a press that would do nothing.
- * A live control passes `readOnly` while a write is in flight, which is why the two props coexist
- * instead of one replacing the other.
+ * Two modes, one primitive. With `onChange` it is a live control. With `readOnly` it is a state
+ * display: real `role="switch"` semantics plus `aria-disabled`, so assistive tech announces
+ * "switch, on, dimmed" rather than inviting a press that would do nothing. A live control passes
+ * `readOnly` while a write is in flight, which is why the two props coexist instead of one
+ * replacing the other.
  */
 export function Switch({
   checked,

@@ -26,8 +26,8 @@ import { Drawer } from "../ui/Drawer";
  * only real difference is the input: a plain `<input>` here, where a numeric keypad would be the
  * wrong instrument for a keyboard.
  *
- * This replaced a drawer that funded Stellar buckets with USDC, EURC and CETES. None of those
- * assets exist in this protocol, so the screen was offering deposits that could never settle.
+ * This replaced a drawer that funded yield buckets with three assets this protocol does not take,
+ * so the screen was offering deposits that could never settle.
  */
 
 function parseAmount(text: string, decimals: number): bigint {

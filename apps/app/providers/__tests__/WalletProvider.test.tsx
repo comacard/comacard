@@ -8,11 +8,10 @@ import { WalletProvider } from "../WalletProvider";
 // connect() hands back, i.e. "the live wallet is the one you connected". The mismatch/locked tests
 // override getAddress per-case to a different value or a throw; everything else restores cleanly.
 vi.mock("../../lib/wallet", () => ({
-  connect: vi.fn(async () => ({ address: "GABC123", name: "Freighter" })),
+  connect: vi.fn(async () => ({ address: "0xA11CE", name: "Rabby Wallet" })),
   disconnect: vi.fn(async () => {}),
-  signTransaction: vi.fn(async () => "SIGNED"),
-  getAddress: vi.fn(async () => "GABC123"),
-  getWalletId: vi.fn(() => "freighter"),
+  getAddress: vi.fn(async () => "0xA11CE"),
+  getWalletId: vi.fn(() => "rabby"),
 }));
 
 function Probe() {
@@ -46,7 +45,7 @@ test("connect sets address + isConnected", async () => {
   );
   expect(await screen.findByText("none")).toBeInTheDocument(); // hydrated, no session
   await userEvent.click(screen.getByRole("button", { name: "connect" }));
-  expect(await screen.findByText("GABC123")).toBeInTheDocument();
+  expect(await screen.findByText("0xA11CE")).toBeInTheDocument();
   expect(screen.getByTestId("flag").textContent).toBe("true");
 });
 
@@ -62,23 +61,23 @@ test("hydration with no stored session ends disconnected but hydrated", async ()
 });
 
 test("restores a stored session only after getAddress() confirms it", async () => {
-  localStorage.setItem("soro.wallet", "GABC123");
-  localStorage.setItem("soro.wallet.name", "Freighter");
+  localStorage.setItem("comacard.wallet", "0xA11CE");
+  localStorage.setItem("comacard.wallet.name", "Rabby Wallet");
   render(
     <WalletProvider>
       <Probe />
     </WalletProvider>,
   );
-  expect(await screen.findByText("GABC123")).toBeInTheDocument();
+  expect(await screen.findByText("0xA11CE")).toBeInTheDocument();
   expect(screen.getByTestId("flag").textContent).toBe("true");
-  expect(screen.getByTestId("walletName").textContent).toBe("Freighter");
+  expect(screen.getByTestId("walletName").textContent).toBe("Rabby Wallet");
   expect(wallet.getAddress).toHaveBeenCalledTimes(1);
 });
 
 test("clears a stale session when getAddress() disagrees", async () => {
   vi.mocked(wallet.getAddress).mockResolvedValueOnce("GDIFFERENT");
-  localStorage.setItem("soro.wallet", "GABC123");
-  localStorage.setItem("soro.wallet.name", "Freighter");
+  localStorage.setItem("comacard.wallet", "0xA11CE");
+  localStorage.setItem("comacard.wallet.name", "Rabby Wallet");
   render(
     <WalletProvider>
       <Probe />
@@ -87,13 +86,13 @@ test("clears a stale session when getAddress() disagrees", async () => {
   await waitFor(() => expect(screen.getByTestId("hydrated").textContent).toBe("true"));
   expect(screen.getByTestId("addr").textContent).toBe("none");
   expect(screen.getByTestId("flag").textContent).toBe("false");
-  expect(localStorage.getItem("soro.wallet")).toBeNull();
-  expect(localStorage.getItem("soro.wallet.name")).toBeNull();
+  expect(localStorage.getItem("comacard.wallet")).toBeNull();
+  expect(localStorage.getItem("comacard.wallet.name")).toBeNull();
 });
 
 test("clears a stored session when the wallet is locked (getAddress throws)", async () => {
   vi.mocked(wallet.getAddress).mockRejectedValueOnce(new Error("locked"));
-  localStorage.setItem("soro.wallet", "GABC123");
+  localStorage.setItem("comacard.wallet", "0xA11CE");
   render(
     <WalletProvider>
       <Probe />
@@ -101,7 +100,7 @@ test("clears a stored session when the wallet is locked (getAddress throws)", as
   );
   await waitFor(() => expect(screen.getByTestId("hydrated").textContent).toBe("true"));
   expect(screen.getByTestId("addr").textContent).toBe("none");
-  expect(localStorage.getItem("soro.wallet")).toBeNull();
+  expect(localStorage.getItem("comacard.wallet")).toBeNull();
 });
 
 test("disconnect clears address + isConnected + localStorage", async () => {
@@ -111,13 +110,13 @@ test("disconnect clears address + isConnected + localStorage", async () => {
     </WalletProvider>,
   );
   await userEvent.click(screen.getByRole("button", { name: "connect" }));
-  expect(await screen.findByText("GABC123")).toBeInTheDocument();
-  expect(localStorage.getItem("soro.wallet")).toBe("GABC123");
+  expect(await screen.findByText("0xA11CE")).toBeInTheDocument();
+  expect(localStorage.getItem("comacard.wallet")).toBe("0xA11CE");
   await userEvent.click(screen.getByRole("button", { name: "disconnect" }));
   expect(await screen.findByText("none")).toBeInTheDocument();
   expect(screen.getByTestId("flag").textContent).toBe("false");
-  expect(localStorage.getItem("soro.wallet")).toBeNull();
-  expect(localStorage.getItem("soro.wallet.name")).toBeNull();
+  expect(localStorage.getItem("comacard.wallet")).toBeNull();
+  expect(localStorage.getItem("comacard.wallet.name")).toBeNull();
 });
 
 test("exposes and persists the wallet name across a remount", async () => {
@@ -128,14 +127,14 @@ test("exposes and persists the wallet name across a remount", async () => {
     </WalletProvider>,
   );
   await user.click(screen.getByText("connect"));
-  await waitFor(() => expect(screen.getByTestId("walletName").textContent).toBe("Freighter"));
+  await waitFor(() => expect(screen.getByTestId("walletName").textContent).toBe("Rabby Wallet"));
   unmount();
   render(
     <WalletProvider>
       <Probe />
     </WalletProvider>,
   );
-  await waitFor(() => expect(screen.getByTestId("walletName").textContent).toBe("Freighter"));
+  await waitFor(() => expect(screen.getByTestId("walletName").textContent).toBe("Rabby Wallet"));
 });
 
 test("fails closed (no hang) when localStorage access itself throws", async () => {

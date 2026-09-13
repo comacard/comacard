@@ -4,8 +4,9 @@ import type { CollateralAsset } from "../../../hooks/useCollateral";
 import { LockCollateralDrawer } from "../LockCollateralDrawer";
 
 /**
- * The desktop deposit drawer, which replaced one that funded Stellar buckets with USDC, EURC and
- * CETES. These tests pin the two things that made that screen wrong: the assets have to come from
+ * The desktop deposit drawer, which replaced one that funded yield buckets with three assets this
+ * protocol does not take. These tests pin the two things that made that screen wrong: the assets
+ * have to come from
  * the chain, and the write has to be the real collateral lock.
  */
 
@@ -92,7 +93,7 @@ test("lists the assets the chain says are accepted, not a hardcoded stablecoin s
   expect(screen.getByRole("button", { name: /tUSDC/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /1 ETH$/ })).toBeInTheDocument();
   // The drawer this replaced offered these, and none of them exist in this protocol.
-  expect(screen.queryByText(/EURC|CETES|Stellar/)).toBeNull();
+  expect(screen.queryByText(/EURC|CETES/)).toBeNull();
 });
 
 test("picking a token and entering an amount locks it through lockToken", async () => {

@@ -40,15 +40,13 @@ vi.mock("../../../hooks/useWalletAssets", () => ({
 }));
 
 const ADDRESS = "GABCDEF12345678K3X9";
-const signTransaction = vi.fn(async (xdr: string) => xdr);
 
 beforeEach(() => {
   vi.clearAllMocks();
   useWallet.mockReturnValue({
     address: ADDRESS,
-    walletName: "Freighter",
+    walletName: "Rabby Wallet",
     disconnect: vi.fn(),
-    signTransaction,
   });
 });
 

@@ -10,6 +10,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Button, CoinBadge, Toast } from "../components/ui";
 import type { TokenSym } from "../components/ui/CoinBadge";
 import { useWallet } from "../hooks/useWallet";
+import { migrateStorageKeys, STORAGE } from "../lib/storage";
 import { USER_CLOSED_MODAL, WalletError } from "../lib/wallet-error";
 import styles from "./Onboarding.module.css";
 
@@ -19,7 +20,7 @@ type TourScreen = {
   visual: ReactNode;
 };
 
-const ONBOARDING_DONE_KEY = "soro.onboarding.done";
+const ONBOARDING_DONE_KEY = STORAGE.onboardingDone;
 
 const TOUR: TourScreen[] = [
   {
@@ -40,6 +41,8 @@ const TOUR: TourScreen[] = [
 ];
 
 export default function Landing() {
+  // Outside `WalletProvider`, so this screen runs the one-time key move itself.
+  migrateStorageKeys();
   const router = useRouter();
   const { connect, address, hydrated } = useWallet();
   const [mode, setMode] = useState<"tour" | "connect" | null>(null);

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The flat segmented control from `docs/mockups/sorosense-mock-2.html` (`.curseg` / `.seg`):
+ * The flat segmented control:
  * borderless buttons on no track at all, the pressed one filled with the pill tone. There is no
  * sliding thumb and no white raised pill: those belong to the dimensional `Button`, not here.
  *
